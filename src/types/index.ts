@@ -64,27 +64,37 @@ export interface PiRep {
   id: string;
   aircraft: string;
   message: string;
-  position: {
+  location: {
     lat: number;
     lon: number;
   };
+  altitude: number;
   timestamp: string;
   ageMinutes: number;
   priority: 'normal' | 'high' | 'urgent';
+  conditions: Array<{
+    type: string;
+    severity: 'LIGHT' | 'MODERATE' | 'SEVERE' | 'EXTREME' | 'TRACE';
+    description?: string;
+  }>;
+  remarks?: string;
   dismissed?: boolean;
 }
 
 export interface GroundTrack {
+  id: string;
   callsign: string;
-  points: Array<{
+  aircraft: string;
+  coordinates: Array<{
     lat: number;
     lon: number;
+    altitude?: number;
     timestamp: string;
   }>;
   runway?: string;
-  aircraftType: string;
-  completed: boolean;
-  timestamp: string;
+  status: 'ACTIVE' | 'COMPLETED' | 'EMERGENCY';
+  startTime: string;
+  endTime?: string;
 }
 
 export interface SituationSummary {

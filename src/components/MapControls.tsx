@@ -24,7 +24,7 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
     { key: 'showDmeRings' as const, label: 'DME Rings', icon: '⭕' },
     { key: 'showWaypoints' as const, label: 'Waypoints', icon: '📍' },
     { key: 'showPireps' as const, label: 'PIREPs', icon: '⚠️' },
-    { key: 'showTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
+    { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
   ];
 
   return (
@@ -81,7 +81,7 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
                     showDmeRings: true,
                     showWaypoints: true,
                     showPireps: true,
-                    showTracks: true,
+                    showGroundTracks: true,
                   };
                   onOptionsChange(allOn);
                 }}
@@ -97,7 +97,7 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
                     showDmeRings: false,
                     showWaypoints: false,
                     showPireps: false,
-                    showTracks: false,
+                    showGroundTracks: false,
                   };
                   onOptionsChange(allOff);
                 }}

@@ -17,38 +17,32 @@ interface PilotMapProps {
 
 export function PilotMap({ 
   airport,
-  // airportData,
-  // pireps,
-  // tracks,
+  airportData,
+  pireps,
+  tracks,
   displayOptions,
-  // onDismissPirep 
+  onDismissPirep 
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+  const [leafletLoaded, setLeafletLoaded] = useState(false);
+  
+  // Layer group references for easy cleanup
+  const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
 
   // Get airport configuration from constants
   const airportConfig = airport ? AIRPORTS[airport.code] : null;
 
-  // Load Leaflet and create map
+  // Load Leaflet library once
   useEffect(() => {
-    if (typeof window === 'undefined' || !airport || !airportConfig) return;
+    if (typeof window === 'undefined' || leafletLoaded) return;
 
-    let isMounted = true;
-
-    const initializeMap = async () => {
+    const loadLeaflet = async () => {
       try {
-        console.log('[PilotMap] Loading Leaflet for', airport.code);
-        
-        // Load Leaflet dynamically
         const leafletModule = await import('leaflet');
-        
-        // Import CSS as side effect
         await import('leaflet/dist/leaflet.css');
-        
         const L = leafletModule.default;
-
-        if (!isMounted) return;
 
         // Fix Leaflet default icon path issues
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -59,79 +53,537 @@ export function PilotMap({
           shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
         });
 
-        if (mapRef.current && !mapInstance) {
-          console.log('[PilotMap] Creating map for', airport.code);
-          
-          // Create map
-          const map = L.map(mapRef.current, {
-            center: airportConfig.position,
-            zoom: 13,
-            zoomControl: true,
-          });
-
-          // Add OpenStreetMap tiles
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18,
-          }).addTo(map);
-
-          // Add airport marker
-          L.marker(airportConfig.position)
-            .addTo(map)
-            .bindPopup(`<strong>${airport.code}</strong><br/>${airport.name}`);
-
-          // Add runways
-          if (displayOptions.showRunways) {
-            airportConfig.runways.forEach(runway => {
-              if (runway.threshold && runway.oppositeEnd) {
-                L.polyline([
-                  [runway.threshold.lat, runway.threshold.lon],
-                  [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
-                ], {
-                  color: '#333',
-                  weight: 8,
-                  opacity: 0.8
-                }).addTo(map).bindPopup(
-                  `Runway ${runway.name}/${runway.oppositeEnd.name}<br/>Length: ${runway.length.toLocaleString()} ft`
-                );
-              }
-            });
-          }
-
-          // Add DME rings
-          if (displayOptions.showDmeRings) {
-            airportConfig.dmeRings.forEach(distance => {
-              L.circle(airportConfig.position, {
-                radius: distance * 1852, // Convert NM to meters
-                fill: false,
-                color: distance % 10 === 0 ? '#3b82f6' : '#94a3b8',
-                weight: distance % 10 === 0 ? 2 : 1,
-                opacity: 0.6
-              }).addTo(map);
-            });
-          }
-
-          setMapInstance(map);
-          setMapReady(true);
-          console.log('[PilotMap] Map ready!');
-        }
+        setLeafletLoaded(true);
+        console.log('[PilotMap] Leaflet loaded');
       } catch (error) {
-        console.error('[PilotMap] Failed to load map:', error);
+        console.error('[PilotMap] Failed to load Leaflet:', error);
       }
     };
 
-    initializeMap();
+    loadLeaflet();
+  }, [leafletLoaded]);
 
-    return () => {
-      isMounted = false;
+  // Create/destroy map when airport changes
+  useEffect(() => {
+    if (!leafletLoaded || !airport || !airportConfig) {
       if (mapInstance) {
         mapInstance.remove();
         setMapInstance(null);
         setMapReady(false);
       }
+      return;
+    }
+
+    // Clean up existing map
+    if (mapInstance) {
+      mapInstance.remove();
+      setMapInstance(null);
+      setMapReady(false);
+    }
+
+    const createMap = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      if (!mapRef.current) return;
+
+      console.log('[PilotMap] Creating map for', airport.code);
+
+      // Create map
+      const map = L.map(mapRef.current, {
+        center: airportConfig.position,
+        zoom: 13,
+        zoomControl: true,
+        attributionControl: true,
+      });
+
+      // Add base tiles
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors',
+        maxZoom: 18,
+      }).addTo(map);
+
+      // Initialize layer groups
+      layerGroupsRef.current = {
+        runways: L.layerGroup().addTo(map),
+        dmeRings: L.layerGroup().addTo(map),
+        waypoints: L.layerGroup().addTo(map),
+        approachRoutes: L.layerGroup().addTo(map),
+        pireps: L.layerGroup().addTo(map),
+        tracks: L.layerGroup().addTo(map),
+        airport: L.layerGroup().addTo(map),
+      };
+
+      // Add airport marker
+      const airportMarker = L.marker(airportConfig.position)
+        .bindPopup(`<strong>${airport.code}</strong><br/>${airport.name}`);
+      layerGroupsRef.current.airport.addLayer(airportMarker);
+
+      setMapInstance(map);
+      setMapReady(true);
+      console.log('[PilotMap] Map created successfully');
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [airport?.code, displayOptions.showRunways, displayOptions.showDmeRings]);
+
+    createMap();
+
+    return () => {
+      if (mapInstance) {
+        mapInstance.remove();
+        setMapInstance(null);
+        setMapReady(false);
+      }
+      layerGroupsRef.current = {};
+    };
+  }, [leafletLoaded, airport?.code, airportConfig]);
+
+  // Update runway display
+  useEffect(() => {
+    if (!mapInstance || !airportConfig || !layerGroupsRef.current.runways) return;
+
+    const updateRunways = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing runways
+      layerGroupsRef.current.runways.clearLayers();
+
+      if (displayOptions.showRunways) {
+        airportConfig.runways.forEach(runway => {
+          if (runway.threshold && runway.oppositeEnd) {
+            const runwayLine = L.polyline([
+              [runway.threshold.lat, runway.threshold.lon],
+              [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
+            ], {
+              color: '#333333',
+              weight: 8,
+              opacity: 0.9
+            }).bindPopup(
+              `<div class="runway-popup">
+                <h4><strong>Runway ${runway.name}/${runway.oppositeEnd.name}</strong></h4>
+                <p><strong>Length:</strong> ${runway.length.toLocaleString()} ft</p>
+                <p><strong>Heading:</strong> ${runway.heading}°/${runway.oppositeHeading}°</p>
+              </div>`
+            );
+            
+            layerGroupsRef.current.runways.addLayer(runwayLine);
+
+            // Add runway threshold markers
+            const thresholdIcon = L.divIcon({
+              html: `<div style="
+                background: #333;
+                color: white;
+                font-size: 10px;
+                font-weight: bold;
+                padding: 2px 4px;
+                border-radius: 2px;
+                border: 1px solid white;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              ">${runway.name}</div>`,
+              className: 'runway-threshold-marker',
+              iconAnchor: [10, 5]
+            });
+
+            const thresholdMarker = L.marker([runway.threshold.lat, runway.threshold.lon], { icon: thresholdIcon })
+              .bindPopup(`<strong>Runway ${runway.name}</strong><br/>Threshold`);
+            
+            layerGroupsRef.current.runways.addLayer(thresholdMarker);
+          }
+        });
+      }
+    };
+
+    updateRunways();
+  }, [mapInstance, displayOptions.showRunways, airportConfig]);
+
+  // Update DME rings display
+  useEffect(() => {
+    if (!mapInstance || !airportConfig || !layerGroupsRef.current.dmeRings) return;
+
+    const updateDmeRings = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing DME rings
+      layerGroupsRef.current.dmeRings.clearLayers();
+
+      if (displayOptions.showDmeRings) {
+        airportConfig.dmeRings.forEach(distance => {
+          const dmeRing = L.circle(airportConfig.position, {
+            radius: distance * 1852, // Convert NM to meters
+            fill: false,
+            color: distance % 10 === 0 ? '#3b82f6' : '#94a3b8',
+            weight: distance % 10 === 0 ? 2 : 1,
+            opacity: 0.6
+          }).bindPopup(`<strong>${distance} NM</strong><br/>DME Ring`);
+          
+          layerGroupsRef.current.dmeRings.addLayer(dmeRing);
+        });
+      }
+    };
+
+    updateDmeRings();
+  }, [mapInstance, displayOptions.showDmeRings, airportConfig]);
+
+  // Update waypoints display
+  useEffect(() => {
+    if (!mapInstance || !airportConfig || !layerGroupsRef.current.waypoints) return;
+
+    const updateWaypoints = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing waypoints
+      layerGroupsRef.current.waypoints.clearLayers();
+
+      if (displayOptions.showWaypoints && airportConfig.waypoints) {
+        airportConfig.waypoints.forEach(waypoint => {
+          const waypointIcon = L.divIcon({
+            html: `<div style="
+              width: 12px;
+              height: 12px;
+              background: #8b5cf6;
+              border: 2px solid #ffffff;
+              border-radius: 50%;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+            "></div>`,
+            className: 'custom-waypoint-marker',
+            iconSize: [16, 16],
+            iconAnchor: [8, 8]
+          });
+
+          const waypointMarker = L.marker([waypoint.lat, waypoint.lon], { icon: waypointIcon })
+            .bindPopup(`
+              <div class="waypoint-popup">
+                <h4><strong>${waypoint.name}</strong></h4>
+                ${waypoint.description ? `<p>${waypoint.description}</p>` : ''}
+                <p class="text-sm text-gray-600">
+                  ${waypoint.lat.toFixed(4)}, ${waypoint.lon.toFixed(4)}
+                </p>
+              </div>
+            `);
+          
+          layerGroupsRef.current.waypoints.addLayer(waypointMarker);
+        });
+      }
+    };
+
+    updateWaypoints();
+  }, [mapInstance, displayOptions.showWaypoints, airportConfig]);
+
+  // Update approach routes display
+  useEffect(() => {
+    if (!mapInstance || !airportConfig || !layerGroupsRef.current.approachRoutes) return;
+
+    const updateApproachRoutes = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing approach routes
+      layerGroupsRef.current.approachRoutes.clearLayers();
+
+      if (displayOptions.showApproachRoutes) {
+        airportConfig.runways.forEach(runway => {
+          if (runway.approaches) {
+            runway.approaches.forEach(approach => {
+              // Calculate waypoint positions along approach path
+              const approachWaypoints: [number, number][] = [];
+              const runwayHeading = runway.heading;
+              const threshold = runway.threshold;
+              
+              approach.waypoints.forEach(waypoint => {
+                if (waypoint.position) {
+                  approachWaypoints.push(waypoint.position);
+                } else {
+                  // Calculate position based on distance and heading
+                  const distanceNm = waypoint.distanceFromThreshold;
+                  const distanceMeters = distanceNm * 1852;
+                  
+                  // Convert runway heading to approach heading (opposite direction)
+                  const approachHeading = (runwayHeading + 180) % 360;
+                  const headingRad = (approachHeading * Math.PI) / 180;
+                  
+                  // Calculate position
+                  const lat = threshold.lat + (distanceMeters / 111320) * Math.cos(headingRad);
+                  const lon = threshold.lon + (distanceMeters / (111320 * Math.cos(threshold.lat * Math.PI / 180))) * Math.sin(headingRad);
+                  
+                  approachWaypoints.push([lat, lon]);
+                }
+              });
+
+              if (approachWaypoints.length > 1) {
+                // Add approach path line
+                const approachPath = L.polyline(approachWaypoints, {
+                  color: '#f59e0b',
+                  weight: 2,
+                  opacity: 0.7,
+                  dashArray: '5, 10'
+                }).bindPopup(
+                  `<strong>${approach.name} Approach</strong><br/>Runway ${runway.name}`
+                );
+                
+                layerGroupsRef.current.approachRoutes.addLayer(approachPath);
+
+                // Add approach waypoint markers
+                approach.waypoints.forEach((waypoint, index) => {
+                  if (index < approachWaypoints.length) {
+                    const waypointIcon = L.divIcon({
+                      html: `<div style="
+                        background: #f59e0b;
+                        color: white;
+                        font-size: 8px;
+                        font-weight: bold;
+                        padding: 1px 3px;
+                        border-radius: 2px;
+                        border: 1px solid white;
+                        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+                      ">${waypoint.name}</div>`,
+                      className: 'approach-waypoint-marker',
+                      iconAnchor: [10, 5]
+                    });
+
+                    const waypointMarker = L.marker(approachWaypoints[index], { icon: waypointIcon })
+                      .bindPopup(`
+                        <div class="approach-waypoint-popup">
+                          <h4><strong>${waypoint.name}</strong></h4>
+                          <p><strong>Approach:</strong> ${approach.name}</p>
+                          <p><strong>Distance:</strong> ${waypoint.distanceFromThreshold} NM</p>
+                          <p><strong>Runway:</strong> ${runway.name}</p>
+                        </div>
+                      `);
+                    
+                    layerGroupsRef.current.approachRoutes.addLayer(waypointMarker);
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+    };
+
+    updateApproachRoutes();
+  }, [mapInstance, displayOptions.showApproachRoutes, airportConfig]);
+
+  // Update PIREP markers
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.pireps) return;
+
+    const updatePireps = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing PIREPs
+      layerGroupsRef.current.pireps.clearLayers();
+
+      if (displayOptions.showPireps) {
+        pireps.forEach(pirep => {
+          // Determine priority styling based on conditions
+          const isUrgent = pirep.conditions?.some(c => 
+            c.type === 'TURBULENCE' && (c.severity === 'SEVERE' || c.severity === 'EXTREME') ||
+            c.type === 'ICING' && (c.severity === 'SEVERE' || c.severity === 'TRACE')
+          ) || false;
+          
+          const hasModerate = pirep.conditions?.some(c => c.severity === 'MODERATE') || false;
+          
+          // Choose color based on priority
+          let color = '#10b981'; // Green for light/normal conditions
+          if (isUrgent) {
+            color = '#ef4444'; // Red for urgent
+          } else if (hasModerate) {
+            color = '#f59e0b'; // Amber for moderate
+          }
+
+          // Create custom PIREP icon
+          const pirepIcon = L.divIcon({
+            html: `<div style="
+              width: 16px;
+              height: 16px;
+              background: ${color};
+              border: 2px solid #ffffff;
+              border-radius: 3px;
+              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 10px;
+              font-weight: bold;
+              color: white;
+            ">P</div>`,
+            className: 'custom-pirep-marker',
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+          });
+
+          const marker = L.marker([pirep.location.lat, pirep.location.lon], { icon: pirepIcon });
+
+          // Create popup content
+          const conditionsHtml = pirep.conditions?.map(c => 
+            `<li><strong>${c.type}:</strong> ${c.severity} ${c.description ? `- ${c.description}` : ''}</li>`
+          ).join('') || '<li>No specific conditions reported</li>';
+
+          const popupContent = `
+            <div class="pirep-popup" style="min-width: 200px;">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <h4 style="margin: 0; color: ${color};"><strong>PIREP ${pirep.id.slice(-6)}</strong></h4>
+                <button 
+                  onclick="window.dismissPirep('${pirep.id}')"
+                  style="background: #f3f4f6; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;"
+                >Dismiss</button>
+              </div>
+              <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">
+                ${new Date(pirep.timestamp).toLocaleString()}<br/>
+                ${pirep.aircraft} at ${pirep.altitude?.toLocaleString() || 'Unknown'} ft
+              </p>
+              ${pirep.message ? `<p style="margin: 8px 0; font-size: 13px;"><strong>Message:</strong> ${pirep.message}</p>` : ''}
+              <ul style="margin: 8px 0; padding-left: 16px; font-size: 13px;">
+                ${conditionsHtml}
+              </ul>
+              ${pirep.remarks ? `<p style="margin: 8px 0; font-size: 12px; font-style: italic;">${pirep.remarks}</p>` : ''}
+            </div>
+          `;
+
+          marker.bindPopup(popupContent);
+          layerGroupsRef.current.pireps.addLayer(marker);
+        });
+
+        // Make dismiss function globally available
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (window as any).dismissPirep = (pirepId: string) => {
+          onDismissPirep(pirepId);
+        };
+      }
+    };
+
+    updatePireps();
+  }, [mapInstance, pireps, displayOptions.showPireps, onDismissPirep]);
+
+  // Update ground tracks
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.tracks) return;
+
+    const updateTracks = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing tracks
+      layerGroupsRef.current.tracks.clearLayers();
+
+      if (displayOptions.showGroundTracks) {
+        tracks.forEach(track => {
+          if (track.coordinates.length < 2) return; // Need at least 2 points for a line
+
+          // Convert coordinates to Leaflet LatLng format
+          const latLngs: [number, number][] = track.coordinates.map(coord => [coord.lat, coord.lon]);
+
+          // Determine track color based on status and callsign
+          let color = '#3b82f6'; // Default blue for active flights
+          if (track.status === 'COMPLETED') {
+            color = '#6b7280'; // Gray for completed flights
+          } else if (track.status === 'EMERGENCY') {
+            color = '#ef4444'; // Red for emergency
+          } else if (track.callsign?.includes('UAL')) {
+            color = '#8b5cf6'; // Purple for United
+          } else if (track.callsign?.includes('AAL')) {
+            color = '#10b981'; // Green for American
+          } else {
+            // Use a hash of the callsign for consistent coloring per flight
+            const hash = track.callsign ? track.callsign.split('').reduce((a, b) => {
+              a = ((a << 5) - a) + b.charCodeAt(0);
+              return a & a;
+            }, 0) : 0;
+            const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
+            color = colors[Math.abs(hash) % colors.length];
+          }
+
+          // Create polyline with styling
+          const polyline = L.polyline(latLngs, {
+            color: color,
+            weight: 3,
+            opacity: 0.8,
+            dashArray: track.status === 'COMPLETED' ? '5, 5' : undefined // Dashed for completed flights
+          });
+          
+          layerGroupsRef.current.tracks.addLayer(polyline);
+
+          // Add start marker (takeoff)
+          if (track.coordinates.length > 0) {
+            const startCoord = track.coordinates[0];
+            const startIcon = L.divIcon({
+              html: `<div style="
+                width: 12px;
+                height: 12px;
+                background: ${color};
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+              "></div>`,
+              className: 'track-start-marker',
+              iconSize: [16, 16],
+              iconAnchor: [8, 8]
+            });
+
+            const startMarker = L.marker([startCoord.lat, startCoord.lon], { icon: startIcon })
+              .bindPopup(`
+                <div class="track-popup">
+                  <h4><strong>Flight Start</strong></h4>
+                  <p><strong>Aircraft:</strong> ${track.aircraft}</p>
+                  <p><strong>Callsign:</strong> ${track.callsign}</p>
+                  <p><strong>Departure:</strong> ${new Date(track.startTime).toLocaleString()}</p>
+                  <p><strong>Status:</strong> ${track.status}</p>
+                  ${track.runway ? `<p><strong>Runway:</strong> ${track.runway}</p>` : ''}
+                </div>
+              `);
+            
+            layerGroupsRef.current.tracks.addLayer(startMarker);
+          }
+
+          // Add end marker (current position or landing)
+          if (track.coordinates.length > 1) {
+            const endCoord = track.coordinates[track.coordinates.length - 1];
+            const isCompleted = track.status === 'COMPLETED';
+            
+            const endIcon = L.divIcon({
+              html: `<div style="
+                width: 0;
+                height: 0;
+                border-left: 6px solid transparent;
+                border-right: 6px solid transparent;
+                border-bottom: 12px solid ${color};
+                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+                ${!isCompleted ? 'animation: pulse 2s infinite;' : ''}
+              "></div>
+              <style>
+                @keyframes pulse {
+                  0% { opacity: 1; transform: scale(1); }
+                  50% { opacity: 0.7; transform: scale(1.1); }
+                  100% { opacity: 1; transform: scale(1); }
+                }
+              </style>`,
+              className: 'track-end-marker',
+              iconSize: [12, 12],
+              iconAnchor: [6, 12]
+            });
+
+            const endMarker = L.marker([endCoord.lat, endCoord.lon], { icon: endIcon })
+              .bindPopup(`
+                <div class="track-popup">
+                  <h4><strong>${isCompleted ? 'Flight Ended' : 'Current Position'}</strong></h4>
+                  <p><strong>Aircraft:</strong> ${track.aircraft}</p>
+                  <p><strong>Callsign:</strong> ${track.callsign}</p>
+                  <p><strong>Altitude:</strong> ${endCoord.altitude?.toLocaleString() || 'Unknown'} ft</p>
+                  <p><strong>Updated:</strong> ${new Date(endCoord.timestamp).toLocaleString()}</p>
+                  ${track.endTime ? `<p><strong>Arrival:</strong> ${new Date(track.endTime).toLocaleString()}</p>` : ''}
+                </div>
+              `);
+            
+            layerGroupsRef.current.tracks.addLayer(endMarker);
+          }
+        });
+      }
+    };
+
+    updateTracks();
+  }, [mapInstance, tracks, displayOptions.showGroundTracks]);
   
   if (!airport || !airportConfig) {
     return (

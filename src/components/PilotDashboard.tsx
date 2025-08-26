@@ -148,13 +148,15 @@ export function PilotDashboard() {
             }}
           />
           
-          {/* Map Controls Overlay */}
-          <div className="absolute top-4 left-4 z-10">
-            <MapControls
-              displayOptions={mapDisplayOptions}
-              onOptionsChange={setMapDisplayOptions}
-            />
-          </div>
+          {/* Map Controls Overlay - Always shown */}
+          {selectedAirport && (
+            <div className="absolute top-4 left-4 z-50">
+              <MapControls
+                displayOptions={mapDisplayOptions}
+                onOptionsChange={setMapDisplayOptions}
+              />
+            </div>
+          )}
         </div>
 
         {/* Right Sidebar */}

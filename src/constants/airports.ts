@@ -175,6 +175,12 @@ export const AIRPORTS: Record<string, AirportData> = {
       { dir: "W", bearing: 270, distance: 0.4 },
       { dir: "NW", bearing: 315, distance: 0.28 },
     ],
+    waypoints: [
+      { name: "SMO", lat: 34.016, lon: -118.451, description: "Santa Monica Airport" },
+      { name: "VNY", lat: 34.210, lon: -118.490, description: "Van Nuys Airport" },
+      { name: "DARTS", lat: 33.816, lon: -118.352, description: "Departure waypoint" },
+      { name: "BAYST", lat: 33.703, lon: -118.295, description: "Bay waypoint" }
+    ]
   },
 
   KSBA: {
@@ -251,6 +257,11 @@ export const AIRPORTS: Record<string, AirportData> = {
       { dir: "SW", bearing: 225, distance: 0.2 },
       { dir: "W", bearing: 270, distance: 0.3 },
       { dir: "NW", bearing: 315, distance: 0.2 },
+    ],
+    waypoints: [
+      { name: "GAVIOTA", lat: 34.463, lon: -120.214, description: "VOR waypoint" },
+      { name: "SANTA MONICA", lat: 34.016, lon: -118.451, description: "Airport reference" },
+      { name: "VENTURA", lat: 34.280, lon: -119.177, description: "Coastal waypoint" }
     ]
   },
 
@@ -294,6 +305,11 @@ export const AIRPORTS: Record<string, AirportData> = {
       { dir: "SW", bearing: 225, distance: 0.15 },
       { dir: "W", bearing: 270, distance: 0.2 },
       { dir: "NW", bearing: 315, distance: 0.15 },
+    ],
+    waypoints: [
+      { name: "LAX", lat: 33.942, lon: -118.408, description: "Los Angeles International" },
+      { name: "VNY", lat: 34.210, lon: -118.490, description: "Van Nuys Airport" },
+      { name: "BUR", lat: 34.201, lon: -118.359, description: "Burbank Airport" }
     ]
   },
 
@@ -381,6 +397,11 @@ export const AIRPORTS: Record<string, AirportData> = {
       { dir: "SW", bearing: 225, distance: 0.4 },
       { dir: "W", bearing: 270, distance: 0.5 },
       { dir: "NW", bearing: 315, distance: 0.4 },
+    ],
+    waypoints: [
+      { name: "DENVER", lat: 39.739, lon: -104.990, description: "Downtown Denver" },
+      { name: "ROCKY", lat: 39.820, lon: -105.055, description: "Rocky Mountain" },
+      { name: "FRONT", lat: 39.900, lon: -104.800, description: "Front Range" }
     ]
   }
 };
