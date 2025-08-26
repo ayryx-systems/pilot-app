@@ -151,7 +151,7 @@ export function PilotDashboard() {
         <div className="flex-1 relative">
           <PilotMap
             airport={airportOverview?.airport}
-            airportData={airportOverview}
+            airportData={airportOverview || undefined}
             pireps={pireps}
             tracks={tracks}
             displayOptions={mapDisplayOptions}
