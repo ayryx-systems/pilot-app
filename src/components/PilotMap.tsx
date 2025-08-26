@@ -630,7 +630,11 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Clear existing tracks
+      // Clear existing tracks - add defensive check
+      if (!layerGroupsRef.current.tracks) {
+        console.warn('[PilotMap] Tracks layer group not available');
+        return;
+      }
       layerGroupsRef.current.tracks.clearLayers();
 
       if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
@@ -682,11 +686,13 @@ export function PilotMap({
             dashArray: track.status === 'COMPLETED' ? '5, 5' : undefined // Dashed for completed flights
           });
 
-          layerGroupsRef.current.tracks.addLayer(polyline);
+          if (layerGroupsRef.current.tracks) {
+            layerGroupsRef.current.tracks.addLayer(polyline);
+          }
 
           // Add start marker (takeoff)
-          if (latLngs.length > 0 && track.coordinates && track.coordinates.length > 0) {
-            const startCoord = track.coordinates[0];
+          if (latLngs.length > 0 && track.points && track.points.length > 0) {
+            const startCoord = track.points[0];
             if (!startCoord || typeof startCoord.lat !== 'number' || typeof startCoord.lon !== 'number') {
               console.warn('[PilotMap] Invalid start coordinate for track:', track.id || track.callsign);
               return;
@@ -717,12 +723,14 @@ export function PilotMap({
                 </div>
               `);
 
-            layerGroupsRef.current.tracks.addLayer(startMarker);
+            if (layerGroupsRef.current.tracks) {
+              layerGroupsRef.current.tracks.addLayer(startMarker);
+            }
           }
 
           // Add end marker (current position or landing)
-          if (latLngs.length > 1 && track.coordinates && track.coordinates.length > 1) {
-            const endCoord = track.coordinates[track.coordinates.length - 1];
+          if (latLngs.length > 1 && track.points && track.points.length > 1) {
+            const endCoord = track.points[track.points.length - 1];
             if (!endCoord || typeof endCoord.lat !== 'number' || typeof endCoord.lon !== 'number') {
               console.warn('[PilotMap] Invalid end coordinate for track:', track.id || track.callsign);
               return;
@@ -763,7 +771,9 @@ export function PilotMap({
                 </div>
               `);
 
-            layerGroupsRef.current.tracks.addLayer(endMarker);
+            if (layerGroupsRef.current.tracks) {
+              layerGroupsRef.current.tracks.addLayer(endMarker);
+            }
           }
         });
       }
