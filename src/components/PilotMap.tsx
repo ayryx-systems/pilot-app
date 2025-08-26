@@ -636,15 +636,15 @@ export function PilotMap({
       if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
         tracks.forEach(track => {
           // Defensive checks for track data integrity
-          if (!track || !track.coordinates || !Array.isArray(track.coordinates)) {
+          if (!track || !track.points || !Array.isArray(track.points)) {
             console.warn('[PilotMap] Invalid track data:', track);
             return;
           }
 
-          if (track.coordinates.length < 2) return; // Need at least 2 points for a line
+          if (track.points.length < 2) return; // Need at least 2 points for a line
 
           // Convert coordinates to Leaflet LatLng format with additional safety checks
-          const latLngs: [number, number][] = track.coordinates
+          const latLngs: [number, number][] = track.points
             .filter(coord => coord && typeof coord.lat === 'number' && typeof coord.lon === 'number')
             .map(coord => [coord.lat, coord.lon]);
 
