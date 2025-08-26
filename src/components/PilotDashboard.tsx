@@ -143,9 +143,9 @@ export function PilotDashboard() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex relative">
+      <div className="flex-1 flex">
         {/* Map Area */}
-        <div className="flex-1">
+        <div className="flex-1 relative">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview}
@@ -157,22 +157,22 @@ export function PilotDashboard() {
               console.log('Dismiss PIREP:', id);
             }}
           />
-        </div>
 
-        {/* Map Controls Overlay - Positioned outside map container */}
-        {selectedAirport && (
-          <div
-            className="absolute top-4 left-4 pointer-events-none"
-            style={{ zIndex: 9999 }}
-          >
-            <div className="pointer-events-auto">
-              <MapControls
-                displayOptions={mapDisplayOptions}
-                onOptionsChange={setMapDisplayOptions}
-              />
+          {/* Map Controls Overlay - Positioned at top-right to avoid zoom controls */}
+          {selectedAirport && (
+            <div
+              className="absolute top-4 right-6 pointer-events-none"
+              style={{ zIndex: 9999 }}
+            >
+              <div className="pointer-events-auto">
+                <MapControls
+                  displayOptions={mapDisplayOptions}
+                  onOptionsChange={setMapDisplayOptions}
+                />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
 
         {/* Right Sidebar */}
         <div className="w-96 bg-slate-800 border-l border-slate-700 flex flex-col">
