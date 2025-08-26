@@ -2,7 +2,7 @@
 const nextConfig = {
   // Enable React Strict Mode
   reactStrictMode: true,
-  
+
   // PWA-specific headers
   async headers() {
     return [
@@ -48,34 +48,37 @@ const nextConfig = {
       },
     ];
   },
-  
+
   // Optimize build output
   output: 'standalone',
-  
+
   // Configure images for PWA
   images: {
     unoptimized: true, // For better PWA compatibility
     formats: ['image/webp', 'image/avif'],
   },
-  
+
   // Enable compression
   compress: true,
-  
+
   // Disable x-powered-by header
   poweredByHeader: false,
-  
-  // Configure webpack for PWA
-  webpack: (config, { isServer }) => {
-    if (!isServer) {
-      // Client-side webpack config for PWA
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        fs: false,
-      };
-    }
-    
-    return config;
-  },
+
+  // Configure for both webpack and Turbopack
+  ...(process.env.NODE_ENV === 'development' ? {} : {
+    // Webpack config for production builds
+    webpack: (config, { isServer }) => {
+      if (!isServer) {
+        // Client-side webpack config for PWA
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          fs: false,
+        };
+      }
+
+      return config;
+    },
+  }),
 };
 
 export default nextConfig;
