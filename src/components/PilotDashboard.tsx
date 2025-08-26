@@ -83,11 +83,11 @@ export function PilotDashboard() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-900 text-white">
+    <div className="h-screen flex flex-col bg-slate-900 text-white overflow-hidden">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-xl font-bold text-blue-400">Pilot Situational Awareness</h1>
+      <header className="flex items-center justify-between p-2 sm:p-4 bg-slate-800 border-b border-slate-700 flex-shrink-0">
+        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+          <h1 className="text-lg sm:text-xl font-bold text-blue-400 truncate">Pilot Situational Awareness</h1>
 
           <AirportSelector
             airports={airports}
@@ -97,11 +97,11 @@ export function PilotDashboard() {
           />
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           {/* Connection Status */}
-          <div className={`flex items-center space-x-2 ${getConnectionStatusColor()}`}>
+          <div className={`flex items-center space-x-1 sm:space-x-2 ${getConnectionStatusColor()}`}>
             {getConnectionStatusIcon()}
-            <span className="text-sm">
+            <span className="text-xs sm:text-sm hidden sm:inline">
               {connectionStatus.connected ? (
                 <>
                   Connected
@@ -116,7 +116,7 @@ export function PilotDashboard() {
           </div>
 
           {/* Last Update */}
-          <div className="flex items-center space-x-1 text-gray-400">
+          <div className="flex items-center space-x-1 text-gray-400 hidden md:flex">
             <Clock className="w-4 h-4" />
             <span className="text-sm">
               {formatLastUpdate(connectionStatus.lastUpdate)}
@@ -127,8 +127,8 @@ export function PilotDashboard() {
           <button
             onClick={refreshData}
             disabled={loading}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
-                     rounded text-sm transition-colors"
+            className="px-2 sm:px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
+                     rounded text-xs sm:text-sm transition-colors"
           >
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
@@ -146,9 +146,9 @@ export function PilotDashboard() {
       )}
 
       {/* Main Content */}
-      <div className="flex-1 flex">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
         {/* Map Area */}
-        <div className="flex-1 relative">
+        <div className="flex-1 relative order-2 lg:order-1">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -164,7 +164,7 @@ export function PilotDashboard() {
           {/* Map Controls Overlay - Positioned at top-right to avoid zoom controls */}
           {selectedAirport && (
             <div
-              className="absolute top-4 right-6 pointer-events-none"
+              className="absolute top-2 right-2 lg:top-4 lg:right-6 pointer-events-none"
               style={{ zIndex: 9999 }}
             >
               <div className="pointer-events-auto">
@@ -177,10 +177,18 @@ export function PilotDashboard() {
           )}
         </div>
 
-        {/* Right Sidebar */}
-        <div className="w-96 bg-slate-800 border-l border-slate-700 flex flex-col">
+        {/* Sidebar - Responsive layout */}
+        <div className="
+          w-full lg:w-80 xl:w-96 
+          h-64 sm:h-80 lg:h-full 
+          bg-slate-800 
+          border-t lg:border-t-0 lg:border-l border-slate-700 
+          flex flex-col 
+          order-1 lg:order-2
+          overflow-hidden
+        ">
           {/* Situation Overview */}
-          <div className="p-4 border-b border-slate-700">
+          <div className="p-2 sm:p-4 border-b border-slate-700 flex-shrink-0">
             <SituationOverview
               summary={summary}
               weather={airportOverview?.weather}
@@ -191,8 +199,8 @@ export function PilotDashboard() {
           </div>
 
           {/* PIREPs List */}
-          <div className="flex-1 overflow-y-auto">
-            <div className="p-4">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
+            <div className="p-2 sm:p-4">
               <PirepsList
                 pireps={pireps}
                 onDismissPirep={(id) => {
@@ -206,7 +214,7 @@ export function PilotDashboard() {
 
           {/* Airport Info Footer */}
           {airportOverview && (
-            <div className="p-4 border-t border-slate-700 bg-slate-800">
+            <div className="p-2 sm:p-4 border-t border-slate-700 bg-slate-800 flex-shrink-0">
               <div className="text-sm space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-400">Airport:</span>
