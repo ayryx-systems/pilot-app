@@ -26,6 +26,9 @@ export function usePilotData() {
     },
     loading: false,
     error: null,
+    pirepsMetadata: undefined,
+    tracksMetadata: undefined,
+    summaryMetadata: undefined,
   });
 
   // Test connection and update status
@@ -110,22 +113,37 @@ export function usePilotData() {
 
       if (pirepsResponse.status === 'fulfilled') {
         updates.pireps = pirepsResponse.value.pireps;
+        updates.pirepsMetadata = {
+          active: pirepsResponse.value.active ?? true,
+          message: pirepsResponse.value.message
+        };
       } else {
         console.error('Failed to load PIREPs:', pirepsResponse.reason);
         updates.pireps = [];
+        updates.pirepsMetadata = { active: false, message: 'Failed to load PIREPs' };
       }
 
       if (tracksResponse.status === 'fulfilled') {
         updates.tracks = tracksResponse.value.tracks;
+        updates.tracksMetadata = {
+          active: tracksResponse.value.active ?? true,
+          message: tracksResponse.value.message
+        };
       } else {
         console.error('Failed to load ground tracks:', tracksResponse.reason);
         updates.tracks = [];
+        updates.tracksMetadata = { active: false, message: 'Failed to load ground tracks' };
       }
 
       if (summaryResponse.status === 'fulfilled') {
         updates.summary = summaryResponse.value.summary;
+        updates.summaryMetadata = {
+          active: summaryResponse.value.active ?? true,
+          generated: summaryResponse.value.generated
+        };
       } else {
         console.error('Failed to load situation summary:', summaryResponse.reason);
+        updates.summaryMetadata = { active: false, generated: false };
       }
 
       setState(prev => ({ ...prev, ...updates }));
@@ -149,6 +167,9 @@ export function usePilotData() {
       pireps: [],
       tracks: [],
       summary: null,
+      pirepsMetadata: undefined,
+      tracksMetadata: undefined,
+      summaryMetadata: undefined,
     }));
   }, []);
 
@@ -196,6 +217,9 @@ export function usePilotData() {
     connectionStatus: state.connectionStatus,
     loading: state.loading,
     error: state.error,
+    pirepsMetadata: state.pirepsMetadata,
+    tracksMetadata: state.tracksMetadata,
+    summaryMetadata: state.summaryMetadata,
     refreshData,
   };
 }

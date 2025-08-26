@@ -100,21 +100,26 @@ export interface GroundTrack {
 export interface SituationSummary {
   situation_overview: string;
   conditions: {
+    processing?: {
+      description: string;
+      status: 'active' | 'inactive';
+      reason?: string;
+    };
     weather?: {
       description: string;
-      status: 'normal' | 'caution' | 'warning';
+      status: 'normal' | 'caution' | 'warning' | 'check-overview' | 'unavailable';
     };
     traffic?: {
       description: string;
-      status: 'normal' | 'caution' | 'warning';
+      status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     approach?: {
       description: string;
-      status: 'normal' | 'caution' | 'warning';
+      status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     runway?: {
       description: string;
-      status: 'normal' | 'caution' | 'warning';
+      status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     ground?: {
       description: string;
@@ -125,6 +130,8 @@ export interface SituationSummary {
       status: 'normal' | 'caution' | 'warning';
     };
   };
+  active?: boolean;
+  processingAvailable?: boolean;
   fallback?: boolean;
 }
 
@@ -151,6 +158,18 @@ export interface PilotAppState {
   connectionStatus: ConnectionStatus;
   loading: boolean;
   error: string | null;
+  pirepsMetadata?: {
+    active: boolean;
+    message?: string;
+  };
+  tracksMetadata?: {
+    active: boolean;
+    message?: string;
+  };
+  summaryMetadata?: {
+    active: boolean;
+    generated: boolean;
+  };
 }
 
 // Map display options
@@ -187,6 +206,8 @@ export interface PirepsResponse {
   timestamp: string;
   cacheMaxAge: number;
   source: string;
+  active?: boolean;
+  message?: string;
 }
 
 export interface TracksResponse {
@@ -196,6 +217,8 @@ export interface TracksResponse {
   timestamp: string;
   cacheMaxAge: number;
   source: string;
+  active?: boolean;
+  message?: string;
 }
 
 export interface SummaryResponse {
@@ -205,4 +228,5 @@ export interface SummaryResponse {
   cacheMaxAge: number;
   source: string;
   generated: boolean;
+  active?: boolean;
 }

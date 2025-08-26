@@ -23,6 +23,9 @@ export function PilotDashboard() {
     connectionStatus,
     loading,
     error,
+    pirepsMetadata,
+    tracksMetadata,
+    summaryMetadata,
     refreshData
   } = usePilotData();
 
@@ -183,6 +186,7 @@ export function PilotDashboard() {
               weather={airportOverview?.weather}
               loading={loading}
               connectionStatus={connectionStatus}
+              summaryMetadata={summaryMetadata}
             />
           </div>
 
@@ -195,6 +199,7 @@ export function PilotDashboard() {
                   console.log('Dismiss PIREP from list:', id);
                 }}
                 connectionStatus={connectionStatus}
+                pirepsMetadata={pirepsMetadata}
               />
             </div>
           </div>

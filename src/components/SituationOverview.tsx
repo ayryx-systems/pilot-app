@@ -9,20 +9,30 @@ interface SituationOverviewProps {
   weather?: any;
   loading: boolean;
   connectionStatus: ConnectionStatus;
+  summaryMetadata?: {
+    active: boolean;
+    generated: boolean;
+  };
 }
 
 export function SituationOverview({ 
   summary, 
   weather, 
   loading,
-  connectionStatus 
+  connectionStatus,
+  summaryMetadata
 }: SituationOverviewProps) {
-  const getStatusIcon = (status?: 'normal' | 'caution' | 'warning') => {
+  const getStatusIcon = (status?: 'normal' | 'caution' | 'warning' | 'inactive' | 'unavailable' | 'check-overview') => {
     switch (status) {
       case 'warning':
         return <AlertTriangle className="w-4 h-4 text-red-400" />;
       case 'caution':
         return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
+      case 'inactive':
+      case 'unavailable':
+        return <Info className="w-4 h-4 text-gray-400" />;
+      case 'check-overview':
+        return <Cloud className="w-4 h-4 text-blue-400" />;
       default:
         return <CheckCircle className="w-4 h-4 text-green-400" />;
     }
@@ -88,10 +98,13 @@ export function SituationOverview({
             </div>
           )}
 
-          {summary.fallback && (
+          {(summary.fallback || (summaryMetadata && !summaryMetadata.active)) && (
             <div className="flex items-center p-2 bg-yellow-900/30 rounded text-yellow-200 text-xs">
               <Info className="w-3 h-3 mr-1" />
-              Using cached data
+              {summaryMetadata && !summaryMetadata.active 
+                ? 'Airport data processing not active'
+                : 'Using cached data'
+              }
             </div>
           )}
         </div>

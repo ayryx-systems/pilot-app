@@ -8,9 +8,13 @@ interface PirepsListProps {
   pireps: PiRep[];
   onDismissPirep: (id: string) => void;
   connectionStatus: ConnectionStatus;
+  pirepsMetadata?: {
+    active: boolean;
+    message?: string;
+  };
 }
 
-export function PirepsList({ pireps, onDismissPirep, connectionStatus }: PirepsListProps) {
+export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMetadata }: PirepsListProps) {
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
       case 'urgent':
@@ -54,9 +58,11 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus }: PirepsL
         <div className="text-center text-gray-400 py-8">
           <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">
-            {connectionStatus.connected 
-              ? 'No current PIREPs' 
-              : 'Connect to load PIREPs'
+            {pirepsMetadata?.message 
+              ? pirepsMetadata.message
+              : connectionStatus.connected 
+                ? 'No current PIREPs' 
+                : 'Connect to load PIREPs'
             }
           </p>
         </div>
@@ -107,8 +113,19 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus }: PirepsL
       <div className="mt-4 pt-3 border-t border-slate-600">
         <div className="flex items-center justify-between text-xs text-gray-400">
           <span>PIREP Data</span>
-          <span className={connectionStatus.connected ? 'text-green-400' : 'text-yellow-400'}>
-            {connectionStatus.connected ? 'Real-time' : 'Cached'}
+          <span className={
+            pirepsMetadata?.active === false 
+              ? 'text-gray-400' 
+              : connectionStatus.connected 
+                ? 'text-green-400' 
+                : 'text-yellow-400'
+          }>
+            {pirepsMetadata?.active === false 
+              ? 'Processing inactive'
+              : connectionStatus.connected 
+                ? 'Real-time' 
+                : 'Cached'
+            }
           </span>
         </div>
       </div>

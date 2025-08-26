@@ -148,7 +148,7 @@ export function PilotMap({
 
   // Create/destroy map when airport changes
   useEffect(() => {
-    if (!leafletLoaded || !airport || !airportConfig) {
+    if (!leafletLoaded || !airport) {
       if (mapInstance) {
         mapInstance.remove();
         setMapInstance(null);
@@ -175,7 +175,7 @@ export function PilotMap({
       // Convert position format - API uses {lat, lon}, constants use [lat, lon]
       const mapCenter: [number, number] = airport.position
         ? [airport.position.lat, airport.position.lon]
-        : airportConfig.position;
+        : airportConfig?.position || [34.0522, -118.2437]; // Default to LAX if no position available
 
       // Create map
       const map = L.map(mapRef.current, {
@@ -252,7 +252,7 @@ export function PilotMap({
 
   // Update runway display
   useEffect(() => {
-    if (!mapInstance || !airportConfig || !layerGroupsRef.current.runways) return;
+    if (!mapInstance || !layerGroupsRef.current.runways) return;
 
     const updateRunways = async () => {
       const leafletModule = await import('leaflet');
@@ -263,7 +263,7 @@ export function PilotMap({
 
       if (displayOptions.showRunways) {
         // Use runways from airportData if available, fallback to airportConfig
-        const runways = airportData?.runways || airportConfig.runways;
+        const runways = airportData?.runways || airportConfig?.runways || [];
         runways.forEach(runway => {
           if (runway.threshold && runway.oppositeEnd) {
             const runwayLine = L.polyline([
@@ -313,7 +313,7 @@ export function PilotMap({
 
   // Update DME rings display
   useEffect(() => {
-    if (!mapInstance || !airportConfig || !layerGroupsRef.current.dmeRings) return;
+    if (!mapInstance || !layerGroupsRef.current.dmeRings) return;
 
     const updateDmeRings = async () => {
       const leafletModule = await import('leaflet');
@@ -322,11 +322,11 @@ export function PilotMap({
       // Clear existing DME rings
       layerGroupsRef.current.dmeRings.clearLayers();
 
-      if (displayOptions.showDmeRings) {
+      if (displayOptions.showDmeRings && airportConfig?.dmeRings) {
         // Use the same center as the map
         const dmeCenter: [number, number] = airport.position
           ? [airport.position.lat, airport.position.lon]
-          : airportConfig.position;
+          : airportConfig?.position || [34.0522, -118.2437];
 
         airportConfig.dmeRings.forEach(distance => {
           const dmeRing = L.circle(dmeCenter, {
@@ -347,7 +347,7 @@ export function PilotMap({
 
   // Update waypoints display
   useEffect(() => {
-    if (!mapInstance || !airportConfig || !layerGroupsRef.current.waypoints) return;
+    if (!mapInstance || !layerGroupsRef.current.waypoints) return;
 
     const updateWaypoints = async () => {
       const leafletModule = await import('leaflet');
@@ -356,7 +356,7 @@ export function PilotMap({
       // Clear existing waypoints
       layerGroupsRef.current.waypoints.clearLayers();
 
-      if (displayOptions.showWaypoints && airportConfig.waypoints) {
+      if (displayOptions.showWaypoints && airportConfig?.waypoints) {
         airportConfig.waypoints.forEach(waypoint => {
           const waypointIcon = L.divIcon({
             html: `<div style="
@@ -393,7 +393,7 @@ export function PilotMap({
 
   // Update approach routes display
   useEffect(() => {
-    if (!mapInstance || !airportConfig || !layerGroupsRef.current.approachRoutes) return;
+    if (!mapInstance || !layerGroupsRef.current.approachRoutes) return;
 
     const updateApproachRoutes = async () => {
       const leafletModule = await import('leaflet');
@@ -404,7 +404,7 @@ export function PilotMap({
 
       if (displayOptions.showApproachRoutes) {
         // Use runways from airportData if available, fallback to airportConfig
-        const runways = airportData?.runways || airportConfig.runways;
+        const runways = airportData?.runways || airportConfig?.runways || [];
         runways.forEach(runway => {
           if (runway.approaches) {
             runway.approaches.forEach(approach => {
