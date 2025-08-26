@@ -23,6 +23,13 @@ const CACHEABLE_API_PATTERNS = [
   /^\/api\/pilot\/health$/
 ];
 
+// Map tile patterns for caching
+const MAP_TILE_PATTERNS = [
+  /^https:\/\/[a-c]\.tile\.openstreetmap\.org\/\d+\/\d+\/\d+\.png$/,
+  /^https:\/\/tiles\.stadiamaps\.com\/tiles\/alidade_smooth_dark\/\d+\/\d+\/\d+\.png$/,
+  /^https:\/\/server\.arcgisonline\.com\/ArcGIS\/rest\/services\/World_Imagery\/MapServer\/tile\/\d+\/\d+\/\d+$/
+];
+
 // Short-lived data that should be cached briefly
 const SHORT_CACHE_PATTERNS = [
   /^\/api\/pilot\/[^/]+\/pireps$/,
@@ -85,6 +92,13 @@ self.addEventListener('fetch', event => {
   
   // Skip non-GET requests
   if (event.request.method !== 'GET') {
+    return;
+  }
+  
+  // Handle map tiles with cache-first strategy
+  const isMapTile = MAP_TILE_PATTERNS.some(pattern => pattern.test(event.request.url));
+  if (isMapTile) {
+    event.respondWith(handleMapTileRequest(event.request));
     return;
   }
   
@@ -202,6 +216,61 @@ async function handleApiRequest(request) {
       status: 503,
       headers: { 'Content-Type': 'application/json' }
     });
+  }
+}
+
+// Handle map tiles with cache-first strategy for offline support
+async function handleMapTileRequest(request) {
+  const cache = await caches.open(CACHE_NAME);
+  
+  // Try cache first for map tiles (cache-first strategy)
+  const cachedResponse = await cache.match(request);
+  if (cachedResponse) {
+    console.log(`[SW] Serving cached map tile: ${request.url}`);
+    return cachedResponse;
+  }
+  
+  try {
+    // Try network for new tiles
+    const networkResponse = await fetch(request, {
+      // Add timeout for tile requests
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    if (networkResponse.ok) {
+      // Cache successful tile response with long expiry
+      const responseClone = networkResponse.clone();
+      cache.put(request, responseClone);
+      console.log(`[SW] Cached new map tile: ${request.url}`);
+    }
+    
+    return networkResponse;
+  } catch (error) {
+    console.warn(`[SW] Failed to fetch map tile: ${request.url}`, error);
+    
+    // Return a transparent tile as fallback for missing map tiles
+    const fallbackTile = new Response(
+      // 1x1 transparent PNG
+      new Uint8Array([
+        0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+        0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+        0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+        0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+        0x89, 0x00, 0x00, 0x00, 0x0a, 0x49, 0x44, 0x41,
+        0x54, 0x78, 0x9c, 0x63, 0x00, 0x01, 0x00, 0x00,
+        0x05, 0x00, 0x01, 0x0d, 0x0a, 0x2d, 0xb4, 0x00,
+        0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae,
+        0x42, 0x60, 0x82
+      ]), {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Cache-Control': 'public, max-age=86400'
+        }
+      }
+    );
+    
+    return fallbackTile;
   }
 }
 

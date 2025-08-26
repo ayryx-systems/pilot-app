@@ -23,10 +23,8 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
     { key: 'showRunways' as const, label: 'Runways', icon: '✈️' },
     { key: 'showDmeRings' as const, label: 'DME Rings', icon: '⭕' },
     { key: 'showWaypoints' as const, label: 'Waypoints', icon: '📍' },
-    { key: 'showApproachRoutes' as const, label: 'Approaches', icon: '🛬' },
-    { key: 'showExtendedCenterlines' as const, label: 'Centerlines', icon: '—' },
     { key: 'showPireps' as const, label: 'PIREPs', icon: '⚠️' },
-    { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
+    { key: 'showTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
   ];
 
   return (
@@ -82,10 +80,8 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
                     showRunways: true,
                     showDmeRings: true,
                     showWaypoints: true,
-                    showApproachRoutes: true,
-                    showExtendedCenterlines: true,
                     showPireps: true,
-                    showGroundTracks: true,
+                    showTracks: true,
                   };
                   onOptionsChange(allOn);
                 }}
@@ -100,10 +96,8 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
                     showRunways: false,
                     showDmeRings: false,
                     showWaypoints: false,
-                    showApproachRoutes: false,
-                    showExtendedCenterlines: false,
                     showPireps: false,
-                    showGroundTracks: false,
+                    showTracks: false,
                   };
                   onOptionsChange(allOff);
                 }}

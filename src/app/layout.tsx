@@ -17,7 +17,6 @@ export const metadata: Metadata = {
   title: "AYRYX Pilot",
   description: "Aviation Situational Awareness for Pilots",
   manifest: "/manifest.json",
-  themeColor: "#3b82f6",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -38,6 +37,15 @@ export const metadata: Metadata = {
       { url: "/icons/apple-icon-180.png", sizes: "180x180", type: "image/png" },
     ],
   },
+};
+
+export const viewport = {
+  themeColor: "#3b82f6",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: "cover",
 };
 
 export default function RootLayout({
