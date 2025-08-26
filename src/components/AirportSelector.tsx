@@ -11,11 +11,11 @@ interface AirportSelectorProps {
   loading: boolean;
 }
 
-export function AirportSelector({ 
-  airports, 
-  selectedAirport, 
-  onSelectAirport, 
-  loading 
+export function AirportSelector({
+  airports,
+  selectedAirport,
+  onSelectAirport,
+  loading
 }: AirportSelectorProps) {
   const selectedAirportData = airports.find(a => a.id === selectedAirport);
 
@@ -25,9 +25,10 @@ export function AirportSelector({
         value={selectedAirport || ''}
         onChange={(e) => onSelectAirport(e.target.value || null)}
         disabled={loading}
-        className="appearance-none bg-slate-700 text-white px-3 py-2 pr-8 rounded-lg 
+        className="appearance-none bg-slate-700 text-white px-2 sm:px-3 py-1 sm:py-2 pr-6 sm:pr-8 rounded-lg 
                    border border-slate-600 focus:border-blue-400 focus:outline-none
-                   disabled:opacity-50 disabled:cursor-not-allowed min-w-[200px]"
+                   disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px] sm:min-w-[200px]
+                   text-sm sm:text-base"
       >
         <option value="">Select Airport...</option>
         {airports.map(airport => (
@@ -37,11 +38,11 @@ export function AirportSelector({
           </option>
         ))}
       </select>
-      
-      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-        <ChevronDown className="w-4 h-4 text-gray-400" />
+
+      <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
       </div>
-      
+
       {selectedAirportData && (
         <div className="flex items-center mt-1 text-xs text-gray-400">
           <Plane className="w-3 h-3 mr-1" />

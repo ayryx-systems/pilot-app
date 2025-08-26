@@ -32,9 +32,10 @@ export const metadata: Metadata = {
     description: "Aviation Situational Awareness for Pilots",
   },
   icons: {
-    shortcut: "/favicon.ico",
+    shortcut: "/logo4.png",
+    icon: "/logo4.png",
     apple: [
-      { url: "/icons/apple-icon-180.png", sizes: "180x180", type: "image/png" },
+      { url: "/logo4.png", sizes: "180x180", type: "image/png" },
     ],
   },
 };
@@ -56,8 +57,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/favicon.ico" />
-        <link rel="apple-touch-icon" href="/icons/apple-icon-180.png" />
+        <link rel="icon" href="/logo4.png" />
+        <link rel="apple-touch-icon" href="/logo4.png" />
         <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />

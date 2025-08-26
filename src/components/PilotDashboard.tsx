@@ -87,7 +87,11 @@ export function PilotDashboard() {
       {/* Header */}
       <header className="flex items-center justify-between p-2 sm:p-4 bg-slate-800 border-b border-slate-700 flex-shrink-0">
         <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
-          <h1 className="text-lg sm:text-xl font-bold text-blue-400 truncate">Pilot Situational Awareness</h1>
+          <img
+            src="/logo4.png"
+            alt="AYRYX"
+            className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
+          />
 
           <AirportSelector
             airports={airports}
@@ -115,13 +119,7 @@ export function PilotDashboard() {
             </span>
           </div>
 
-          {/* Last Update */}
-          <div className="flex items-center space-x-1 text-gray-400 hidden md:flex">
-            <Clock className="w-4 h-4" />
-            <span className="text-sm">
-              {formatLastUpdate(connectionStatus.lastUpdate)}
-            </span>
-          </div>
+
 
           {/* Refresh Button */}
           <button
