@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offline - Pilot App</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+            color: white;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 2rem;
+        }
+        
+        .offline-icon {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto 2rem;
+            background: #3b82f6;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3rem;
+        }
+        
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            color: #3b82f6;
+        }
+        
+        p {
+            font-size: 1.1rem;
+            line-height: 1.6;
+            color: #cbd5e1;
+            margin-bottom: 2rem;
+        }
+        
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            background: #1e293b;
+            padding: 0.75rem 1.5rem;
+            border-radius: 2rem;
+            border: 1px solid #334155;
+            margin-bottom: 2rem;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        
+        .retry-btn {
+            background: #3b82f6;
+            color: white;
+            border: none;
+            padding: 1rem 2rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        
+        .retry-btn:hover {
+            background: #2563eb;
+        }
+        
+        .cached-data {
+            margin-top: 2rem;
+            padding: 1rem;
+            background: #1e293b;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+        }
+        
+        .cached-data h3 {
+            margin-top: 0;
+            color: #f1f5f9;
+            font-size: 1rem;
+        }
+        
+        .cached-data ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .cached-data li {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            justify-content: between;
+            font-size: 0.9rem;
+        }
+        
+        .cached-data li:last-child {
+            border-bottom: none;
+        }
+        
+        .cache-item-name {
+            color: #cbd5e1;
+        }
+        
+        .cache-item-age {
+            color: #64748b;
+            font-size: 0.8rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="offline-icon">✈️</div>
+        
+        <h1>You're Offline</h1>
+        
+        <p>
+            The Pilot App is currently offline. Some cached data may still be available 
+            for viewing, but real-time updates are not available.
+        </p>
+        
+        <div class="status-indicator">
+            <div class="status-dot"></div>
+            <span>No Network Connection</span>
+        </div>
+        
+        <button class="retry-btn" onclick="retryConnection()">
+            Try Again
+        </button>
+        
+        <div class="cached-data">
+            <h3>Available Offline Data</h3>
+            <ul id="cached-data-list">
+                <li>Loading cached data...</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function retryConnection() {
+            if (navigator.onLine) {
+                window.location.reload();
+            } else {
+                alert('Still no internet connection. Please check your network settings.');
+            }
+        }
+        
+        // Check for cached data
+        if ('caches' in window) {
+            caches.keys().then(cacheNames => {
+                const cachedDataList = document.getElementById('cached-data-list');
+                
+                if (cacheNames.length === 0) {
+                    cachedDataList.innerHTML = '<li>No cached data available</li>';
+                    return;
+                }
+                
+                cachedDataList.innerHTML = '';
+                
+                Promise.all(
+                    cacheNames.map(async cacheName => {
+                        const cache = await caches.open(cacheName);
+                        const requests = await cache.keys();
+                        return { cacheName, count: requests.length };
+                    })
+                ).then(cacheStats => {
+                    cacheStats.forEach(({ cacheName, count }) => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <span class="cache-item-name">${cacheName.replace('pilot-app-', '')}</span>
+                            <span class="cache-item-age">${count} items</span>
+                        `;
+                        cachedDataList.appendChild(li);
+                    });
+                });
+            }).catch(() => {
+                document.getElementById('cached-data-list').innerHTML = 
+                    '<li>Unable to check cached data</li>';
+            });
+        }
+        
+        // Listen for online/offline events
+        window.addEventListener('online', () => {
+            document.querySelector('.status-dot').style.background = '#10b981';
+            document.querySelector('.status-indicator span').textContent = 'Connection Restored';
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+        
+        window.addEventListener('offline', () => {
+            document.querySelector('.status-dot').style.background = '#ef4444';
+            document.querySelector('.status-indicator span').textContent = 'No Network Connection';
+        });
+    </script>
+</body>
+</html>

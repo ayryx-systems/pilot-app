@@ -137,3 +137,58 @@ This frontend application is designed to work with the separate ATC backend serv
 - PIREP collection and processing
 - Ground track monitoring
 - AI-powered situation summaries
+
+## Progressive Web App (PWA) Features
+
+### Service Worker Implementation
+- **Intelligent Caching**: Different caching strategies for static assets vs. API data
+- **Network-First**: API calls try network first, fallback to cache when offline
+- **Cache-First**: Static assets served from cache for optimal performance
+- **Background Sync**: Automatic data updates when connectivity is restored
+
+### Offline Support
+- **Cached Data**: Essential airport data available offline
+- **Graceful Degradation**: Clear indicators when operating from cached data
+- **Offline Page**: Custom offline fallback with cached airport list
+- **Connection Recovery**: Automatic background sync when reconnected
+
+### Installation & PWA Manifest
+- **Installable**: Can be installed as native-like app on supported devices
+- **App Shortcuts**: Quick access to common functions via PWA manifest
+- **Theme Integration**: Properly configured for iOS/Android home screen
+- **Standalone Mode**: Runs in app-like experience without browser chrome
+
+### Caching Strategy Details
+```javascript
+// Static Assets: Long-term cache
+- Application shell (HTML, CSS, JS)
+- Icons and manifest
+- Offline fallback page
+
+// API Data: Intelligent cache with TTL
+- Airports list: 1 hour cache
+- Airport overviews: 1 hour cache  
+- PIREPs: 2 minute cache (real-time data)
+- Ground tracks: 2 minute cache (real-time data)
+- Health checks: No cache (always fresh)
+```
+
+### PWA Development Commands
+```bash
+# Test PWA features in development
+npm run dev
+
+# Build optimized PWA for production
+npm run build
+
+# Serve PWA build locally to test service worker
+npx serve out
+```
+
+### PWA Testing Checklist
+- [ ] Service worker registers successfully
+- [ ] Offline mode works with cached data
+- [ ] Install prompt appears on supported browsers
+- [ ] Background sync triggers when reconnected
+- [ ] App works in standalone mode
+- [ ] Icons and manifest load correctly

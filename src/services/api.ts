@@ -7,8 +7,10 @@ import {
   AirportOverview, 
   PirepsResponse, 
   TracksResponse, 
-  SummaryResponse 
+  SummaryResponse,
+  CachedData
 } from '@/types';
+import { cacheService, CACHE_CONFIGS } from './cache';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
@@ -59,43 +61,195 @@ class PilotApiService {
   }
 
   /**
-   * Get list of available airports
+   * Get cached data or return null if expired/unavailable
    */
-  async getAirports(): Promise<AirportsResponse> {
-    const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports`);
-    return this.handleResponse<AirportsResponse>(response);
+  private getCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], id?: string): CachedData<T> | null {
+    return cacheService.get<T>(config, id);
   }
 
   /**
-   * Get airport overview (weather, runways, operational data)
+   * Cache data with appropriate config
    */
-  async getAirportOverview(airportId: string): Promise<AirportOverview> {
-    const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
-    return this.handleResponse<AirportOverview>(response);
+  private setCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], data: T, id?: string): void {
+    cacheService.set(config, data, id);
   }
 
   /**
-   * Get PIREPs for an airport
+   * Get list of available airports (with caching)
    */
-  async getPireps(airportId: string): Promise<PirepsResponse> {
-    const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
-    return this.handleResponse<PirepsResponse>(response);
+  async getAirports(useCache: boolean = true): Promise<AirportsResponse> {
+    // Try cache first if requested
+    if (useCache) {
+      const cached = this.getCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
+      if (cached) {
+        console.log('Using cached airports data');
+        return { ...cached.data, source: 'cache' };
+      }
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports`);
+      const data = await this.handleResponse<AirportsResponse>(response);
+      
+      // Cache the response
+      this.setCachedData(CACHE_CONFIGS.airports, data);
+      console.log('Cached fresh airports data');
+      
+      return data;
+    } catch (error) {
+      // If network fails, try to return stale cache
+      const staleCache = this.getCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
+      if (staleCache) {
+        console.log('Using stale cached airports data due to network error');
+        return { ...staleCache.data, source: 'stale-cache' };
+      }
+      throw error;
+    }
   }
 
   /**
-   * Get ground tracks for an airport
+   * Get airport overview (weather, runways, operational data) with caching
    */
-  async getGroundTracks(airportId: string): Promise<TracksResponse> {
-    const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
-    return this.handleResponse<TracksResponse>(response);
+  async getAirportOverview(airportId: string, useCache: boolean = true): Promise<AirportOverview> {
+    if (useCache) {
+      const cached = this.getCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
+      if (cached) {
+        console.log(`Using cached airport overview for ${airportId}`);
+        return { ...cached.data, source: 'cache' };
+      }
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
+      const data = await this.handleResponse<AirportOverview>(response);
+      
+      this.setCachedData(CACHE_CONFIGS.airportOverview, data, airportId);
+      console.log(`Cached airport overview for ${airportId}`);
+      
+      return data;
+    } catch (error) {
+      const staleCache = this.getCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
+      if (staleCache) {
+        console.log(`Using stale cached airport overview for ${airportId}`);
+        return { ...staleCache.data, source: 'stale-cache' };
+      }
+      throw error;
+    }
   }
 
   /**
-   * Get situation summary for an airport
+   * Get PIREPs for an airport with caching
    */
-  async getSituationSummary(airportId: string): Promise<SummaryResponse> {
-    const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
-    return this.handleResponse<SummaryResponse>(response);
+  async getPireps(airportId: string, useCache: boolean = true): Promise<PirepsResponse> {
+    if (useCache) {
+      const cached = this.getCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
+      if (cached) {
+        console.log(`Using cached PIREPs for ${airportId}`);
+        return { ...cached.data, source: 'cache' };
+      }
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
+      const data = await this.handleResponse<PirepsResponse>(response);
+      
+      this.setCachedData(CACHE_CONFIGS.pireps, data, airportId);
+      console.log(`Cached PIREPs for ${airportId}`);
+      
+      return data;
+    } catch (error) {
+      const staleCache = this.getCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
+      if (staleCache) {
+        console.log(`Using stale cached PIREPs for ${airportId}`);
+        return { ...staleCache.data, source: 'stale-cache' };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get ground tracks for an airport with caching
+   */
+  async getGroundTracks(airportId: string, useCache: boolean = true): Promise<TracksResponse> {
+    if (useCache) {
+      const cached = this.getCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
+      if (cached) {
+        console.log(`Using cached ground tracks for ${airportId}`);
+        return { ...cached.data, source: 'cache' };
+      }
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
+      const data = await this.handleResponse<TracksResponse>(response);
+      
+      this.setCachedData(CACHE_CONFIGS.tracks, data, airportId);
+      console.log(`Cached ground tracks for ${airportId}`);
+      
+      return data;
+    } catch (error) {
+      const staleCache = this.getCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
+      if (staleCache) {
+        console.log(`Using stale cached ground tracks for ${airportId}`);
+        return { ...staleCache.data, source: 'stale-cache' };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Get situation summary for an airport with caching
+   */
+  async getSituationSummary(airportId: string, useCache: boolean = true): Promise<SummaryResponse> {
+    if (useCache) {
+      const cached = this.getCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
+      if (cached) {
+        console.log(`Using cached situation summary for ${airportId}`);
+        return { ...cached.data, source: 'cache' };
+      }
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
+      const data = await this.handleResponse<SummaryResponse>(response);
+      
+      this.setCachedData(CACHE_CONFIGS.summary, data, airportId);
+      console.log(`Cached situation summary for ${airportId}`);
+      
+      return data;
+    } catch (error) {
+      const staleCache = this.getCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
+      if (staleCache) {
+        console.log(`Using stale cached situation summary for ${airportId}`);
+        return { ...staleCache.data, source: 'stale-cache' };
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Clear cache for specific airport
+   */
+  clearAirportCache(airportId: string): void {
+    cacheService.clear(CACHE_CONFIGS.airportOverview, airportId);
+    cacheService.clear(CACHE_CONFIGS.pireps, airportId);
+    cacheService.clear(CACHE_CONFIGS.tracks, airportId);
+    cacheService.clear(CACHE_CONFIGS.summary, airportId);
+    console.log(`Cleared cache for ${airportId}`);
+  }
+
+  /**
+   * Clear all cached data
+   */
+  clearAllCache(): void {
+    cacheService.clearAll();
+  }
+
+  /**
+   * Get cache statistics
+   */
+  getCacheStats() {
+    return cacheService.getStats();
   }
 
   /**
