@@ -30,7 +30,14 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
   ];
 
   return (
-    <div className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600">
+    <div
+      className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600"
+      style={{
+        position: 'relative',
+        zIndex: 10000,
+        isolation: 'isolate'
+      }}
+    >
       {/* Toggle Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
