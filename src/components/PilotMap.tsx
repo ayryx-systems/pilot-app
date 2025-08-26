@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import type * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 
 interface PilotMapProps {
   airport?: Airport;
@@ -30,9 +30,65 @@ export function PilotMap({
   
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
+  
+  // Fullscreen state
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   // Get airport configuration from constants
   const airportConfig = airport ? AIRPORTS[airport.code] : null;
+
+  // Inject custom CSS for map elements
+  useEffect(() => {
+    if (!document.getElementById("pilot-map-custom-styles")) {
+      const style = document.createElement("style");
+      style.id = "pilot-map-custom-styles";
+      style.innerHTML = `
+        .leaflet-popup-content-wrapper {
+          background-color: rgba(0, 0, 0, 0.8);
+          color: white;
+          border-radius: 4px;
+        }
+        
+        .leaflet-popup-tip {
+          background-color: rgba(0, 0, 0, 0.8);
+        }
+        
+        .leaflet-popup-close-button {
+          color: white;
+        }
+        
+        .runway-popup h4 {
+          margin: 0 0 4px 0;
+          color: #ffffff;
+        }
+        
+        .runway-popup p {
+          margin: 2px 0;
+          font-size: 12px;
+        }
+        
+        .waypoint-popup h4 {
+          margin: 0 0 4px 0;
+          color: #8b5cf6;
+        }
+        
+        .pirep-popup {
+          min-width: 200px;
+        }
+        
+        .track-popup h4 {
+          margin: 0 0 4px 0;
+          color: #ffffff;
+        }
+        
+        .track-popup p {
+          margin: 2px 0;
+          font-size: 12px;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+  }, []);
 
   // Load Leaflet library once
   useEffect(() => {
@@ -89,19 +145,28 @@ export function PilotMap({
 
       console.log('[PilotMap] Creating map for', airport.code);
 
+      // Convert position format - API uses {lat, lon}, constants use [lat, lon]
+      const mapCenter: [number, number] = airport.position 
+        ? [airport.position.lat, airport.position.lon]
+        : airportConfig.position;
+
       // Create map
       const map = L.map(mapRef.current, {
-        center: airportConfig.position,
+        center: mapCenter,
         zoom: 13,
         zoomControl: true,
-        attributionControl: true,
+        attributionControl: false, // Add custom attribution later
       });
 
-      // Add base tiles
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 18,
-      }).addTo(map);
+      // Add dark aviation-focused tile layer (similar to ATC dashboard)
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 20,
+          subdomains: 'abcd',
+          attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+        }
+      ).addTo(map);
 
       // Initialize layer groups
       layerGroupsRef.current = {
@@ -109,15 +174,37 @@ export function PilotMap({
         dmeRings: L.layerGroup().addTo(map),
         waypoints: L.layerGroup().addTo(map),
         approachRoutes: L.layerGroup().addTo(map),
+        extendedCenterlines: L.layerGroup().addTo(map),
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
         airport: L.layerGroup().addTo(map),
       };
 
-      // Add airport marker
-      const airportMarker = L.marker(airportConfig.position)
+      // Add airport marker at correct position
+      const airportMarker = L.marker(mapCenter)
         .bindPopup(`<strong>${airport.code}</strong><br/>${airport.name}`);
       layerGroupsRef.current.airport.addLayer(airportMarker);
+
+      // Add scale control (similar to ATC dashboard)
+      L.control
+        .scale({
+          maxWidth: 100,
+          metric: false,
+          imperial: true,
+          position: "bottomleft",
+        })
+        .addTo(map);
+
+      // Add attribution control  
+      L.control
+        .attribution({
+          position: "bottomright",
+          prefix: false,
+        })
+        .addAttribution(
+          '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> | <a href="https://carto.com/attributions">CARTO</a>'
+        )
+        .addTo(map);
 
       setMapInstance(map);
       setMapReady(true);
@@ -148,7 +235,9 @@ export function PilotMap({
       layerGroupsRef.current.runways.clearLayers();
 
       if (displayOptions.showRunways) {
-        airportConfig.runways.forEach(runway => {
+        // Use runways from airportData if available, fallback to airportConfig
+        const runways = airportData?.runways || airportConfig.runways;
+        runways.forEach(runway => {
           if (runway.threshold && runway.oppositeEnd) {
             const runwayLine = L.polyline([
               [runway.threshold.lat, runway.threshold.lon],
@@ -207,8 +296,13 @@ export function PilotMap({
       layerGroupsRef.current.dmeRings.clearLayers();
 
       if (displayOptions.showDmeRings) {
+        // Use the same center as the map
+        const dmeCenter: [number, number] = airport.position 
+          ? [airport.position.lat, airport.position.lon]
+          : airportConfig.position;
+          
         airportConfig.dmeRings.forEach(distance => {
-          const dmeRing = L.circle(airportConfig.position, {
+          const dmeRing = L.circle(dmeCenter, {
             radius: distance * 1852, // Convert NM to meters
             fill: false,
             color: distance % 10 === 0 ? '#3b82f6' : '#94a3b8',
@@ -282,7 +376,9 @@ export function PilotMap({
       layerGroupsRef.current.approachRoutes.clearLayers();
 
       if (displayOptions.showApproachRoutes) {
-        airportConfig.runways.forEach(runway => {
+        // Use runways from airportData if available, fallback to airportConfig
+        const runways = airportData?.runways || airportConfig.runways;
+        runways.forEach(runway => {
           if (runway.approaches) {
             runway.approaches.forEach(approach => {
               // Calculate waypoint positions along approach path
@@ -362,7 +458,69 @@ export function PilotMap({
     };
 
     updateApproachRoutes();
-  }, [mapInstance, displayOptions.showApproachRoutes, airportConfig]);
+  }, [mapInstance, displayOptions.showApproachRoutes, airportConfig, airportData]);
+
+  // Update extended centerlines display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.extendedCenterlines) return;
+
+    const updateExtendedCenterlines = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing extended centerlines
+      layerGroupsRef.current.extendedCenterlines.clearLayers();
+
+      if (displayOptions.showExtendedCenterlines) {
+        // Use runways from airportData if available, fallback to airportConfig
+        const runways = airportData?.runways || airportConfig?.runways || [];
+        
+        runways.forEach(runway => {
+          if (runway.threshold && runway.oppositeEnd) {
+            // Calculate extended centerline points (extend 10 NM from each end)
+            const extensionDistanceNm = 10;
+            const extensionDistanceMeters = extensionDistanceNm * 1852;
+            
+            // Calculate runway bearing
+            const lat1 = runway.threshold.lat * Math.PI / 180;
+            const lon1 = runway.threshold.lon * Math.PI / 180;
+            const lat2 = runway.oppositeEnd.lat * Math.PI / 180;
+            const lon2 = runway.oppositeEnd.lon * Math.PI / 180;
+            
+            const deltaLon = lon2 - lon1;
+            const y = Math.sin(deltaLon) * Math.cos(lat2);
+            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
+            const bearing = Math.atan2(y, x);
+            
+            // Extend from threshold
+            const extLat1 = runway.threshold.lat - (extensionDistanceMeters / 111320) * Math.cos(bearing);
+            const extLon1 = runway.threshold.lon - (extensionDistanceMeters / (111320 * Math.cos(runway.threshold.lat * Math.PI / 180))) * Math.sin(bearing);
+            
+            // Extend from opposite end
+            const extLat2 = runway.oppositeEnd.lat + (extensionDistanceMeters / 111320) * Math.cos(bearing);
+            const extLon2 = runway.oppositeEnd.lon + (extensionDistanceMeters / (111320 * Math.cos(runway.oppositeEnd.lat * Math.PI / 180))) * Math.sin(bearing);
+            
+            // Create extended centerline
+            const centerline = L.polyline([
+              [extLat1, extLon1],
+              [runway.threshold.lat, runway.threshold.lon],
+              [runway.oppositeEnd.lat, runway.oppositeEnd.lon],
+              [extLat2, extLon2]
+            ], {
+              color: '#fbbf24', // amber-400
+              weight: 1,
+              opacity: 0.6,
+              dashArray: '10, 10'
+            }).bindPopup(`<strong>Extended Centerline</strong><br/>Runway ${runway.name}/${runway.oppositeEnd.name}`);
+            
+            layerGroupsRef.current.extendedCenterlines.addLayer(centerline);
+          }
+        });
+      }
+    };
+
+    updateExtendedCenterlines();
+  }, [mapInstance, displayOptions.showExtendedCenterlines, airportConfig, airportData]);
 
   // Update PIREP markers
   useEffect(() => {
@@ -584,8 +742,61 @@ export function PilotMap({
 
     updateTracks();
   }, [mapInstance, tracks, displayOptions.showGroundTracks]);
+
+  // Handle recenter events (similar to ATC dashboard)
+  useEffect(() => {
+    const handleRecenter = () => {
+      if (mapInstance && airport) {
+        const mapCenter: [number, number] = airport.position 
+          ? [airport.position.lat, airport.position.lon]
+          : airportConfig?.position || [0, 0];
+        mapInstance.flyTo(mapCenter, 13, { duration: 1.5 });
+      }
+    };
+
+    window.addEventListener('map-recenter', handleRecenter);
+    return () => {
+      window.removeEventListener('map-recenter', handleRecenter);
+    };
+  }, [mapInstance, airport, airportConfig]);
+
+  // Add fullscreen change handler (similar to ATC dashboard) 
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (mapInstance) {
+        setTimeout(() => {
+          mapInstance.invalidateSize();
+          if (airport) {
+            const mapCenter: [number, number] = airport.position 
+              ? [airport.position.lat, airport.position.lon]
+              : airportConfig?.position || [0, 0];
+            mapInstance.setView(mapCenter, mapInstance.getZoom());
+            mapInstance.fire('resize');
+          }
+        }, 150);
+      }
+    };
+
+    window.addEventListener('map-fullscreen-change', handleFullscreenChange as EventListener);
+    return () => {
+      window.removeEventListener('map-fullscreen-change', handleFullscreenChange as EventListener);
+    };
+  }, [mapInstance, airport, airportConfig]);
+
+  // Fullscreen toggle function
+  const toggleFullscreen = () => {
+    const newFullscreenState = !isFullscreen;
+    setIsFullscreen(newFullscreenState);
+
+    // Notify about fullscreen state change
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('map-fullscreen-change', {
+        detail: { isFullscreen: newFullscreenState }
+      }));
+    }, 100);
+  };
   
-  if (!airport || !airportConfig) {
+  if (!airport) {
     return (
       <div className="h-full bg-slate-800 flex items-center justify-center">
         <div className="text-center text-gray-400">
@@ -596,7 +807,51 @@ export function PilotMap({
   }
 
   return (
-    <div className="h-full relative">
+    <div className={`${isFullscreen
+      ? 'fixed inset-0 z-50 bg-slate-900'
+      : 'h-full rounded-xl overflow-hidden border relative'
+    }`}>
+      {/* Fullscreen and Recenter buttons */}
+      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+        {/* Fullscreen toggle button */}
+        <button
+          onClick={toggleFullscreen}
+          className="bg-gray-800/80 hover:bg-gray-700/80 text-white border border-gray-600 
+                   px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors"
+        >
+          {isFullscreen ? (
+            <>
+              <Minimize2 className="h-4 w-4" />
+              Exit Fullscreen
+            </>
+          ) : (
+            <>
+              <Maximize2 className="h-4 w-4" />
+              Fullscreen
+            </>
+          )}
+        </button>
+
+        {/* Recenter button */}
+        <button
+          onClick={() => {
+            window.dispatchEvent(new CustomEvent('map-recenter'));
+          }}
+          className="bg-gray-800/80 hover:bg-gray-700/80 text-white border border-gray-600 
+                   px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors"
+        >
+          <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+          </svg>
+          Recenter
+        </button>
+      </div>
+
+      {/* Airport info overlay */}
+      <div className="absolute z-10 bottom-2 left-2 bg-black/60 text-white p-1 px-2 text-xs rounded">
+        {airport.name} ({airport.code})
+      </div>
+
       {!mapReady && (
         <div className="absolute inset-0 bg-slate-800 flex items-center justify-center z-10">
           <div className="text-center text-gray-400">
@@ -605,6 +860,7 @@ export function PilotMap({
           </div>
         </div>
       )}
+      
       <div 
         ref={mapRef} 
         className="w-full h-full"
