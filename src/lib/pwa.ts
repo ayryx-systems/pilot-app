@@ -296,7 +296,7 @@ class PWAManager {
    */
   isInstalled(): boolean {
     return window.matchMedia('(display-mode: standalone)').matches ||
-           (window.navigator as any).standalone === true ||
+           (window.navigator as unknown as { standalone?: boolean }).standalone === true ||
            document.referrer.includes('android-app://');
   }
 
@@ -310,7 +310,7 @@ class PWAManager {
   /**
    * Get cache statistics
    */
-  async getCacheStats(): Promise<any> {
+  async getCacheStats(): Promise<unknown> {
     if (!this.swRegistration) {
       return null;
     }

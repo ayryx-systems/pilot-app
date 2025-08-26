@@ -33,7 +33,7 @@ class CacheService {
     return `${CACHE_PREFIX}${CACHE_VERSION}-${key}`;
   }
 
-  private isExpired(cachedData: CachedData<any>): boolean {
+  private isExpired(cachedData: CachedData<unknown>): boolean {
     const now = new Date().getTime();
     const cacheTime = cachedData.timestamp.getTime();
     const maxAge = cachedData.maxAge * 1000; // convert to milliseconds
@@ -254,8 +254,8 @@ class CacheService {
   /**
    * Export cache data for backup/debugging
    */
-  exportCache(): Record<string, any> {
-    const cache: Record<string, any> = {};
+  exportCache(): Record<string, unknown> {
+    const cache: Record<string, unknown> = {};
     
     try {
       for (let i = 0; i < localStorage.length; i++) {

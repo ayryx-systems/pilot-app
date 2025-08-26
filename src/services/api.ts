@@ -15,7 +15,7 @@ import { cacheService, CACHE_CONFIGS } from './cache';
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 class ApiError extends Error {
-  constructor(message: string, public status?: number, public response?: any) {
+  constructor(message: string, public status?: number, public response?: unknown) {
     super(message);
     this.name = 'ApiError';
   }

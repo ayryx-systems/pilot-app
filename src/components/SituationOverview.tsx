@@ -4,9 +4,20 @@ import React from 'react';
 import { SituationSummary, ConnectionStatus } from '@/types';
 import { AlertTriangle, CheckCircle, Info, Cloud, Wind } from 'lucide-react';
 
+interface WeatherData {
+  conditions: string;
+  temperature?: string;
+  wind?: {
+    direction: number;
+    speed: number;
+    gust?: number;
+  };
+  visibility?: string;
+}
+
 interface SituationOverviewProps {
   summary?: SituationSummary | null;
-  weather?: any;
+  weather?: WeatherData;
   loading: boolean;
   connectionStatus: ConnectionStatus;
   summaryMetadata?: {
