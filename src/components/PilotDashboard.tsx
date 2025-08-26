@@ -26,6 +26,16 @@ export function PilotDashboard() {
     refreshData
   } = usePilotData();
 
+  // Debug data structure to help identify issues
+  useEffect(() => {
+    if (tracks && tracks.length > 0) {
+      console.log('[PilotDashboard] Track data structure:', tracks[0]);
+    }
+    if (pireps && pireps.length > 0) {
+      console.log('[PilotDashboard] PIREP data structure:', pireps[0]);
+    }
+  }, [tracks, pireps]);
+
   const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>({
     showRunways: true,
     showDmeRings: true,
@@ -63,7 +73,7 @@ export function PilotDashboard() {
   const formatLastUpdate = (date: Date) => {
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     return `${Math.floor(diff / 3600)}h ago`;
@@ -75,7 +85,7 @@ export function PilotDashboard() {
       <header className="flex items-center justify-between p-4 bg-slate-800 border-b border-slate-700">
         <div className="flex items-center space-x-4">
           <h1 className="text-xl font-bold text-blue-400">Pilot Situational Awareness</h1>
-          
+
           <AirportSelector
             airports={airports}
             selectedAirport={selectedAirport}
@@ -147,7 +157,7 @@ export function PilotDashboard() {
               console.log('Dismiss PIREP:', id);
             }}
           />
-          
+
           {/* Map Controls Overlay - Always shown */}
           {selectedAirport && (
             <div className="absolute top-4 left-4 z-50">
@@ -163,7 +173,7 @@ export function PilotDashboard() {
         <div className="w-96 bg-slate-800 border-l border-slate-700 flex flex-col">
           {/* Situation Overview */}
           <div className="p-4 border-b border-slate-700">
-            <SituationOverview 
+            <SituationOverview
               summary={summary}
               weather={airportOverview?.weather}
               loading={loading}
@@ -174,7 +184,7 @@ export function PilotDashboard() {
           {/* PIREPs List */}
           <div className="flex-1 overflow-y-auto">
             <div className="p-4">
-              <PirepsList 
+              <PirepsList
                 pireps={pireps}
                 onDismissPirep={(id) => {
                   console.log('Dismiss PIREP from list:', id);

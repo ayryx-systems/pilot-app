@@ -40,9 +40,8 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
           <Map className="w-4 h-4 text-blue-400" />
           <span className="text-sm font-medium text-white">Map Layers</span>
         </div>
-        <Settings className={`w-4 h-4 text-gray-400 transition-transform ${
-          isExpanded ? 'rotate-90' : ''
-        }`} />
+        <Settings className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''
+          }`} />
       </button>
 
       {/* Expanded Controls */}
@@ -54,10 +53,9 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
                 key={key}
                 onClick={() => handleToggle(key)}
                 className={`w-full flex items-center justify-between p-2 rounded text-sm
-                  hover:bg-slate-700/50 transition-colors ${
-                    displayOptions[key] 
-                      ? 'text-white bg-slate-700/30' 
-                      : 'text-gray-400'
+                  hover:bg-slate-700/50 transition-colors ${displayOptions[key]
+                    ? 'text-white bg-slate-700/30'
+                    : 'text-gray-400'
                   }`}
               >
                 <div className="flex items-center space-x-2">

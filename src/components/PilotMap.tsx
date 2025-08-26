@@ -15,22 +15,22 @@ interface PilotMapProps {
   onDismissPirep: (id: string) => void;
 }
 
-export function PilotMap({ 
+export function PilotMap({
   airport,
   airportData,
   pireps,
   tracks,
   displayOptions,
-  onDismissPirep 
+  onDismissPirep
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
-  
+
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
-  
+
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -146,7 +146,7 @@ export function PilotMap({
       console.log('[PilotMap] Creating map for', airport.code);
 
       // Convert position format - API uses {lat, lon}, constants use [lat, lon]
-      const mapCenter: [number, number] = airport.position 
+      const mapCenter: [number, number] = airport.position
         ? [airport.position.lat, airport.position.lon]
         : airportConfig.position;
 
@@ -253,7 +253,7 @@ export function PilotMap({
                 <p><strong>Heading:</strong> ${runway.heading}°/${runway.oppositeHeading}°</p>
               </div>`
             );
-            
+
             layerGroupsRef.current.runways.addLayer(runwayLine);
 
             // Add runway threshold markers
@@ -274,7 +274,7 @@ export function PilotMap({
 
             const thresholdMarker = L.marker([runway.threshold.lat, runway.threshold.lon], { icon: thresholdIcon })
               .bindPopup(`<strong>Runway ${runway.name}</strong><br/>Threshold`);
-            
+
             layerGroupsRef.current.runways.addLayer(thresholdMarker);
           }
         });
@@ -297,10 +297,10 @@ export function PilotMap({
 
       if (displayOptions.showDmeRings) {
         // Use the same center as the map
-        const dmeCenter: [number, number] = airport.position 
+        const dmeCenter: [number, number] = airport.position
           ? [airport.position.lat, airport.position.lon]
           : airportConfig.position;
-          
+
         airportConfig.dmeRings.forEach(distance => {
           const dmeRing = L.circle(dmeCenter, {
             radius: distance * 1852, // Convert NM to meters
@@ -309,7 +309,7 @@ export function PilotMap({
             weight: distance % 10 === 0 ? 2 : 1,
             opacity: 0.6
           }).bindPopup(`<strong>${distance} NM</strong><br/>DME Ring`);
-          
+
           layerGroupsRef.current.dmeRings.addLayer(dmeRing);
         });
       }
@@ -355,7 +355,7 @@ export function PilotMap({
                 </p>
               </div>
             `);
-          
+
           layerGroupsRef.current.waypoints.addLayer(waypointMarker);
         });
       }
@@ -385,7 +385,7 @@ export function PilotMap({
               const approachWaypoints: [number, number][] = [];
               const runwayHeading = runway.heading;
               const threshold = runway.threshold;
-              
+
               approach.waypoints.forEach(waypoint => {
                 if (waypoint.position) {
                   approachWaypoints.push(waypoint.position);
@@ -393,15 +393,15 @@ export function PilotMap({
                   // Calculate position based on distance and heading
                   const distanceNm = waypoint.distanceFromThreshold;
                   const distanceMeters = distanceNm * 1852;
-                  
+
                   // Convert runway heading to approach heading (opposite direction)
                   const approachHeading = (runwayHeading + 180) % 360;
                   const headingRad = (approachHeading * Math.PI) / 180;
-                  
+
                   // Calculate position
                   const lat = threshold.lat + (distanceMeters / 111320) * Math.cos(headingRad);
                   const lon = threshold.lon + (distanceMeters / (111320 * Math.cos(threshold.lat * Math.PI / 180))) * Math.sin(headingRad);
-                  
+
                   approachWaypoints.push([lat, lon]);
                 }
               });
@@ -416,7 +416,7 @@ export function PilotMap({
                 }).bindPopup(
                   `<strong>${approach.name} Approach</strong><br/>Runway ${runway.name}`
                 );
-                
+
                 layerGroupsRef.current.approachRoutes.addLayer(approachPath);
 
                 // Add approach waypoint markers
@@ -446,7 +446,7 @@ export function PilotMap({
                           <p><strong>Runway:</strong> ${runway.name}</p>
                         </div>
                       `);
-                    
+
                     layerGroupsRef.current.approachRoutes.addLayer(waypointMarker);
                   }
                 });
@@ -474,32 +474,32 @@ export function PilotMap({
       if (displayOptions.showExtendedCenterlines) {
         // Use runways from airportData if available, fallback to airportConfig
         const runways = airportData?.runways || airportConfig?.runways || [];
-        
+
         runways.forEach(runway => {
           if (runway.threshold && runway.oppositeEnd) {
             // Calculate extended centerline points (extend 10 NM from each end)
             const extensionDistanceNm = 10;
             const extensionDistanceMeters = extensionDistanceNm * 1852;
-            
+
             // Calculate runway bearing
             const lat1 = runway.threshold.lat * Math.PI / 180;
             const lon1 = runway.threshold.lon * Math.PI / 180;
             const lat2 = runway.oppositeEnd.lat * Math.PI / 180;
             const lon2 = runway.oppositeEnd.lon * Math.PI / 180;
-            
+
             const deltaLon = lon2 - lon1;
             const y = Math.sin(deltaLon) * Math.cos(lat2);
             const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
             const bearing = Math.atan2(y, x);
-            
+
             // Extend from threshold
             const extLat1 = runway.threshold.lat - (extensionDistanceMeters / 111320) * Math.cos(bearing);
             const extLon1 = runway.threshold.lon - (extensionDistanceMeters / (111320 * Math.cos(runway.threshold.lat * Math.PI / 180))) * Math.sin(bearing);
-            
+
             // Extend from opposite end
             const extLat2 = runway.oppositeEnd.lat + (extensionDistanceMeters / 111320) * Math.cos(bearing);
             const extLon2 = runway.oppositeEnd.lon + (extensionDistanceMeters / (111320 * Math.cos(runway.oppositeEnd.lat * Math.PI / 180))) * Math.sin(bearing);
-            
+
             // Create extended centerline
             const centerline = L.polyline([
               [extLat1, extLon1],
@@ -512,7 +512,7 @@ export function PilotMap({
               opacity: 0.6,
               dashArray: '10, 10'
             }).bindPopup(`<strong>Extended Centerline</strong><br/>Runway ${runway.name}/${runway.oppositeEnd.name}`);
-            
+
             layerGroupsRef.current.extendedCenterlines.addLayer(centerline);
           }
         });
@@ -533,16 +533,21 @@ export function PilotMap({
       // Clear existing PIREPs
       layerGroupsRef.current.pireps.clearLayers();
 
-      if (displayOptions.showPireps) {
+      if (displayOptions.showPireps && pireps && Array.isArray(pireps)) {
         pireps.forEach(pirep => {
+          // Defensive checks for PIREP data integrity
+          if (!pirep || !pirep.location || typeof pirep.location.lat !== 'number' || typeof pirep.location.lon !== 'number') {
+            console.warn('[PilotMap] Invalid PIREP data:', pirep);
+            return;
+          }
           // Determine priority styling based on conditions
-          const isUrgent = pirep.conditions?.some(c => 
+          const isUrgent = pirep.conditions?.some(c =>
             c.type === 'TURBULENCE' && (c.severity === 'SEVERE' || c.severity === 'EXTREME') ||
             c.type === 'ICING' && (c.severity === 'SEVERE' || c.severity === 'TRACE')
           ) || false;
-          
+
           const hasModerate = pirep.conditions?.some(c => c.severity === 'MODERATE') || false;
-          
+
           // Choose color based on priority
           let color = '#10b981'; // Green for light/normal conditions
           if (isUrgent) {
@@ -575,22 +580,24 @@ export function PilotMap({
           const marker = L.marker([pirep.location.lat, pirep.location.lon], { icon: pirepIcon });
 
           // Create popup content
-          const conditionsHtml = pirep.conditions?.map(c => 
-            `<li><strong>${c.type}:</strong> ${c.severity} ${c.description ? `- ${c.description}` : ''}</li>`
-          ).join('') || '<li>No specific conditions reported</li>';
+          const conditionsHtml = (pirep.conditions && Array.isArray(pirep.conditions))
+            ? pirep.conditions.map(c =>
+              `<li><strong>${c?.type || 'Unknown'}:</strong> ${c?.severity || 'Unknown'} ${c?.description ? `- ${c.description}` : ''}</li>`
+            ).join('')
+            : '<li>No specific conditions reported</li>';
 
           const popupContent = `
             <div class="pirep-popup" style="min-width: 200px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="margin: 0; color: ${color};"><strong>PIREP ${pirep.id.slice(-6)}</strong></h4>
+                <h4 style="margin: 0; color: ${color};"><strong>PIREP ${pirep.id ? pirep.id.slice(-6) : 'Unknown'}</strong></h4>
                 <button 
                   onclick="window.dismissPirep('${pirep.id}')"
                   style="background: #f3f4f6; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;"
                 >Dismiss</button>
               </div>
               <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">
-                ${new Date(pirep.timestamp).toLocaleString()}<br/>
-                ${pirep.aircraft} at ${pirep.altitude?.toLocaleString() || 'Unknown'} ft
+                ${pirep.timestamp ? new Date(pirep.timestamp).toLocaleString() : 'Unknown time'}<br/>
+                ${pirep.aircraft || 'Unknown aircraft'} at ${pirep.altitude?.toLocaleString() || 'Unknown'} ft
               </p>
               ${pirep.message ? `<p style="margin: 8px 0; font-size: 13px;"><strong>Message:</strong> ${pirep.message}</p>` : ''}
               <ul style="margin: 8px 0; padding-left: 16px; font-size: 13px;">
@@ -626,12 +633,26 @@ export function PilotMap({
       // Clear existing tracks
       layerGroupsRef.current.tracks.clearLayers();
 
-      if (displayOptions.showGroundTracks) {
+      if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
         tracks.forEach(track => {
+          // Defensive checks for track data integrity
+          if (!track || !track.coordinates || !Array.isArray(track.coordinates)) {
+            console.warn('[PilotMap] Invalid track data:', track);
+            return;
+          }
+
           if (track.coordinates.length < 2) return; // Need at least 2 points for a line
 
-          // Convert coordinates to Leaflet LatLng format
-          const latLngs: [number, number][] = track.coordinates.map(coord => [coord.lat, coord.lon]);
+          // Convert coordinates to Leaflet LatLng format with additional safety checks
+          const latLngs: [number, number][] = track.coordinates
+            .filter(coord => coord && typeof coord.lat === 'number' && typeof coord.lon === 'number')
+            .map(coord => [coord.lat, coord.lon]);
+
+          // Skip if we don't have enough valid coordinates after filtering
+          if (latLngs.length < 2) {
+            console.warn('[PilotMap] Track has insufficient valid coordinates:', track.id || track.callsign);
+            return;
+          }
 
           // Determine track color based on status and callsign
           let color = '#3b82f6'; // Default blue for active flights
@@ -660,12 +681,16 @@ export function PilotMap({
             opacity: 0.8,
             dashArray: track.status === 'COMPLETED' ? '5, 5' : undefined // Dashed for completed flights
           });
-          
+
           layerGroupsRef.current.tracks.addLayer(polyline);
 
           // Add start marker (takeoff)
-          if (track.coordinates.length > 0) {
+          if (latLngs.length > 0 && track.coordinates && track.coordinates.length > 0) {
             const startCoord = track.coordinates[0];
+            if (!startCoord || typeof startCoord.lat !== 'number' || typeof startCoord.lon !== 'number') {
+              console.warn('[PilotMap] Invalid start coordinate for track:', track.id || track.callsign);
+              return;
+            }
             const startIcon = L.divIcon({
               html: `<div style="
                 width: 12px;
@@ -691,15 +716,19 @@ export function PilotMap({
                   ${track.runway ? `<p><strong>Runway:</strong> ${track.runway}</p>` : ''}
                 </div>
               `);
-            
+
             layerGroupsRef.current.tracks.addLayer(startMarker);
           }
 
           // Add end marker (current position or landing)
-          if (track.coordinates.length > 1) {
+          if (latLngs.length > 1 && track.coordinates && track.coordinates.length > 1) {
             const endCoord = track.coordinates[track.coordinates.length - 1];
+            if (!endCoord || typeof endCoord.lat !== 'number' || typeof endCoord.lon !== 'number') {
+              console.warn('[PilotMap] Invalid end coordinate for track:', track.id || track.callsign);
+              return;
+            }
             const isCompleted = track.status === 'COMPLETED';
-            
+
             const endIcon = L.divIcon({
               html: `<div style="
                 width: 0;
@@ -733,7 +762,7 @@ export function PilotMap({
                   ${track.endTime ? `<p><strong>Arrival:</strong> ${new Date(track.endTime).toLocaleString()}</p>` : ''}
                 </div>
               `);
-            
+
             layerGroupsRef.current.tracks.addLayer(endMarker);
           }
         });
@@ -747,7 +776,7 @@ export function PilotMap({
   useEffect(() => {
     const handleRecenter = () => {
       if (mapInstance && airport) {
-        const mapCenter: [number, number] = airport.position 
+        const mapCenter: [number, number] = airport.position
           ? [airport.position.lat, airport.position.lon]
           : airportConfig?.position || [0, 0];
         mapInstance.flyTo(mapCenter, 13, { duration: 1.5 });
@@ -767,7 +796,7 @@ export function PilotMap({
         setTimeout(() => {
           mapInstance.invalidateSize();
           if (airport) {
-            const mapCenter: [number, number] = airport.position 
+            const mapCenter: [number, number] = airport.position
               ? [airport.position.lat, airport.position.lon]
               : airportConfig?.position || [0, 0];
             mapInstance.setView(mapCenter, mapInstance.getZoom());
@@ -795,7 +824,7 @@ export function PilotMap({
       }));
     }, 100);
   };
-  
+
   if (!airport) {
     return (
       <div className="h-full bg-slate-800 flex items-center justify-center">
@@ -810,7 +839,7 @@ export function PilotMap({
     <div className={`${isFullscreen
       ? 'fixed inset-0 z-50 bg-slate-900'
       : 'h-full rounded-xl overflow-hidden border relative'
-    }`}>
+      }`}>
       {/* Fullscreen and Recenter buttons */}
       <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
         {/* Fullscreen toggle button */}
@@ -860,9 +889,9 @@ export function PilotMap({
           </div>
         </div>
       )}
-      
-      <div 
-        ref={mapRef} 
+
+      <div
+        ref={mapRef}
         className="w-full h-full"
         style={{ minHeight: '400px' }}
       />
