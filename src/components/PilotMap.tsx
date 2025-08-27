@@ -803,15 +803,15 @@ export function PilotMap({
       if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
         tracks.forEach(track => {
           // Defensive checks for track data integrity
-          if (!track || !track.points || !Array.isArray(track.points)) {
+          if (!track || !track.coordinates || !Array.isArray(track.coordinates)) {
             console.warn('[PilotMap] Invalid track data:', track);
             return;
           }
 
-          if (track.points.length < 2) return; // Need at least 2 points for a line
+          if (track.coordinates.length < 2) return; // Need at least 2 points for a line
 
           // Convert coordinates to Leaflet LatLng format with additional safety checks
-          const latLngs: [number, number][] = track.points
+          const latLngs: [number, number][] = track.coordinates
             .filter(coord => coord && typeof coord.lat === 'number' && typeof coord.lon === 'number')
             .map(coord => [coord.lat, coord.lon]);
 
@@ -854,8 +854,8 @@ export function PilotMap({
           }
 
           // Add start marker (takeoff)
-          if (latLngs.length > 0 && track.points && track.points.length > 0) {
-            const startCoord = track.points[0];
+          if (latLngs.length > 0 && track.coordinates && track.coordinates.length > 0) {
+            const startCoord = track.coordinates[0];
             if (!startCoord || typeof startCoord.lat !== 'number' || typeof startCoord.lon !== 'number') {
               console.warn('[PilotMap] Invalid start coordinate for track:', track.id || track.callsign);
               return;
@@ -892,8 +892,8 @@ export function PilotMap({
           }
 
           // Add end marker (current position or landing)
-          if (latLngs.length > 1 && track.points && track.points.length > 1) {
-            const endCoord = track.points[track.points.length - 1];
+          if (latLngs.length > 1 && track.coordinates && track.coordinates.length > 1) {
+            const endCoord = track.coordinates[track.coordinates.length - 1];
             if (!endCoord || typeof endCoord.lat !== 'number' || typeof endCoord.lon !== 'number') {
               console.warn('[PilotMap] Invalid end coordinate for track:', track.id || track.callsign);
               return;
