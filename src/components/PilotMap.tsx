@@ -333,11 +333,107 @@ export function PilotMap({
             radius: distance * 1852, // Convert NM to meters
             fill: false,
             color: distance % 10 === 0 ? '#3b82f6' : '#94a3b8',
-            weight: distance % 10 === 0 ? 2 : 1,
-            opacity: 0.6
-          }).bindPopup(`<strong>${distance} NM</strong><br/>DME Ring`);
+            weight: distance % 10 === 0 ? 1.2 : 0.8,
+            opacity: distance % 10 === 0 ? 0.5 : 0.3,
+            dashArray: distance % 10 === 0 ? undefined : "3,3",
+            interactive: false,
+          });
 
           layerGroupsRef.current.dmeRings.addLayer(dmeRing);
+
+          // Helper function to calculate point at distance and bearing
+          const getPointAtDistanceAndBearing = (
+            lat: number,
+            lng: number,
+            distanceNM: number,
+            bearingDeg: number
+          ): { lat: number; lng: number } => {
+            const R = 6371; // Earth's radius in km
+            const d = distanceNM * 1.852; // Convert NM to km
+
+            const lat1 = (lat * Math.PI) / 180;
+            const lng1 = (lng * Math.PI) / 180;
+            const brng = (bearingDeg * Math.PI) / 180;
+
+            const lat2 = Math.asin(
+              Math.sin(lat1) * Math.cos(d / R) +
+              Math.cos(lat1) * Math.sin(d / R) * Math.cos(brng)
+            );
+
+            const lng2 =
+              lng1 +
+              Math.atan2(
+                Math.sin(brng) * Math.sin(d / R) * Math.cos(lat1),
+                Math.cos(d / R) - Math.sin(lat1) * Math.sin(lat2)
+              );
+
+            return {
+              lat: (lat2 * 180) / Math.PI,
+              lng: (lng2 * 180) / Math.PI,
+            };
+          };
+
+          // Add DME distance labels at lower left and top right of each circle
+          const lowerLeftBearing = 225; // Lower left (SW)
+          const topRightBearing = 45;   // Top right (NE)
+
+          // Lower left label
+          const lowerLeftPoint = getPointAtDistanceAndBearing(
+            dmeCenter[0],
+            dmeCenter[1],
+            distance,
+            lowerLeftBearing
+          );
+
+          const lowerLeftLabel = L.marker([lowerLeftPoint.lat, lowerLeftPoint.lng], {
+            icon: L.divIcon({
+              className: "dme-label",
+              html: `<div style="
+                color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
+                font-size: 11px;
+                font-weight: 600;
+                text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
+                background: none;
+                padding: 0;
+                transform: rotate(45deg);
+                opacity: 0.8;
+              ">${distance} NM</div>`,
+              iconSize: [50, 20],
+              iconAnchor: [25, 10],
+            }),
+            interactive: false,
+          });
+
+          layerGroupsRef.current.dmeRings.addLayer(lowerLeftLabel);
+
+          // Top right label
+          const topRightPoint = getPointAtDistanceAndBearing(
+            dmeCenter[0],
+            dmeCenter[1],
+            distance,
+            topRightBearing
+          );
+
+          const topRightLabel = L.marker([topRightPoint.lat, topRightPoint.lng], {
+            icon: L.divIcon({
+              className: "dme-label",
+              html: `<div style="
+                color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
+                font-size: 11px;
+                font-weight: 600;
+                text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
+                background: none;
+                padding: 0;
+                transform: rotate(45deg);
+                opacity: 0.8;
+              ">${distance} NM</div>`,
+              iconSize: [50, 20],
+              iconAnchor: [25, 10],
+            }),
+            interactive: false,
+          });
+
+          layerGroupsRef.current.dmeRings.addLayer(topRightLabel);
         });
       }
     };
@@ -358,32 +454,40 @@ export function PilotMap({
 
       if (displayOptions.showWaypoints && airportConfig?.waypoints) {
         airportConfig.waypoints.forEach(waypoint => {
-          const waypointIcon = L.divIcon({
-            html: `<div style="
-              width: 12px;
-              height: 12px;
-              background: #8b5cf6;
-              border: 2px solid #ffffff;
-              border-radius: 50%;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-            "></div>`,
-            className: 'custom-waypoint-marker',
-            iconSize: [16, 16],
-            iconAnchor: [8, 8]
+          // Draw waypoint marker - using smaller, less prominent purple dot
+          const waypointMarker = L.marker([waypoint.lat, waypoint.lon], {
+            icon: L.divIcon({
+              className: "waypoint-marker",
+              html: `<div style="width: 6px; height: 6px; background-color: #8b5cf6; border-radius: 50%; border: 1px solid #fff;"></div>`,
+              iconSize: [8, 8],
+              iconAnchor: [4, 4],
+            }),
+            interactive: true,
           });
 
-          const waypointMarker = L.marker([waypoint.lat, waypoint.lon], { icon: waypointIcon })
-            .bindPopup(`
-              <div class="waypoint-popup">
-                <h4><strong>${waypoint.name}</strong></h4>
-                ${waypoint.description ? `<p>${waypoint.description}</p>` : ''}
-                <p class="text-sm text-gray-600">
-                  ${waypoint.lat.toFixed(4)}, ${waypoint.lon.toFixed(4)}
-                </p>
-              </div>
-            `);
+          // Add waypoint information tooltip
+          waypointMarker.bindTooltip(
+            `${waypoint.name}: ${waypoint.description || "Waypoint"}`,
+            {
+              permanent: false,
+              direction: "top",
+              className: "distance-tooltip",
+            }
+          );
+
+          // Add waypoint label - smaller and less prominent
+          const waypointLabel = L.marker([waypoint.lat, waypoint.lon], {
+            icon: L.divIcon({
+              className: "waypoint-label",
+              html: `<div style="color: #8b5cf6; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
+              iconSize: [40, 20],
+              iconAnchor: [20, -6], // Place the label above the marker
+            }),
+            interactive: false,
+          });
 
           layerGroupsRef.current.waypoints.addLayer(waypointMarker);
+          layerGroupsRef.current.waypoints.addLayer(waypointLabel);
         });
       }
     };
@@ -446,35 +550,43 @@ export function PilotMap({
 
                 layerGroupsRef.current.approachRoutes.addLayer(approachPath);
 
-                // Add approach waypoint markers
+                // Add approach waypoint markers - using similar style to regular waypoints
                 approach.waypoints.forEach((waypoint, index) => {
                   if (index < approachWaypoints.length) {
-                    const waypointIcon = L.divIcon({
-                      html: `<div style="
-                        background: #f59e0b;
-                        color: white;
-                        font-size: 8px;
-                        font-weight: bold;
-                        padding: 1px 3px;
-                        border-radius: 2px;
-                        border: 1px solid white;
-                        box-shadow: 0 1px 2px rgba(0,0,0,0.3);
-                      ">${waypoint.name}</div>`,
-                      className: 'approach-waypoint-marker',
-                      iconAnchor: [10, 5]
+                    // Draw approach waypoint marker with a different color
+                    const waypointMarker = L.marker(approachWaypoints[index], {
+                      icon: L.divIcon({
+                        className: "approach-waypoint-marker",
+                        html: `<div style="width: 6px; height: 6px; background-color: #14b8a6; border-radius: 50%; border: 1px solid #fff;"></div>`,
+                        iconSize: [8, 8],
+                        iconAnchor: [4, 4],
+                      }),
+                      interactive: true,
                     });
 
-                    const waypointMarker = L.marker(approachWaypoints[index], { icon: waypointIcon })
-                      .bindPopup(`
-                        <div class="approach-waypoint-popup">
-                          <h4><strong>${waypoint.name}</strong></h4>
-                          <p><strong>Approach:</strong> ${approach.name}</p>
-                          <p><strong>Distance:</strong> ${waypoint.distanceFromThreshold} NM</p>
-                          <p><strong>Runway:</strong> ${runway.name}</p>
-                        </div>
-                      `);
+                    // Add waypoint information tooltip
+                    waypointMarker.bindTooltip(
+                      `${waypoint.name}: ${approach.name} approach waypoint for RWY ${runway.name} (${waypoint.distanceFromThreshold}nm from threshold)`,
+                      {
+                        permanent: false,
+                        direction: "top",
+                        className: "distance-tooltip",
+                      }
+                    );
+
+                    // Add waypoint label - use teal color
+                    const waypointLabel = L.marker(approachWaypoints[index], {
+                      icon: L.divIcon({
+                        className: "approach-waypoint-label",
+                        html: `<div style="color: #14b8a6; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
+                        iconSize: [40, 20],
+                        iconAnchor: [20, -6], // Place the label above the marker
+                      }),
+                      interactive: false,
+                    });
 
                     layerGroupsRef.current.approachRoutes.addLayer(waypointMarker);
+                    layerGroupsRef.current.approachRoutes.addLayer(waypointLabel);
                   }
                 });
               }
@@ -527,20 +639,43 @@ export function PilotMap({
             const extLat2 = runway.oppositeEnd.lat + (extensionDistanceMeters / 111320) * Math.cos(bearing);
             const extLon2 = runway.oppositeEnd.lon + (extensionDistanceMeters / (111320 * Math.cos(runway.oppositeEnd.lat * Math.PI / 180))) * Math.sin(bearing);
 
-            // Create extended centerline
-            const centerline = L.polyline([
-              [extLat1, extLon1],
+            // Draw the actual runway line that connects the thresholds
+            const runwayLine = L.polyline([
               [runway.threshold.lat, runway.threshold.lon],
+              [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
+            ], {
+              color: '#3b82f6', // Blue color
+              weight: 2,
+              opacity: 0.9,
+            });
+            layerGroupsRef.current.extendedCenterlines.addLayer(runwayLine);
+
+            // Create extended centerline for first direction (from threshold outward)
+            const centerline1 = L.polyline([
+              [runway.threshold.lat, runway.threshold.lon],
+              [extLat1, extLon1]
+            ], {
+              color: '#3b82f6', // Blue color
+              weight: 1.5,
+              opacity: 0.6,
+              dashArray: '5,5',
+              interactive: false,
+            });
+
+            // Create extended centerline for opposite direction (from opposite end outward)
+            const centerline2 = L.polyline([
               [runway.oppositeEnd.lat, runway.oppositeEnd.lon],
               [extLat2, extLon2]
             ], {
-              color: '#fbbf24', // amber-400
-              weight: 1,
+              color: '#3b82f6', // Blue color
+              weight: 1.5,
               opacity: 0.6,
-              dashArray: '10, 10'
-            }).bindPopup(`<strong>Extended Centerline</strong><br/>Runway ${runway.name}/${runway.oppositeEnd.name}`);
+              dashArray: '5,5',
+              interactive: false,
+            });
 
-            layerGroupsRef.current.extendedCenterlines.addLayer(centerline);
+            layerGroupsRef.current.extendedCenterlines.addLayer(centerline1);
+            layerGroupsRef.current.extendedCenterlines.addLayer(centerline2);
           }
         });
       }
@@ -583,25 +718,26 @@ export function PilotMap({
             color = '#f59e0b'; // Amber for moderate
           }
 
-          // Create custom PIREP icon
+          // Create custom PIREP icon with warning triangle - more prominent
           const pirepIcon = L.divIcon({
             html: `<div style="
-              width: 16px;
-              height: 16px;
+              width: 24px;
+              height: 24px;
               background: ${color};
-              border: 2px solid #ffffff;
-              border-radius: 3px;
-              box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+              border: 3px solid #ffffff;
+              border-radius: 4px;
+              box-shadow: 0 3px 6px rgba(0,0,0,0.4);
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 10px;
+              font-size: 14px;
               font-weight: bold;
               color: white;
-            ">P</div>`,
+              position: relative;
+            ">⚠</div>`,
             className: 'custom-pirep-marker',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            iconSize: [30, 30],
+            iconAnchor: [15, 15]
           });
 
           const marker = L.marker([pirep.location.lat, pirep.location.lon], { icon: pirepIcon });
@@ -616,7 +752,7 @@ export function PilotMap({
           const popupContent = `
             <div class="pirep-popup" style="min-width: 200px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <h4 style="margin: 0; color: ${color};"><strong>PIREP ${pirep.id ? pirep.id.slice(-6) : 'Unknown'}</strong></h4>
+                <h4 style="margin: 0; color: ${color};"><strong>PIREP</strong></h4>
                 <button 
                   onclick="window.dismissPirep('${pirep.id}')"
                   style="background: #f3f4f6; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;"
