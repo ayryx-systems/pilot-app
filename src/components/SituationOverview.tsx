@@ -85,93 +85,100 @@ export function SituationOverview({
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-3 text-white">Situation Overview</h2>
+      <h2 className="text-base font-semibold mb-2 text-white">Situation Overview</h2>
 
-      {/* Weather Button */}
-      {(weather || summary?.conditions?.weather) && (
-        <button
-          onClick={() => setIsWeatherModalOpen(true)}
-          className="mb-4 w-full p-3 bg-slate-700 hover:bg-slate-600 rounded-lg transition-colors text-left"
-        >
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              {getStatusIcon(summary?.conditions?.weather?.status)}
-              <span className="text-sm font-medium text-white ml-2">Weather</span>
-            </div>
-            <div className="text-xs text-gray-400">Tap for details</div>
-          </div>
-          <div className="text-sm text-gray-300 mt-1">
-            {summary?.conditions?.weather?.short_summary || weather?.conditions || 'Weather information unavailable'}
-          </div>
-        </button>
+      {/* Situation Summary - Compact */}
+      {summary && (
+        <div className="mb-3 p-2 bg-slate-700 rounded-md">
+          <p className="text-xs text-gray-200 leading-relaxed">{summary.situation_overview}</p>
+        </div>
       )}
 
-      {/* Situation Summary */}
-      {summary ? (
-        <div className="space-y-3">
-          <div className="p-3 bg-slate-700 rounded-lg">
-            <p className="text-sm text-gray-200">{summary.situation_overview}</p>
-          </div>
+      {/* Compact Condition Grid */}
+      {summary?.conditions && (
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {/* Weather Button - Compact */}
+          {(weather || summary.conditions.weather) && (
+            <button
+              onClick={() => setIsWeatherModalOpen(true)}
+              className="col-span-2 p-2 bg-slate-700 hover:bg-slate-600 rounded-md transition-colors text-left"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center">
+                  {getStatusIcon(summary.conditions.weather?.status)}
+                  <span className="text-xs font-medium text-white ml-1">Weather</span>
+                </div>
+                <div className="text-xs text-gray-400">Details</div>
+              </div>
+              <div className="text-xs text-gray-300 mt-1 truncate">
+                {summary.conditions.weather?.short_summary || weather?.conditions || 'Weather unavailable'}
+              </div>
+            </button>
+          )}
 
-          {/* Expandable Condition Cards */}
-          {summary.conditions && (
-            <div className="space-y-2">
-              {Object.entries(summary.conditions)
-                .filter(([key]) => key !== 'weather') // Exclude weather from conditions list
-                .map(([key, condition]) => {
-                  const isExpanded = expandedConditions.has(key);
-                  return (
-                    <div key={key} className="space-y-2">
-                      {/* Condition Button */}
+          {/* Other Conditions - Grid Layout */}
+          {Object.entries(summary.conditions)
+            .filter(([key]) => key !== 'weather')
+            .map(([key, condition]) => {
+              const isExpanded = expandedConditions.has(key);
+              return (
+                <div key={key} className="col-span-1">
+                  <button
+                    onClick={() => toggleConditionExpansion(key)}
+                    className="w-full p-2 bg-slate-700/50 hover:bg-slate-600/50 rounded-md transition-colors text-left"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="flex items-center">
+                        {getStatusIcon(condition.status)}
+                        <span className="text-xs font-medium text-white ml-1 capitalize truncate">{key}</span>
+                      </div>
+                    </div>
+                    <div className="text-xs text-gray-300 truncate">
+                      {condition.short_summary || condition.description || 'No data'}
+                    </div>
+                  </button>
+
+                  {/* Expanded Details - Full Width */}
+                  {isExpanded && (
+                    <div className="col-span-2 mt-2 p-2 bg-slate-800/50 rounded-md border-l-2 border-slate-600">
+                      <p className="text-xs text-gray-300 leading-relaxed">
+                        {condition.long_summary || condition.description || 'Detailed information not available'}
+                      </p>
                       <button
                         onClick={() => toggleConditionExpansion(key)}
-                        className="w-full p-3 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg transition-colors text-left"
+                        className="mt-1 text-xs text-blue-400 hover:text-blue-300"
                       >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            {getStatusIcon(condition.status)}
-                            <span className="text-sm font-medium text-white ml-2 capitalize">{key}</span>
-                          </div>
-                          <div className="text-xs text-gray-400">
-                            {isExpanded ? 'Tap to collapse' : 'Tap for details'}
-                          </div>
-                        </div>
-                        <div className="text-sm text-gray-300 mt-1">
-                          {condition.short_summary || condition.description || 'No summary available'}
-                        </div>
+                        Collapse
                       </button>
-
-                      {/* Expanded Details */}
-                      {isExpanded && (
-                        <div className="ml-4 p-3 bg-slate-800/50 rounded-lg border-l-2 border-slate-600">
-                          <p className="text-sm text-gray-300 leading-relaxed">
-                            {condition.long_summary || condition.description || 'Detailed information not available'}
-                          </p>
-                        </div>
-                      )}
                     </div>
-                  );
-                })}
-            </div>
-          )}
-
-          {(summary.fallback || (summaryMetadata && !summaryMetadata.active)) && (
-            <div className="flex items-center p-2 bg-yellow-900/30 rounded text-yellow-200 text-xs">
-              <Info className="w-3 h-3 mr-1" />
-              {summaryMetadata && !summaryMetadata.active
-                ? 'Airport data processing not active'
-                : 'Using cached data'
-              }
-            </div>
-          )}
+                  )}
+                </div>
+              );
+            })}
         </div>
-      ) : (
-        <div className="text-center text-gray-400 py-8">
-          <Info className="w-8 h-8 mx-auto mb-2" />
-          <p className="text-sm">
+      )}
+
+      {/* Status Indicators */}
+      {(summary?.fallback || (summaryMetadata && !summaryMetadata.active)) && (
+        <div className="flex items-center p-1.5 bg-yellow-900/30 rounded text-yellow-200 text-xs">
+          <Info className="w-3 h-3 mr-1 flex-shrink-0" />
+          <span className="truncate">
+            {summaryMetadata && !summaryMetadata.active
+              ? 'Processing inactive'
+              : 'Cached data'
+            }
+          </span>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {!summary && (
+        <div className="text-center text-gray-400 py-4">
+          <Info className="w-6 h-6 mx-auto mb-1" />
+          <p className="text-xs">
             {connectionStatus.connected
-              ? 'Loading situation analysis...'
-              : 'Connect to load situation data'
+              ? 'Loading analysis...'
+              : 'Connect to load data'
             }
           </p>
         </div>

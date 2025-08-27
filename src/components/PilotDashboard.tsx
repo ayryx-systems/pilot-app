@@ -224,15 +224,15 @@ export function PilotDashboard() {
         {/* Sidebar - Responsive layout */}
         <div className="
           w-full lg:w-80 xl:w-96 
-          h-64 sm:h-80 lg:h-full 
+          h-72 sm:h-80 lg:h-full 
           bg-slate-800 
           border-t lg:border-t-0 lg:border-l border-slate-700 
           flex flex-col 
           order-1 lg:order-2
           overflow-hidden
         ">
-          {/* Situation Overview */}
-          <div className="p-2 sm:p-4 border-b border-slate-700 flex-shrink-0">
+          {/* Situation Overview - Compact */}
+          <div className="p-2 sm:p-3 border-b border-slate-700 flex-shrink-0">
             <SituationOverview
               summary={summary}
               weather={airportOverview?.weather}
@@ -243,9 +243,9 @@ export function PilotDashboard() {
             />
           </div>
 
-          {/* PIREPs List */}
+          {/* PIREPs List - More space */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="p-2 sm:p-4">
+            <div className="p-2 sm:p-3">
               <PirepsList
                 pireps={pireps}
                 onDismissPirep={(id) => {
@@ -257,27 +257,22 @@ export function PilotDashboard() {
             </div>
           </div>
 
-          {/* Airport Info Footer */}
+          {/* Airport Info Footer - Compact */}
           {airportOverview && (
-            <div className="p-2 sm:p-4 border-t border-slate-700 bg-slate-800 flex-shrink-0">
-              <div className="text-sm space-y-1">
+            <div className="p-2 border-t border-slate-700 bg-slate-800 flex-shrink-0">
+              <div className="text-xs space-y-1">
                 <div className="flex justify-between">
-                  <span className="text-gray-400">Airport:</span>
-                  <span>{airportOverview.airport.code}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Runways:</span>
-                  <span>{airportOverview.runways.length}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-400">Status:</span>
-                  <span className={airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}>
-                    {airportOverview.operational.active ? 'Active' : 'Inactive'}
+                  <span className="text-gray-400">{airportOverview.airport.code}</span>
+                  <span className="flex items-center space-x-2">
+                    <span>{airportOverview.runways.length} RWY</span>
+                    <span className={airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}>
+                      {airportOverview.operational.active ? '●' : '●'}
+                    </span>
                   </span>
                 </div>
 
-                {/* Debug timestamp */}
-                <div className="pt-2 border-t border-slate-600/50">
+                {/* Debug timestamp - compact */}
+                <div className="pt-1 border-t border-slate-600/30">
                   <DebugTimestamp
                     serverTimestamp={airportOverview.timestamp}
                     source="live data"
