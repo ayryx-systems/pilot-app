@@ -100,18 +100,20 @@ export function SituationOverview({
             <p className="text-sm text-gray-200">{summary.situation_overview}</p>
           </div>
 
-          {/* Conditions */}
+          {/* Conditions (excluding weather since it has its own button) */}
           {summary.conditions && (
             <div className="space-y-2">
-              {Object.entries(summary.conditions).map(([key, condition]) => (
-                <div key={key} className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
-                  <div className="flex items-center space-x-2">
-                    {getStatusIcon(condition.status)}
-                    <span className="text-sm capitalize text-white">{key}</span>
+              {Object.entries(summary.conditions)
+                .filter(([key]) => key !== 'weather') // Exclude weather from conditions list
+                .map(([key, condition]) => (
+                  <div key={key} className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
+                    <div className="flex items-center space-x-2">
+                      {getStatusIcon(condition.status)}
+                      <span className="text-sm capitalize text-white">{key}</span>
+                    </div>
+                    <span className="text-xs text-gray-300">{condition.description}</span>
                   </div>
-                  <span className="text-xs text-gray-300">{condition.description}</span>
-                </div>
-              ))}
+                ))}
             </div>
           )}
 

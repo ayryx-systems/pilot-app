@@ -85,7 +85,7 @@ export function WeatherModal({
                 {/* Content */}
                 <div className="p-4 space-y-6">
                     {/* Weather Summary (from LLM) */}
-                    {summaryData?.long_summary && (
+                    {summaryData && (
                         <div>
                             <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
                                 <Cloud className="w-4 h-4 text-blue-400" />
@@ -98,7 +98,7 @@ export function WeatherModal({
                             </h3>
                             <div className="bg-slate-900 rounded-lg p-3">
                                 <p className="text-gray-300 text-sm leading-relaxed">
-                                    {summaryData.long_summary}
+                                    {summaryData.long_summary || summaryData.description || 'Weather summary unavailable'}
                                 </p>
                             </div>
                         </div>
