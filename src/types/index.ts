@@ -18,6 +18,7 @@ export interface AirportOverview {
   airport: Airport;
   weather: {
     metar: string;
+    metarFriendly: string;
     conditions: string;
     temperature?: string;
     wind?: {
@@ -107,6 +108,8 @@ export interface SituationSummary {
     };
     weather?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning' | 'check-overview' | 'unavailable';
     };
     traffic?: {

@@ -192,6 +192,7 @@ export function PilotDashboard() {
               weather={airportOverview?.weather}
               loading={loading}
               connectionStatus={connectionStatus}
+              airportCode={selectedAirport || undefined}
               summaryMetadata={summaryMetadata}
             />
           </div>
