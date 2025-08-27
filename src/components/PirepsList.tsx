@@ -4,6 +4,7 @@ import React from 'react';
 import { PiRep, ConnectionStatus } from '@/types';
 import { AlertTriangle, Clock, X, Plane } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
+import { DebugTimestamp } from './DebugTimestamp';
 
 interface PirepsListProps {
   pireps: PiRep[];
@@ -14,6 +15,7 @@ interface PirepsListProps {
     message?: string;
     lastUpdate?: Date;
     source?: 'live' | 'cache' | 'stale-cache';
+    serverTimestamp?: string;
   };
 }
 
@@ -132,6 +134,16 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
             }
           </span>
         </div>
+
+        {/* Debug timestamp for PIREPs */}
+        {pirepsMetadata?.serverTimestamp && (
+          <div className="mt-1">
+            <DebugTimestamp
+              serverTimestamp={pirepsMetadata.serverTimestamp}
+              source="PIREP data"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

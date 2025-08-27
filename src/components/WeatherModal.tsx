@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { X, Cloud, Wind, Eye, Thermometer } from 'lucide-react';
+import { DebugTimestamp } from './DebugTimestamp';
 
 interface WeatherModalProps {
     isOpen: boolean;
@@ -177,8 +178,18 @@ export function WeatherModal({
 
                     {/* Last Updated */}
                     {weatherData?.timestamp && (
-                        <div className="text-xs text-gray-500 text-center">
-                            Last updated: {new Date(weatherData.timestamp).toLocaleString()}
+                        <div className="space-y-2">
+                            <div className="text-xs text-gray-500 text-center">
+                                Last updated: {new Date(weatherData.timestamp).toLocaleString()}
+                            </div>
+                            {/* Debug: Show weather observation timestamp in UTC */}
+                            <div className="text-center">
+                                <DebugTimestamp
+                                    serverTimestamp={weatherData.timestamp}
+                                    source="weather observation"
+                                    className="text-center"
+                                />
+                            </div>
                         </div>
                     )}
 

@@ -170,7 +170,11 @@ class PilotApiService {
       const cached = this.getCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
       if (cached) {
         console.log(`Using cached airport overview for ${airportId}`);
-        return { ...cached.data, source: 'cache' };
+        return {
+          ...cached.data,
+          source: 'cache',
+          timestamp: cached.timestamp.toISOString()
+        };
       }
     }
 
@@ -181,23 +185,25 @@ class PilotApiService {
       this.setCachedData(CACHE_CONFIGS.airportOverview, data, airportId);
       console.log(`Cached airport overview for ${airportId}`);
 
-      return data;
+      return { ...data, source: 'live' };
     } catch (error) {
       console.warn(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
-      // Try to use stale cache first
+      // Always try to use stale cache when network fails
       const staleCache = this.getStaleCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
       if (staleCache) {
-        console.log(`Using stale cached airport overview for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
-        return { ...staleCache.data, source: 'stale-cache' };
+        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
+        console.log(`Using stale cached airport overview for ${airportId} (${ageSeconds}s old)`);
+        return {
+          ...staleCache.data,
+          source: 'stale-cache',
+          timestamp: staleCache.timestamp.toISOString(),
+          cacheAge: ageSeconds
+        };
       }
 
       // If no cache available, provide meaningful error
-      if (error instanceof ApiError && error.status === 0) {
-        throw new ApiError(`Airport overview unavailable: ${error.message}`, 0);
-      }
-
-      throw error;
+      throw new ApiError(`Airport overview unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
     }
   }
 
@@ -220,22 +226,24 @@ class PilotApiService {
       this.setCachedData(CACHE_CONFIGS.pireps, data, airportId);
       console.log(`Cached PIREPs for ${airportId}`);
 
-      return data;
+      return { ...data, source: 'live' };
     } catch (error) {
       console.warn(`Failed to fetch PIREPs for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       const staleCache = this.getStaleCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
       if (staleCache) {
-        console.log(`Using stale cached PIREPs for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
-        return { ...staleCache.data, source: 'stale-cache' };
+        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
+        console.log(`Using stale cached PIREPs for ${airportId} (${ageSeconds}s old)`);
+        return {
+          ...staleCache.data,
+          source: 'stale-cache',
+          timestamp: staleCache.timestamp.toISOString(),
+          cacheAge: ageSeconds
+        };
       }
 
-      // If no cache available, provide meaningful error
-      if (error instanceof ApiError && error.status === 0) {
-        throw new ApiError(`PIREPs unavailable: ${error.message}`, 0);
-      }
-
-      throw error;
+      // If no cache available, provide meaningful error  
+      throw new ApiError(`PIREPs unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
     }
   }
 
@@ -258,22 +266,24 @@ class PilotApiService {
       this.setCachedData(CACHE_CONFIGS.tracks, data, airportId);
       console.log(`Cached ground tracks for ${airportId}`);
 
-      return data;
+      return { ...data, source: 'live' };
     } catch (error) {
       console.warn(`Failed to fetch ground tracks for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       const staleCache = this.getStaleCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
       if (staleCache) {
-        console.log(`Using stale cached ground tracks for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
-        return { ...staleCache.data, source: 'stale-cache' };
+        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
+        console.log(`Using stale cached ground tracks for ${airportId} (${ageSeconds}s old)`);
+        return {
+          ...staleCache.data,
+          source: 'stale-cache',
+          timestamp: staleCache.timestamp.toISOString(),
+          cacheAge: ageSeconds
+        };
       }
 
       // If no cache available, provide meaningful error
-      if (error instanceof ApiError && error.status === 0) {
-        throw new ApiError(`Ground tracks unavailable: ${error.message}`, 0);
-      }
-
-      throw error;
+      throw new ApiError(`Ground tracks unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
     }
   }
 
@@ -296,22 +306,24 @@ class PilotApiService {
       this.setCachedData(CACHE_CONFIGS.summary, data, airportId);
       console.log(`Cached situation summary for ${airportId}`);
 
-      return data;
+      return { ...data, source: 'live' };
     } catch (error) {
       console.warn(`Failed to fetch situation summary for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       const staleCache = this.getStaleCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
       if (staleCache) {
-        console.log(`Using stale cached situation summary for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
-        return { ...staleCache.data, source: 'stale-cache' };
+        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
+        console.log(`Using stale cached situation summary for ${airportId} (${ageSeconds}s old)`);
+        return {
+          ...staleCache.data,
+          source: 'stale-cache',
+          timestamp: staleCache.timestamp.toISOString(),
+          cacheAge: ageSeconds
+        };
       }
 
       // If no cache available, provide meaningful error
-      if (error instanceof ApiError && error.status === 0) {
-        throw new ApiError(`Situation summary unavailable: ${error.message}`, 0);
-      }
-
-      throw error;
+      throw new ApiError(`Situation summary unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
     }
   }
 
@@ -349,13 +361,27 @@ class PilotApiService {
   }
 
   /**
-   * Test connection and measure latency
+   * Test connection and measure latency (bypasses service worker cache)
    */
   async testConnection(): Promise<{ connected: boolean; latency: number; error?: string }> {
     const startTime = Date.now();
 
     try {
-      await this.checkHealth();
+      // Use a cache-busting parameter and no-cache headers to ensure real connection test
+      const timestamp = Date.now();
+      const response = await this.fetchWithTimeout(
+        `${API_BASE_URL}/api/pilot/health?t=${timestamp}`,
+        {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        },
+        5000 // Shorter timeout for connection test
+      );
+
+      await this.handleResponse<{ status: string; timestamp: string }>(response);
       const latency = Date.now() - startTime;
       return { connected: true, latency };
     } catch (error) {

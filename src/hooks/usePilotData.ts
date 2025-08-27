@@ -119,7 +119,8 @@ export function usePilotData() {
         updates.pireps = pirepsResponse.value.pireps;
         updates.pirepsMetadata = {
           active: pirepsResponse.value.active ?? true,
-          message: pirepsResponse.value.message
+          message: pirepsResponse.value.message,
+          serverTimestamp: pirepsResponse.value.timestamp
         };
       } else {
         console.error('Failed to load PIREPs:', pirepsResponse.reason);
@@ -152,22 +153,26 @@ export function usePilotData() {
       }
 
       // Determine if we're using cached data and set appropriate error message
-      const hasErrors = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
-        .some(response => response.status === 'rejected');
+      const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
+        .filter(response => response.status === 'rejected');
 
-      const usingCachedData = [
-        updates.airportOverview,
+      const successfulData = [
+        overviewResponse.status === 'fulfilled' ? overviewResponse.value : null,
         pirepsResponse.status === 'fulfilled' ? pirepsResponse.value : null,
         tracksResponse.status === 'fulfilled' ? tracksResponse.value : null,
         summaryResponse.status === 'fulfilled' ? summaryResponse.value : null
-      ].some(data => data?.source?.includes('cache'));
+      ].filter(Boolean);
 
-      if (hasErrors && usingCachedData) {
-        updates.error = 'Using cached data - network connection issues';
-      } else if (hasErrors) {
+      const usingStaleCache = successfulData.some(data => data?.source === 'stale-cache');
+      const hasNoData = successfulData.length === 0;
+
+      // Set error message based on data availability
+      if (hasNoData && failedRequests.length > 0) {
+        updates.error = 'No data available - check connection and try refreshing';
+      } else if (usingStaleCache && failedRequests.length > 0) {
+        updates.error = null; // Don't show error when we have stale cache - the age indicator shows this
+      } else if (failedRequests.length > 0) {
         updates.error = 'Some data failed to load';
-      } else if (usingCachedData) {
-        updates.error = null; // Don't show error for successful cached data
       } else {
         updates.error = null;
       }

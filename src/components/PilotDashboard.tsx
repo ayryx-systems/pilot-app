@@ -12,6 +12,7 @@ import { MapDisplayOptions } from '@/types';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
+import { DebugTimestamp } from './DebugTimestamp';
 
 export function PilotDashboard() {
   const {
@@ -85,14 +86,22 @@ export function PilotDashboard() {
     return <Wifi className="w-4 h-4" />;
   };
 
-  // Get the most recent data timestamp for age display
-  const getMostRecentDataTime = (): Date => {
-    const times = [
-      airportOverview?.timestamp,
-      connectionStatus.lastUpdate
-    ].filter(Boolean).map(t => new Date(t!));
+  // Get the most recent data timestamp and check if using cached data
+  const getDataStatus = (): { timestamp: Date; isStale: boolean; source: string } => {
+    // Look for stale cache indicators in the data
+    const isStale = airportOverview?.source === 'stale-cache' ||
+      !connectionStatus.connected;
 
-    return times.length > 0 ? new Date(Math.max(...times.map(t => t.getTime()))) : new Date();
+    // Use actual data timestamps when available
+    const dataTimestamp = airportOverview?.timestamp
+      ? new Date(airportOverview.timestamp)
+      : connectionStatus.lastUpdate;
+
+    return {
+      timestamp: dataTimestamp,
+      isStale,
+      source: airportOverview?.source || (connectionStatus.connected ? 'live' : 'cache')
+    };
   };
 
   return (
@@ -116,14 +125,17 @@ export function PilotDashboard() {
 
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
           {/* Data Age Indicator */}
-          {selectedAirport && (
-            <SimpleDataAge
-              timestamp={getMostRecentDataTime()}
-              isLive={connectionStatus.connected}
-              offline={!connectionStatus.connected}
-              size="md"
-            />
-          )}
+          {selectedAirport && (() => {
+            const dataStatus = getDataStatus();
+            return (
+              <SimpleDataAge
+                timestamp={dataStatus.timestamp}
+                isLive={dataStatus.source === 'live' && connectionStatus.connected}
+                offline={!connectionStatus.connected}
+                size="md"
+              />
+            );
+          })()}
 
           {/* Connection Status */}
           <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
@@ -144,19 +156,43 @@ export function PilotDashboard() {
             <span>{loading ? 'Updating...' : 'Refresh'}</span>
           </button>
         </div>
+
+        {/* Debug info - last connection test timestamp */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="absolute top-full left-0 p-1 text-xs text-gray-500 font-mono bg-slate-800/50">
+            <DebugTimestamp
+              serverTimestamp={connectionStatus.lastUpdate.toISOString()}
+              source="connection test"
+              className="opacity-60"
+            />
+          </div>
+        )}
       </header>
 
       {/* App Update Notifier */}
       <AppUpdateNotifier />
 
-      {/* Simple error display for important errors only */}
-      {error && !error.includes('cache') && !connectionStatus.connected && (
+      {/* Offline notification when using cached data */}
+      {!connectionStatus.connected && airportOverview && (
         <div className="bg-yellow-900/30 border-yellow-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
           <div className="flex items-center text-yellow-200">
             <WifiOff className="w-4 h-4 mr-2" />
             <span className="text-sm">
-              No connection - showing last available data
+              {airportOverview.source === 'stale-cache'
+                ? 'Offline - using cached data'
+                : 'Connection lost - showing last available data'
+              }
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Error display for when we have no data at all */}
+      {error && error.includes('No data available') && (
+        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
+          <div className="flex items-center text-red-200">
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            <span className="text-sm">{error}</span>
           </div>
         </div>
       )}
@@ -246,6 +282,14 @@ export function PilotDashboard() {
                   <span className={airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}>
                     {airportOverview.operational.active ? 'Active' : 'Inactive'}
                   </span>
+                </div>
+
+                {/* Debug timestamp */}
+                <div className="pt-2 border-t border-slate-600/50">
+                  <DebugTimestamp
+                    serverTimestamp={airportOverview.timestamp}
+                    source={`${airportOverview.source || 'unknown'} data`}
+                  />
                 </div>
               </div>
             </div>
