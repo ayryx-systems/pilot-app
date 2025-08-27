@@ -154,12 +154,7 @@ export interface ConnectionStatus {
   latency?: number;
 }
 
-export interface CachedData<T> {
-  data: T;
-  timestamp: Date;
-  maxAge: number; // in seconds
-  source: 'cache' | 'network';
-}
+
 
 export interface PilotAppState {
   selectedAirport: string | null;

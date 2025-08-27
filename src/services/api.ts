@@ -7,10 +7,8 @@ import {
   AirportOverview,
   PirepsResponse,
   TracksResponse,
-  SummaryResponse,
-  CachedData
+  SummaryResponse
 } from '@/types';
-import { cacheService, CACHE_CONFIGS } from './cache';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
@@ -100,62 +98,20 @@ class PilotApiService {
     }
   }
 
-  /**
-   * Get cached data or return null if expired/unavailable
-   */
-  private getCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], id?: string): CachedData<T> | null {
-    return cacheService.get<T>(config, id);
-  }
+
 
   /**
-   * Get stale cached data (even if expired)
+   * Get list of available airports
    */
-  private getStaleCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], id?: string): CachedData<T> | null {
-    return cacheService.getStale<T>(config, id);
-  }
-
-  /**
-   * Cache data with appropriate config
-   */
-  private setCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], data: T, id?: string): void {
-    cacheService.set(config, data, id);
-  }
-
-  /**
-   * Get list of available airports (with smart caching)
-   */
-  async getAirports(useCache: boolean = true): Promise<AirportsResponse> {
-    // Try cache first if requested
-    if (useCache) {
-      const cached = this.getCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
-      if (cached) {
-        console.log('Using cached airports data');
-        return { ...cached.data, source: 'cache' };
-      }
-    }
-
+  async getAirports(): Promise<AirportsResponse> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports`);
-      const data = await this.handleResponse<AirportsResponse>(response);
-
-      // Cache the response
-      this.setCachedData(CACHE_CONFIGS.airports, data);
-      console.log('Cached fresh airports data');
-
-      return data;
+      return await this.handleResponse<AirportsResponse>(response);
     } catch (error) {
-      console.warn('Failed to fetch airports:', error instanceof Error ? error.message : 'Unknown error');
+      console.error('Failed to fetch airports:', error instanceof Error ? error.message : 'Unknown error');
 
-      // If network fails, try to return stale cache
-      const staleCache = this.getStaleCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
-      if (staleCache) {
-        console.log(`Using stale cached airports data (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
-        return { ...staleCache.data, source: 'stale-cache' };
-      }
-
-      // If no cache available, provide meaningful error
       if (error instanceof ApiError && error.status === 0) {
-        throw new ApiError(`Airports list unavailable: ${error.message}`, 0);
+        throw new ApiError('Cannot connect to server - check your internet connection and try again', 0);
       }
 
       throw error;
@@ -163,194 +119,78 @@ class PilotApiService {
   }
 
   /**
-   * Get airport overview (weather, runways, operational data) with smart caching
+   * Get airport overview (weather, runways, operational data)
    */
-  async getAirportOverview(airportId: string, useCache: boolean = true): Promise<AirportOverview> {
-    if (useCache) {
-      const cached = this.getCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
-      if (cached) {
-        console.log(`Using cached airport overview for ${airportId}`);
-        return {
-          ...cached.data,
-          source: 'cache',
-          timestamp: cached.timestamp.toISOString()
-        };
-      }
-    }
-
+  async getAirportOverview(airportId: string): Promise<AirportOverview> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
-      const data = await this.handleResponse<AirportOverview>(response);
-
-      this.setCachedData(CACHE_CONFIGS.airportOverview, data, airportId);
-      console.log(`Cached airport overview for ${airportId}`);
-
-      return { ...data, source: 'live' };
+      return await this.handleResponse<AirportOverview>(response);
     } catch (error) {
-      console.warn(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+      console.error(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
-      // Always try to use stale cache when network fails
-      const staleCache = this.getStaleCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
-      if (staleCache) {
-        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
-        console.log(`Using stale cached airport overview for ${airportId} (${ageSeconds}s old)`);
-        return {
-          ...staleCache.data,
-          source: 'stale-cache',
-          timestamp: staleCache.timestamp.toISOString(),
-          cacheAge: ageSeconds
-        };
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - airport overview unavailable while offline', 0);
       }
 
-      // If no cache available, provide meaningful error
-      throw new ApiError(`Airport overview unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
+      throw error;
     }
   }
 
   /**
-   * Get PIREPs for an airport with smart caching
+   * Get PIREPs for an airport
    */
-  async getPireps(airportId: string, useCache: boolean = true): Promise<PirepsResponse> {
-    if (useCache) {
-      const cached = this.getCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
-      if (cached) {
-        console.log(`Using cached PIREPs for ${airportId}`);
-        return { ...cached.data, source: 'cache' };
-      }
-    }
-
+  async getPireps(airportId: string): Promise<PirepsResponse> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
-      const data = await this.handleResponse<PirepsResponse>(response);
-
-      this.setCachedData(CACHE_CONFIGS.pireps, data, airportId);
-      console.log(`Cached PIREPs for ${airportId}`);
-
-      return { ...data, source: 'live' };
+      return await this.handleResponse<PirepsResponse>(response);
     } catch (error) {
-      console.warn(`Failed to fetch PIREPs for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+      console.error(`Failed to fetch PIREPs for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
-      const staleCache = this.getStaleCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
-      if (staleCache) {
-        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
-        console.log(`Using stale cached PIREPs for ${airportId} (${ageSeconds}s old)`);
-        return {
-          ...staleCache.data,
-          source: 'stale-cache',
-          timestamp: staleCache.timestamp.toISOString(),
-          cacheAge: ageSeconds
-        };
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - PIREPs unavailable while offline', 0);
       }
 
-      // If no cache available, provide meaningful error  
-      throw new ApiError(`PIREPs unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
+      throw error;
     }
   }
 
   /**
-   * Get ground tracks for an airport with smart caching
+   * Get ground tracks for an airport
    */
-  async getGroundTracks(airportId: string, useCache: boolean = true): Promise<TracksResponse> {
-    if (useCache) {
-      const cached = this.getCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
-      if (cached) {
-        console.log(`Using cached ground tracks for ${airportId}`);
-        return { ...cached.data, source: 'cache' };
-      }
-    }
-
+  async getGroundTracks(airportId: string): Promise<TracksResponse> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
-      const data = await this.handleResponse<TracksResponse>(response);
-
-      this.setCachedData(CACHE_CONFIGS.tracks, data, airportId);
-      console.log(`Cached ground tracks for ${airportId}`);
-
-      return { ...data, source: 'live' };
+      return await this.handleResponse<TracksResponse>(response);
     } catch (error) {
-      console.warn(`Failed to fetch ground tracks for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+      console.error(`Failed to fetch ground tracks for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
-      const staleCache = this.getStaleCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
-      if (staleCache) {
-        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
-        console.log(`Using stale cached ground tracks for ${airportId} (${ageSeconds}s old)`);
-        return {
-          ...staleCache.data,
-          source: 'stale-cache',
-          timestamp: staleCache.timestamp.toISOString(),
-          cacheAge: ageSeconds
-        };
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - ground tracks unavailable while offline', 0);
       }
 
-      // If no cache available, provide meaningful error
-      throw new ApiError(`Ground tracks unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
+      throw error;
     }
   }
 
   /**
-   * Get situation summary for an airport with smart caching
+   * Get situation summary for an airport
    */
-  async getSituationSummary(airportId: string, useCache: boolean = true): Promise<SummaryResponse> {
-    if (useCache) {
-      const cached = this.getCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
-      if (cached) {
-        console.log(`Using cached situation summary for ${airportId}`);
-        return { ...cached.data, source: 'cache' };
-      }
-    }
-
+  async getSituationSummary(airportId: string): Promise<SummaryResponse> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
-      const data = await this.handleResponse<SummaryResponse>(response);
-
-      this.setCachedData(CACHE_CONFIGS.summary, data, airportId);
-      console.log(`Cached situation summary for ${airportId}`);
-
-      return { ...data, source: 'live' };
+      return await this.handleResponse<SummaryResponse>(response);
     } catch (error) {
-      console.warn(`Failed to fetch situation summary for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+      console.error(`Failed to fetch situation summary for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
-      const staleCache = this.getStaleCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
-      if (staleCache) {
-        const ageSeconds = Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000);
-        console.log(`Using stale cached situation summary for ${airportId} (${ageSeconds}s old)`);
-        return {
-          ...staleCache.data,
-          source: 'stale-cache',
-          timestamp: staleCache.timestamp.toISOString(),
-          cacheAge: ageSeconds
-        };
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - situation summary unavailable while offline', 0);
       }
 
-      // If no cache available, provide meaningful error
-      throw new ApiError(`Situation summary unavailable: No cached data and ${error instanceof Error ? error.message : 'network error'}`, 0);
+      throw error;
     }
   }
 
-  /**
-   * Clear cache for specific airport
-   */
-  clearAirportCache(airportId: string): void {
-    cacheService.clear(CACHE_CONFIGS.airportOverview, airportId);
-    cacheService.clear(CACHE_CONFIGS.pireps, airportId);
-    cacheService.clear(CACHE_CONFIGS.tracks, airportId);
-    cacheService.clear(CACHE_CONFIGS.summary, airportId);
-    console.log(`Cleared cache for ${airportId}`);
-  }
 
-  /**
-   * Clear all cached data
-   */
-  clearAllCache(): void {
-    cacheService.clearAll();
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getCacheStats() {
-    return cacheService.getStats();
-  }
 
   /**
    * Health check
@@ -432,3 +272,4 @@ class PilotApiService {
 
 export const pilotApi = new PilotApiService();
 export { ApiError };
+

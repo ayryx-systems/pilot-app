@@ -94,7 +94,7 @@ export function usePilotData() {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Load all data in parallel with smart caching
+      // Load all data in parallel
       const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse] = await Promise.allSettled([
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
@@ -104,15 +104,12 @@ export function usePilotData() {
 
       const updates: Partial<PilotAppState> = { loading: false };
 
-      // Process results with better error handling
+      // Process results and handle failures
       if (overviewResponse.status === 'fulfilled') {
         updates.airportOverview = overviewResponse.value;
       } else {
         console.error('Failed to load airport overview:', overviewResponse.reason);
-        // Don't clear existing data if we have it and this is just a refresh
-        if (!updates.airportOverview) {
-          updates.airportOverview = null;
-        }
+        updates.airportOverview = null;
       }
 
       if (pirepsResponse.status === 'fulfilled') {
@@ -125,7 +122,12 @@ export function usePilotData() {
       } else {
         console.error('Failed to load PIREPs:', pirepsResponse.reason);
         updates.pireps = [];
-        updates.pirepsMetadata = { active: false, message: 'Failed to load PIREPs' };
+        updates.pirepsMetadata = {
+          active: false,
+          message: pirepsResponse.reason instanceof Error && pirepsResponse.reason.message.includes('offline')
+            ? 'PIREPs unavailable - check internet connection'
+            : 'Failed to load PIREPs'
+        };
       }
 
       if (tracksResponse.status === 'fulfilled') {
@@ -137,7 +139,12 @@ export function usePilotData() {
       } else {
         console.error('Failed to load ground tracks:', tracksResponse.reason);
         updates.tracks = [];
-        updates.tracksMetadata = { active: false, message: 'Failed to load ground tracks' };
+        updates.tracksMetadata = {
+          active: false,
+          message: tracksResponse.reason instanceof Error && tracksResponse.reason.message.includes('offline')
+            ? 'Ground tracks unavailable - check internet connection'
+            : 'Failed to load ground tracks'
+        };
       }
 
       if (summaryResponse.status === 'fulfilled') {
@@ -149,30 +156,37 @@ export function usePilotData() {
       } else {
         console.error('Failed to load situation summary:', summaryResponse.reason);
         updates.summary = null;
-        updates.summaryMetadata = { active: false, generated: false };
+        updates.summaryMetadata = {
+          active: false,
+          generated: false,
+          message: summaryResponse.reason instanceof Error && summaryResponse.reason.message.includes('offline')
+            ? 'Situation summary unavailable - check internet connection'
+            : undefined
+        };
       }
 
-      // Determine if we're using cached data and set appropriate error message
+      // Set error message based on failed requests
       const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
         .filter(response => response.status === 'rejected');
 
-      const successfulData = [
-        overviewResponse.status === 'fulfilled' ? overviewResponse.value : null,
-        pirepsResponse.status === 'fulfilled' ? pirepsResponse.value : null,
-        tracksResponse.status === 'fulfilled' ? tracksResponse.value : null,
-        summaryResponse.status === 'fulfilled' ? summaryResponse.value : null
-      ].filter(Boolean);
+      const successfulRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
+        .filter(response => response.status === 'fulfilled');
 
-      const usingStaleCache = successfulData.some(data => data?.source === 'stale-cache');
-      const hasNoData = successfulData.length === 0;
+      const hasNoData = successfulRequests.length === 0;
 
       // Set error message based on data availability
       if (hasNoData && failedRequests.length > 0) {
-        updates.error = 'No data available - check connection and try refreshing';
-      } else if (usingStaleCache && failedRequests.length > 0) {
-        updates.error = null; // Don't show error when we have stale cache - the age indicator shows this
+        const offlineErrors = failedRequests.filter(req =>
+          req.reason instanceof Error && req.reason.message.includes('offline')
+        );
+
+        if (offlineErrors.length > 0) {
+          updates.error = 'No data available - check your internet connection and try again';
+        } else {
+          updates.error = 'No data available - server error occurred';
+        }
       } else if (failedRequests.length > 0) {
-        updates.error = 'Some data failed to load';
+        updates.error = `${failedRequests.length} of ${failedRequests.length + successfulRequests.length} data sources failed to load`;
       } else {
         updates.error = null;
       }

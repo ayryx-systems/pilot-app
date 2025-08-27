@@ -86,12 +86,8 @@ export function PilotDashboard() {
     return <Wifi className="w-4 h-4" />;
   };
 
-  // Get the most recent data timestamp and check if using cached data
-  const getDataStatus = (): { timestamp: Date; isStale: boolean; source: string } => {
-    // Look for stale cache indicators in the data
-    const isStale = airportOverview?.source === 'stale-cache' ||
-      !connectionStatus.connected;
-
+  // Get the most recent data timestamp
+  const getDataStatus = (): { timestamp: Date; isLive: boolean } => {
     // Use actual data timestamps when available
     const dataTimestamp = airportOverview?.timestamp
       ? new Date(airportOverview.timestamp)
@@ -99,8 +95,7 @@ export function PilotDashboard() {
 
     return {
       timestamp: dataTimestamp,
-      isStale,
-      source: airportOverview?.source || (connectionStatus.connected ? 'live' : 'cache')
+      isLive: connectionStatus.connected
     };
   };
 
@@ -130,7 +125,7 @@ export function PilotDashboard() {
             return (
               <SimpleDataAge
                 timestamp={dataStatus.timestamp}
-                isLive={dataStatus.source === 'live' && connectionStatus.connected}
+                isLive={dataStatus.isLive}
                 offline={!connectionStatus.connected}
                 size="md"
               />
@@ -172,16 +167,13 @@ export function PilotDashboard() {
       {/* App Update Notifier */}
       <AppUpdateNotifier />
 
-      {/* Offline notification when using cached data */}
-      {!connectionStatus.connected && airportOverview && (
-        <div className="bg-yellow-900/30 border-yellow-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
-          <div className="flex items-center text-yellow-200">
+      {/* Offline notification */}
+      {!connectionStatus.connected && (
+        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
+          <div className="flex items-center text-red-200">
             <WifiOff className="w-4 h-4 mr-2" />
             <span className="text-sm">
-              {airportOverview.source === 'stale-cache'
-                ? 'Offline - using cached data'
-                : 'Connection lost - showing last available data'
-              }
+              Offline - no data available. Please check your internet connection.
             </span>
           </div>
         </div>
@@ -288,7 +280,7 @@ export function PilotDashboard() {
                 <div className="pt-2 border-t border-slate-600/50">
                   <DebugTimestamp
                     serverTimestamp={airportOverview.timestamp}
-                    source={`${airportOverview.source || 'unknown'} data`}
+                    source="live data"
                   />
                 </div>
               </div>
