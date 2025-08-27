@@ -119,6 +119,14 @@ export function PilotDashboard() {
             </span>
           </div>
 
+          {/* Cached Data Indicator */}
+          {error?.includes('cached data') && (
+            <div className="flex items-center space-x-1 text-yellow-400">
+              <Clock className="w-4 h-4" />
+              <span className="text-xs hidden sm:inline">Cached</span>
+            </div>
+          )}
+
 
 
           {/* Refresh Button */}
@@ -135,10 +143,19 @@ export function PilotDashboard() {
 
       {/* Error Display */}
       {error && (
-        <div className="bg-red-900/50 border-l-4 border-red-500 p-4 m-4 rounded">
+        <div className={`border-l-4 p-4 m-4 rounded ${error.includes('cached data')
+            ? 'bg-yellow-900/30 border-yellow-500'
+            : 'bg-red-900/50 border-red-500'
+          }`}>
           <div className="flex items-center">
-            <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-            <span className="text-red-200">{error}</span>
+            {error.includes('cached data') ? (
+              <Clock className="w-5 h-5 text-yellow-400 mr-2" />
+            ) : (
+              <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
+            )}
+            <span className={error.includes('cached data') ? 'text-yellow-200' : 'text-red-200'}>
+              {error}
+            </span>
           </div>
         </div>
       )}

@@ -2,11 +2,11 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { pilotApi, ApiError } from '@/services/api';
-import { 
-  Airport, 
-  AirportOverview, 
-  PiRep, 
-  GroundTrack, 
+import {
+  Airport,
+  AirportOverview,
+  PiRep,
+  GroundTrack,
   SituationSummary,
   ConnectionStatus,
   PilotAppState
@@ -104,11 +104,15 @@ export function usePilotData() {
 
       const updates: Partial<PilotAppState> = { loading: false };
 
-      // Process results
+      // Process results with better error handling
       if (overviewResponse.status === 'fulfilled') {
         updates.airportOverview = overviewResponse.value;
       } else {
         console.error('Failed to load airport overview:', overviewResponse.reason);
+        // Don't clear existing data if we have it and this is just a refresh
+        if (!updates.airportOverview) {
+          updates.airportOverview = null;
+        }
       }
 
       if (pirepsResponse.status === 'fulfilled') {
@@ -143,7 +147,29 @@ export function usePilotData() {
         };
       } else {
         console.error('Failed to load situation summary:', summaryResponse.reason);
+        updates.summary = null;
         updates.summaryMetadata = { active: false, generated: false };
+      }
+
+      // Determine if we're using cached data and set appropriate error message
+      const hasErrors = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
+        .some(response => response.status === 'rejected');
+
+      const usingCachedData = [
+        updates.airportOverview,
+        pirepsResponse.status === 'fulfilled' ? pirepsResponse.value : null,
+        tracksResponse.status === 'fulfilled' ? tracksResponse.value : null,
+        summaryResponse.status === 'fulfilled' ? summaryResponse.value : null
+      ].some(data => data?.source?.includes('cache'));
+
+      if (hasErrors && usingCachedData) {
+        updates.error = 'Using cached data - network connection issues';
+      } else if (hasErrors) {
+        updates.error = 'Some data failed to load';
+      } else if (usingCachedData) {
+        updates.error = null; // Don't show error for successful cached data
+      } else {
+        updates.error = null;
       }
 
       setState(prev => ({ ...prev, ...updates }));
@@ -159,8 +185,8 @@ export function usePilotData() {
 
   // Set selected airport
   const setSelectedAirport = useCallback((airportId: string | null) => {
-    setState(prev => ({ 
-      ...prev, 
+    setState(prev => ({
+      ...prev,
       selectedAirport: airportId,
       // Clear previous airport data
       airportOverview: null,

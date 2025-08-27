@@ -2,13 +2,13 @@
 // ============================
 // Handles offline data storage and cache management
 
-import { 
-  Airport, 
-  AirportOverview, 
-  PiRep, 
-  GroundTrack, 
+import {
+  Airport,
+  AirportOverview,
+  PiRep,
+  GroundTrack,
   SituationSummary,
-  CachedData 
+  CachedData
 } from '@/types';
 
 const CACHE_PREFIX = 'pilot-app-';
@@ -37,7 +37,7 @@ class CacheService {
     const now = new Date().getTime();
     const cacheTime = cachedData.timestamp.getTime();
     const maxAge = cachedData.maxAge * 1000; // convert to milliseconds
-    
+
     return (now - cacheTime) > maxAge;
   }
 
@@ -89,7 +89,7 @@ class CacheService {
     try {
       const key = this.getKey(config.key, id);
       const serialized = localStorage.getItem(key);
-      
+
       if (!serialized) return null;
 
       const cachedData = this.deserialize<T>(serialized);
@@ -103,6 +103,27 @@ class CacheService {
       return cachedData;
     } catch (error) {
       console.error('Failed to get cached data:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Get data from cache even if expired (stale data)
+   */
+  getStale<T>(config: CacheConfig, id?: string): CachedData<T> | null {
+    try {
+      const key = this.getKey(config.key, id);
+      const serialized = localStorage.getItem(key);
+
+      if (!serialized) return null;
+
+      const cachedData = this.deserialize<T>(serialized);
+      if (!cachedData) return null;
+
+      // Return data regardless of expiration
+      return cachedData;
+    } catch (error) {
+      console.error('Failed to get stale cached data:', error);
       return null;
     }
   }
@@ -151,7 +172,7 @@ class CacheService {
           keysToRemove.push(key);
         }
       }
-      
+
       keysToRemove.forEach(key => localStorage.removeItem(key));
       console.log(`Cleared ${keysToRemove.length} cache entries`);
     } catch (error) {
@@ -177,7 +198,7 @@ class CacheService {
           }
         }
       }
-      
+
       keysToRemove.forEach(key => localStorage.removeItem(key));
       if (keysToRemove.length > 0) {
         console.log(`Cleaned up ${keysToRemove.length} expired cache entries`);
@@ -211,7 +232,7 @@ class CacheService {
           const value = localStorage.getItem(key);
           if (value) {
             totalSize += value.length;
-            
+
             // Extract cache type from key
             const typeMatch = key.match(new RegExp(`^${CACHE_PREFIX}${CACHE_VERSION}-(.*?)(-|$)`));
             if (typeMatch) {
@@ -256,7 +277,7 @@ class CacheService {
    */
   exportCache(): Record<string, unknown> {
     const cache: Record<string, unknown> = {};
-    
+
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);

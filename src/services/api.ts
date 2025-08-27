@@ -2,11 +2,11 @@
 // ====================
 // Handles communication with the ATC backend pilot APIs
 
-import { 
-  AirportsResponse, 
-  AirportOverview, 
-  PirepsResponse, 
-  TracksResponse, 
+import {
+  AirportsResponse,
+  AirportOverview,
+  PirepsResponse,
+  TracksResponse,
   SummaryResponse,
   CachedData
 } from '@/types';
@@ -40,24 +40,64 @@ class PilotApiService {
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new ApiError('Request timeout', 408);
+
+      // Enhanced error classification
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          throw new ApiError('Request timeout - server took too long to respond', 408);
+        }
+
+        // Network connection errors
+        if (error.name === 'TypeError' && error.message.includes('fetch')) {
+          throw new ApiError('Network connection failed - check your internet connection', 0);
+        }
+
+        // DNS resolution errors
+        if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+          throw new ApiError('Connection failed - server may be unreachable', 0);
+        }
+
+        // Rethrow with better context
+        throw new ApiError(`Network error: ${error.message}`, 0, { originalError: error.name });
       }
-      throw error;
+
+      throw new ApiError('Unknown network error occurred', 0);
     }
   }
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new ApiError(
-        errorData.error || `HTTP ${response.status}: ${response.statusText}`,
-        response.status,
-        errorData
-      );
+      let errorData: any = {};
+      let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+
+      try {
+        const text = await response.text();
+        if (text) {
+          try {
+            errorData = JSON.parse(text);
+            errorMessage = errorData.error || errorData.message || errorMessage;
+          } catch {
+            // If JSON parsing fails, use the text as error message
+            errorMessage = text.length > 200 ? `${text.substring(0, 200)}...` : text;
+          }
+        }
+      } catch {
+        // If reading response fails, use default message
+        errorMessage = `Network error: Failed to read response (${response.status})`;
+      }
+
+      throw new ApiError(errorMessage, response.status, errorData);
     }
 
-    return response.json();
+    try {
+      return await response.json();
+    } catch (error) {
+      throw new ApiError(
+        'Invalid response format: Expected JSON',
+        response.status,
+        { originalError: error instanceof Error ? error.message : 'Unknown parsing error' }
+      );
+    }
   }
 
   /**
@@ -65,6 +105,13 @@ class PilotApiService {
    */
   private getCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], id?: string): CachedData<T> | null {
     return cacheService.get<T>(config, id);
+  }
+
+  /**
+   * Get stale cached data (even if expired)
+   */
+  private getStaleCachedData<T>(config: typeof CACHE_CONFIGS[keyof typeof CACHE_CONFIGS], id?: string): CachedData<T> | null {
+    return cacheService.getStale<T>(config, id);
   }
 
   /**
@@ -90,19 +137,27 @@ class PilotApiService {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports`);
       const data = await this.handleResponse<AirportsResponse>(response);
-      
+
       // Cache the response
       this.setCachedData(CACHE_CONFIGS.airports, data);
       console.log('Cached fresh airports data');
-      
+
       return data;
     } catch (error) {
+      console.warn('Failed to fetch airports:', error instanceof Error ? error.message : 'Unknown error');
+
       // If network fails, try to return stale cache
-      const staleCache = this.getCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
+      const staleCache = this.getStaleCachedData<AirportsResponse>(CACHE_CONFIGS.airports);
       if (staleCache) {
-        console.log('Using stale cached airports data due to network error');
+        console.log(`Using stale cached airports data (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
         return { ...staleCache.data, source: 'stale-cache' };
       }
+
+      // If no cache available, provide meaningful error
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError(`Airports list unavailable: ${error.message}`, 0);
+      }
+
       throw error;
     }
   }
@@ -122,17 +177,26 @@ class PilotApiService {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
       const data = await this.handleResponse<AirportOverview>(response);
-      
+
       this.setCachedData(CACHE_CONFIGS.airportOverview, data, airportId);
       console.log(`Cached airport overview for ${airportId}`);
-      
+
       return data;
     } catch (error) {
-      const staleCache = this.getCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
+      console.warn(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      // Try to use stale cache first
+      const staleCache = this.getStaleCachedData<AirportOverview>(CACHE_CONFIGS.airportOverview, airportId);
       if (staleCache) {
-        console.log(`Using stale cached airport overview for ${airportId}`);
+        console.log(`Using stale cached airport overview for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
         return { ...staleCache.data, source: 'stale-cache' };
       }
+
+      // If no cache available, provide meaningful error
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError(`Airport overview unavailable: ${error.message}`, 0);
+      }
+
       throw error;
     }
   }
@@ -152,17 +216,25 @@ class PilotApiService {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
       const data = await this.handleResponse<PirepsResponse>(response);
-      
+
       this.setCachedData(CACHE_CONFIGS.pireps, data, airportId);
       console.log(`Cached PIREPs for ${airportId}`);
-      
+
       return data;
     } catch (error) {
-      const staleCache = this.getCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
+      console.warn(`Failed to fetch PIREPs for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      const staleCache = this.getStaleCachedData<PirepsResponse>(CACHE_CONFIGS.pireps, airportId);
       if (staleCache) {
-        console.log(`Using stale cached PIREPs for ${airportId}`);
+        console.log(`Using stale cached PIREPs for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
         return { ...staleCache.data, source: 'stale-cache' };
       }
+
+      // If no cache available, provide meaningful error
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError(`PIREPs unavailable: ${error.message}`, 0);
+      }
+
       throw error;
     }
   }
@@ -182,17 +254,25 @@ class PilotApiService {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
       const data = await this.handleResponse<TracksResponse>(response);
-      
+
       this.setCachedData(CACHE_CONFIGS.tracks, data, airportId);
       console.log(`Cached ground tracks for ${airportId}`);
-      
+
       return data;
     } catch (error) {
-      const staleCache = this.getCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
+      console.warn(`Failed to fetch ground tracks for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      const staleCache = this.getStaleCachedData<TracksResponse>(CACHE_CONFIGS.tracks, airportId);
       if (staleCache) {
-        console.log(`Using stale cached ground tracks for ${airportId}`);
+        console.log(`Using stale cached ground tracks for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
         return { ...staleCache.data, source: 'stale-cache' };
       }
+
+      // If no cache available, provide meaningful error
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError(`Ground tracks unavailable: ${error.message}`, 0);
+      }
+
       throw error;
     }
   }
@@ -212,17 +292,25 @@ class PilotApiService {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
       const data = await this.handleResponse<SummaryResponse>(response);
-      
+
       this.setCachedData(CACHE_CONFIGS.summary, data, airportId);
       console.log(`Cached situation summary for ${airportId}`);
-      
+
       return data;
     } catch (error) {
-      const staleCache = this.getCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
+      console.warn(`Failed to fetch situation summary for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      const staleCache = this.getStaleCachedData<SummaryResponse>(CACHE_CONFIGS.summary, airportId);
       if (staleCache) {
-        console.log(`Using stale cached situation summary for ${airportId}`);
+        console.log(`Using stale cached situation summary for ${airportId} (${Math.floor((Date.now() - staleCache.timestamp.getTime()) / 1000)}s old)`);
         return { ...staleCache.data, source: 'stale-cache' };
       }
+
+      // If no cache available, provide meaningful error
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError(`Situation summary unavailable: ${error.message}`, 0);
+      }
+
       throw error;
     }
   }
@@ -265,19 +353,54 @@ class PilotApiService {
    */
   async testConnection(): Promise<{ connected: boolean; latency: number; error?: string }> {
     const startTime = Date.now();
-    
+
     try {
       await this.checkHealth();
       const latency = Date.now() - startTime;
       return { connected: true, latency };
     } catch (error) {
       const latency = Date.now() - startTime;
-      return { 
-        connected: false, 
+      let errorMessage = 'Connection failed';
+
+      if (error instanceof ApiError) {
+        errorMessage = error.status === 0 ? 'Network unreachable' : error.message;
+      } else if (error instanceof Error) {
+        errorMessage = error.message;
+      }
+
+      return {
+        connected: false,
         latency,
-        error: error instanceof Error ? error.message : 'Connection failed'
+        error: errorMessage
       };
     }
+  }
+
+  /**
+   * Test connection with automatic retry
+   */
+  async testConnectionWithRetry(maxRetries: number = 3, delayMs: number = 1000): Promise<{ connected: boolean; latency: number; error?: string; retries: number }> {
+    let lastError: string = '';
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.testConnection();
+        return { ...result, retries: attempt - 1 };
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : 'Connection failed';
+
+        if (attempt < maxRetries) {
+          await new Promise(resolve => setTimeout(resolve, delayMs * attempt));
+        }
+      }
+    }
+
+    return {
+      connected: false,
+      latency: 0,
+      error: `Failed after ${maxRetries} attempts: ${lastError}`,
+      retries: maxRetries
+    };
   }
 }
 
