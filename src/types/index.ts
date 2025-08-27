@@ -114,22 +114,32 @@ export interface SituationSummary {
     };
     traffic?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     approach?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     runway?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning' | 'unavailable';
     };
     ground?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning';
     };
     special?: {
       description: string;
+      short_summary: string;
+      long_summary: string;
       status: 'normal' | 'caution' | 'warning';
     };
   };

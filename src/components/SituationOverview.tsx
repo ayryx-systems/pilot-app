@@ -40,6 +40,19 @@ export function SituationOverview({
   summaryMetadata
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
+  const [expandedConditions, setExpandedConditions] = useState<Set<string>>(new Set());
+
+  const toggleConditionExpansion = (conditionKey: string) => {
+    setExpandedConditions(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(conditionKey)) {
+        newSet.delete(conditionKey);
+      } else {
+        newSet.add(conditionKey);
+      }
+      return newSet;
+    });
+  };
   const getStatusIcon = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
     switch (status) {
       case 'warning':
@@ -100,20 +113,45 @@ export function SituationOverview({
             <p className="text-sm text-gray-200">{summary.situation_overview}</p>
           </div>
 
-          {/* Conditions (excluding weather since it has its own button) */}
+          {/* Expandable Condition Cards */}
           {summary.conditions && (
             <div className="space-y-2">
               {Object.entries(summary.conditions)
                 .filter(([key]) => key !== 'weather') // Exclude weather from conditions list
-                .map(([key, condition]) => (
-                  <div key={key} className="flex items-center justify-between p-2 bg-slate-700/50 rounded">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(condition.status)}
-                      <span className="text-sm capitalize text-white">{key}</span>
+                .map(([key, condition]) => {
+                  const isExpanded = expandedConditions.has(key);
+                  return (
+                    <div key={key} className="space-y-2">
+                      {/* Condition Button */}
+                      <button
+                        onClick={() => toggleConditionExpansion(key)}
+                        className="w-full p-3 bg-slate-700/50 hover:bg-slate-600/50 rounded-lg transition-colors text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            {getStatusIcon(condition.status)}
+                            <span className="text-sm font-medium text-white ml-2 capitalize">{key}</span>
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {isExpanded ? 'Tap to collapse' : 'Tap for details'}
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-300 mt-1">
+                          {condition.short_summary || condition.description || 'No summary available'}
+                        </div>
+                      </button>
+
+                      {/* Expanded Details */}
+                      {isExpanded && (
+                        <div className="ml-4 p-3 bg-slate-800/50 rounded-lg border-l-2 border-slate-600">
+                          <p className="text-sm text-gray-300 leading-relaxed">
+                            {condition.long_summary || condition.description || 'Detailed information not available'}
+                          </p>
+                        </div>
+                      )}
                     </div>
-                    <span className="text-xs text-gray-300">{condition.description}</span>
-                  </div>
-                ))}
+                  );
+                })}
             </div>
           )}
 
