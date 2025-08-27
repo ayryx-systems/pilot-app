@@ -802,6 +802,7 @@ export function PilotMap({
 
       if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
         tracks.forEach(track => {
+
           // Defensive checks for track data integrity
           if (!track || !track.coordinates || !Array.isArray(track.coordinates)) {
             console.warn('[PilotMap] Invalid track data:', track);
@@ -874,24 +875,22 @@ export function PilotMap({
               iconAnchor: [8, 8]
             });
 
+            const popupContent = `
+              <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
+                <h4 style="margin: 0 0 4px 0; color: white;"><strong>${track.callsign || 'No Callsign'}</strong></h4>
+                <p style="margin: 2px 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
+              </div>
+            `;
+
             const startMarker = L.marker([startCoord.lat, startCoord.lon], { icon: startIcon })
-              .bindPopup(`
-                <div class="track-popup">
-                  <h4><strong>Flight Start</strong></h4>
-                  <p><strong>Aircraft:</strong> ${track.aircraft}</p>
-                  <p><strong>Callsign:</strong> ${track.callsign}</p>
-                  <p><strong>Departure:</strong> ${new Date(track.startTime).toLocaleString()}</p>
-                  <p><strong>Status:</strong> ${track.status}</p>
-                  ${track.runway ? `<p><strong>Runway:</strong> ${track.runway}</p>` : ''}
-                </div>
-              `);
+              .bindPopup(popupContent);
 
             if (layerGroupsRef.current.tracks) {
               layerGroupsRef.current.tracks.addLayer(startMarker);
             }
           }
 
-          // Add end marker (current position or landing)
+          // Add end marker (current position or landing) - simple circle marker
           if (latLngs.length > 1 && track.coordinates && track.coordinates.length > 1) {
             const endCoord = track.coordinates[track.coordinates.length - 1];
             if (!endCoord || typeof endCoord.lat !== 'number' || typeof endCoord.lon !== 'number') {
@@ -902,12 +901,12 @@ export function PilotMap({
 
             const endIcon = L.divIcon({
               html: `<div style="
-                width: 0;
-                height: 0;
-                border-left: 6px solid transparent;
-                border-right: 6px solid transparent;
-                border-bottom: 12px solid ${color};
-                filter: drop-shadow(0 1px 2px rgba(0,0,0,0.3));
+                width: 12px;
+                height: 12px;
+                background: ${color};
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
                 ${!isCompleted ? 'animation: pulse 2s infinite;' : ''}
               "></div>
               <style>
@@ -918,21 +917,19 @@ export function PilotMap({
                 }
               </style>`,
               className: 'track-end-marker',
-              iconSize: [12, 12],
-              iconAnchor: [6, 12]
+              iconSize: [16, 16],
+              iconAnchor: [8, 8]
             });
 
+            const endPopupContent = `
+              <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
+                <h4 style="margin: 0 0 4px 0; color: white;"><strong>${track.callsign || 'No Callsign'}</strong></h4>
+                <p style="margin: 2px 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
+              </div>
+            `;
+
             const endMarker = L.marker([endCoord.lat, endCoord.lon], { icon: endIcon })
-              .bindPopup(`
-                <div class="track-popup">
-                  <h4><strong>${isCompleted ? 'Flight Ended' : 'Current Position'}</strong></h4>
-                  <p><strong>Aircraft:</strong> ${track.aircraft}</p>
-                  <p><strong>Callsign:</strong> ${track.callsign}</p>
-                  <p><strong>Altitude:</strong> ${endCoord.altitude?.toLocaleString() || 'Unknown'} ft</p>
-                  <p><strong>Updated:</strong> ${new Date(endCoord.timestamp).toLocaleString()}</p>
-                  ${track.endTime ? `<p><strong>Arrival:</strong> ${new Date(track.endTime).toLocaleString()}</p>` : ''}
-                </div>
-              `);
+              .bindPopup(endPopupContent);
 
             if (layerGroupsRef.current.tracks) {
               layerGroupsRef.current.tracks.addLayer(endMarker);
