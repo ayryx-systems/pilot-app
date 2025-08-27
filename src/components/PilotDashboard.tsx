@@ -217,7 +217,7 @@ export function PilotDashboard() {
           {selectedAirport && (
             <div
               className="absolute top-2 right-2 lg:top-4 lg:right-6 pointer-events-none"
-              style={{ zIndex: 9999 }}
+              style={{ zIndex: 40 }}
             >
               <div className="pointer-events-auto">
                 <MapControls

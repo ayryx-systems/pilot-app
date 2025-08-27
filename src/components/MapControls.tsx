@@ -34,7 +34,7 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
       className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600"
       style={{
         position: 'relative',
-        zIndex: 10000,
+        zIndex: 40,
         isolation: 'isolate'
       }}
     >
