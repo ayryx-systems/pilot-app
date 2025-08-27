@@ -20,11 +20,11 @@ export interface CacheConfig {
 }
 
 export const CACHE_CONFIGS = {
-  airports: { key: 'airports', maxAge: 300 }, // 5 minutes
-  airportOverview: { key: 'airport-overview', maxAge: 180 }, // 3 minutes
-  pireps: { key: 'pireps', maxAge: 60 }, // 1 minute
-  tracks: { key: 'tracks', maxAge: 120 }, // 2 minutes
-  summary: { key: 'summary', maxAge: 180 }, // 3 minutes
+  airports: { key: 'airports', maxAge: 300 }, // 5 minutes - airports don't change often
+  airportOverview: { key: 'airport-overview', maxAge: 120 }, // 2 minutes - weather changes
+  pireps: { key: 'pireps', maxAge: 30 }, // 30 seconds - PIREPs are time-sensitive
+  tracks: { key: 'tracks', maxAge: 45 }, // 45 seconds - aircraft move quickly
+  summary: { key: 'summary', maxAge: 90 }, // 1.5 minutes - situation analysis
 } as const;
 
 class CacheService {

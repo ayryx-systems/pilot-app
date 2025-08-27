@@ -9,7 +9,9 @@ import { PirepsList } from './PirepsList';
 import { MapControls } from './MapControls';
 import { usePilotData } from '@/hooks/usePilotData';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, Clock, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
+import { SimpleDataAge } from './SimpleDataAge';
+import { AppUpdateNotifier } from './AppUpdateNotifier';
 
 export function PilotDashboard() {
   const {
@@ -60,6 +62,16 @@ export function PilotDashboard() {
     }
   }, [connectionStatus.connected, selectedAirport, refreshData]);
 
+  // Smart refresh that always tries to get the best available data
+  const handleRefresh = async () => {
+    try {
+      // Always try to get fresh data, fall back to cache if needed
+      await refreshData();
+    } catch (error) {
+      console.error('Refresh failed:', error);
+    }
+  };
+
   const getConnectionStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
     if (connectionStatus.latency && connectionStatus.latency > 2000) return 'text-yellow-400';
@@ -73,13 +85,14 @@ export function PilotDashboard() {
     return <Wifi className="w-4 h-4" />;
   };
 
-  const formatLastUpdate = (date: Date) => {
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+  // Get the most recent data timestamp for age display
+  const getMostRecentDataTime = (): Date => {
+    const times = [
+      airportOverview?.timestamp,
+      connectionStatus.lastUpdate
+    ].filter(Boolean).map(t => new Date(t!));
 
-    if (diff < 60) return `${diff}s ago`;
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    return `${Math.floor(diff / 3600)}h ago`;
+    return times.length > 0 ? new Date(Math.max(...times.map(t => t.getTime()))) : new Date();
   };
 
   return (
@@ -102,59 +115,47 @@ export function PilotDashboard() {
         </div>
 
         <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+          {/* Data Age Indicator */}
+          {selectedAirport && (
+            <SimpleDataAge
+              timestamp={getMostRecentDataTime()}
+              isLive={connectionStatus.connected}
+              offline={!connectionStatus.connected}
+              size="md"
+            />
+          )}
+
           {/* Connection Status */}
-          <div className={`flex items-center space-x-1 sm:space-x-2 ${getConnectionStatusColor()}`}>
+          <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
             {getConnectionStatusIcon()}
-            <span className="text-xs sm:text-sm hidden sm:inline">
-              {connectionStatus.connected ? (
-                <>
-                  Connected
-                  {connectionStatus.latency && (
-                    <span className="text-xs ml-1">({connectionStatus.latency}ms)</span>
-                  )}
-                </>
-              ) : (
-                'Offline'
-              )}
+            <span className="text-xs hidden sm:inline">
+              {connectionStatus.connected ? 'Online' : 'Offline'}
             </span>
           </div>
 
-          {/* Cached Data Indicator */}
-          {error?.includes('cached data') && (
-            <div className="flex items-center space-x-1 text-yellow-400">
-              <Clock className="w-4 h-4" />
-              <span className="text-xs hidden sm:inline">Cached</span>
-            </div>
-          )}
-
-
-
-          {/* Refresh Button */}
+          {/* Single, Smart Refresh Button */}
           <button
-            onClick={refreshData}
+            onClick={handleRefresh}
             disabled={loading}
-            className="px-2 sm:px-3 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
+            className="flex items-center space-x-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
                      rounded text-xs sm:text-sm transition-colors"
           >
-            {loading ? 'Refreshing...' : 'Refresh'}
+            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+            <span>{loading ? 'Updating...' : 'Refresh'}</span>
           </button>
         </div>
       </header>
 
-      {/* Error Display */}
-      {error && (
-        <div className={`border-l-4 p-4 m-4 rounded ${error.includes('cached data')
-            ? 'bg-yellow-900/30 border-yellow-500'
-            : 'bg-red-900/50 border-red-500'
-          }`}>
-          <div className="flex items-center">
-            {error.includes('cached data') ? (
-              <Clock className="w-5 h-5 text-yellow-400 mr-2" />
-            ) : (
-              <AlertTriangle className="w-5 h-5 text-red-400 mr-2" />
-            )}
-            <span className={error.includes('cached data') ? 'text-yellow-200' : 'text-red-200'}>
-              {error}
+      {/* App Update Notifier */}
+      <AppUpdateNotifier />
+
+      {/* Simple error display for important errors only */}
+      {error && !error.includes('cache') && !connectionStatus.connected && (
+        <div className="bg-yellow-900/30 border-yellow-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
+          <div className="flex items-center text-yellow-200">
+            <WifiOff className="w-4 h-4 mr-2" />
+            <span className="text-sm">
+              No connection - showing last available data
             </span>
           </div>
         </div>

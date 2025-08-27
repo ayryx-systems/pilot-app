@@ -122,7 +122,7 @@ class PilotApiService {
   }
 
   /**
-   * Get list of available airports (with caching)
+   * Get list of available airports (with smart caching)
    */
   async getAirports(useCache: boolean = true): Promise<AirportsResponse> {
     // Try cache first if requested
@@ -163,7 +163,7 @@ class PilotApiService {
   }
 
   /**
-   * Get airport overview (weather, runways, operational data) with caching
+   * Get airport overview (weather, runways, operational data) with smart caching
    */
   async getAirportOverview(airportId: string, useCache: boolean = true): Promise<AirportOverview> {
     if (useCache) {
@@ -202,7 +202,7 @@ class PilotApiService {
   }
 
   /**
-   * Get PIREPs for an airport with caching
+   * Get PIREPs for an airport with smart caching
    */
   async getPireps(airportId: string, useCache: boolean = true): Promise<PirepsResponse> {
     if (useCache) {
@@ -240,7 +240,7 @@ class PilotApiService {
   }
 
   /**
-   * Get ground tracks for an airport with caching
+   * Get ground tracks for an airport with smart caching
    */
   async getGroundTracks(airportId: string, useCache: boolean = true): Promise<TracksResponse> {
     if (useCache) {
@@ -278,7 +278,7 @@ class PilotApiService {
   }
 
   /**
-   * Get situation summary for an airport with caching
+   * Get situation summary for an airport with smart caching
    */
   async getSituationSummary(airportId: string, useCache: boolean = true): Promise<SummaryResponse> {
     if (useCache) {

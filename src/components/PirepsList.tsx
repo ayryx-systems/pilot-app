@@ -3,6 +3,7 @@
 import React from 'react';
 import { PiRep, ConnectionStatus } from '@/types';
 import { AlertTriangle, Clock, X, Plane } from 'lucide-react';
+import { SimpleDataAge } from './SimpleDataAge';
 
 interface PirepsListProps {
   pireps: PiRep[];
@@ -11,6 +12,8 @@ interface PirepsListProps {
   pirepsMetadata?: {
     active: boolean;
     message?: string;
+    lastUpdate?: Date;
+    source?: 'live' | 'cache' | 'stale-cache';
   };
 }
 
@@ -48,6 +51,7 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
     <div>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-white">Pilot Reports</h2>
+
         <div className="flex items-center text-xs text-gray-400">
           <Plane className="w-3 h-3 mr-1" />
           <span>{pireps.length} active</span>
@@ -58,10 +62,10 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
         <div className="text-center text-gray-400 py-8">
           <AlertTriangle className="w-8 h-8 mx-auto mb-2 opacity-50" />
           <p className="text-sm">
-            {pirepsMetadata?.message 
+            {pirepsMetadata?.message
               ? pirepsMetadata.message
-              : connectionStatus.connected 
-                ? 'No current PIREPs' 
+              : connectionStatus.connected
+                ? 'No current PIREPs'
                 : 'Connect to load PIREPs'
             }
           </p>
@@ -94,7 +98,7 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
                       </p>
                     </div>
                   </div>
-                  
+
                   <button
                     onClick={() => onDismissPirep(pirep.id)}
                     className="ml-2 p-1 hover:bg-slate-600 rounded text-gray-400 hover:text-white"
@@ -114,16 +118,16 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
         <div className="flex items-center justify-between text-xs text-gray-400">
           <span>PIREP Data</span>
           <span className={
-            pirepsMetadata?.active === false 
-              ? 'text-gray-400' 
-              : connectionStatus.connected 
-                ? 'text-green-400' 
+            pirepsMetadata?.active === false
+              ? 'text-gray-400'
+              : connectionStatus.connected
+                ? 'text-green-400'
                 : 'text-yellow-400'
           }>
-            {pirepsMetadata?.active === false 
+            {pirepsMetadata?.active === false
               ? 'Processing inactive'
-              : connectionStatus.connected 
-                ? 'Real-time' 
+              : connectionStatus.connected
+                ? 'Real-time'
                 : 'Cached'
             }
           </span>

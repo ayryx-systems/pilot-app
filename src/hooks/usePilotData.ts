@@ -94,7 +94,7 @@ export function usePilotData() {
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
-      // Load all data in parallel
+      // Load all data in parallel with smart caching
       const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse] = await Promise.allSettled([
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
@@ -199,7 +199,7 @@ export function usePilotData() {
     }));
   }, []);
 
-  // Refresh all data
+  // Smart refresh - always tries to get the best available data
   const refreshData = useCallback(async () => {
     const connected = await testConnection();
     if (connected) {
