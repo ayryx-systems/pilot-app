@@ -231,8 +231,8 @@ export function PilotDashboard() {
           order-1 lg:order-2
           overflow-hidden
         ">
-          {/* Situation Overview - Compact */}
-          <div className="p-2 sm:p-3 border-b border-slate-700 flex-shrink-0">
+          {/* Situation Overview - Ultra Compact */}
+          <div className="p-2 border-b border-slate-700 flex-shrink-0">
             <SituationOverview
               summary={summary}
               weather={airportOverview?.weather}
@@ -243,9 +243,9 @@ export function PilotDashboard() {
             />
           </div>
 
-          {/* PIREPs List - More space */}
+          {/* PIREPs List - Maximum space */}
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="p-2 sm:p-3">
+            <div className="p-2">
               <PirepsList
                 pireps={pireps}
                 onDismissPirep={(id) => {
