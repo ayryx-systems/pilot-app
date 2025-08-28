@@ -180,7 +180,7 @@ export function PilotMap({
       // Create map
       const map = L.map(mapRef.current, {
         center: mapCenter,
-        zoom: 13,
+        zoom: 9, // Set to zoom level 9 to show approximately 40nm radius around airport
         zoomControl: true,
         attributionControl: false, // Add custom attribution later
       });
@@ -949,7 +949,7 @@ export function PilotMap({
         const mapCenter: [number, number] = airport.position
           ? [airport.position.lat, airport.position.lon]
           : airportConfig?.position || [0, 0];
-        mapInstance.flyTo(mapCenter, 13, { duration: 1.5 });
+        mapInstance.flyTo(mapCenter, 9, { duration: 1.5 }); // Use zoom level 9 for 40nm radius view
       }
     };
 
