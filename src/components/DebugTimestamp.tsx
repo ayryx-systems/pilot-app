@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface DebugTimestampProps {
     serverTimestamp?: string;
@@ -13,8 +13,14 @@ export function DebugTimestamp({
     source = 'unknown',
     className = ''
 }: DebugTimestampProps) {
+    const [isClient, setIsClient] = useState(false);
 
-    if (!serverTimestamp) {
+    useEffect(() => {
+        setIsClient(true);
+    }, []);
+
+    // Don't render anything during SSR to prevent hydration mismatch
+    if (!isClient || !serverTimestamp) {
         return null;
     }
 
