@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { MapDisplayOptions } from '@/types';
-import { Settings, Eye, EyeOff, Map } from 'lucide-react';
+import { Settings, Eye, EyeOff, Layers } from 'lucide-react';
 
 interface MapControlsProps {
   displayOptions: MapDisplayOptions;
@@ -34,21 +34,16 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
       className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600"
       style={{
         position: 'relative',
-        zIndex: 40,
+        zIndex: 1001,
         isolation: 'isolate'
       }}
     >
       {/* Toggle Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-3 hover:bg-slate-700/50 rounded-lg"
+        className="flex items-center justify-center p-2 hover:bg-slate-700/50 rounded-lg"
       >
-        <div className="flex items-center space-x-2">
-          <Map className="w-4 h-4 text-blue-400" />
-          <span className="text-sm font-medium text-white">Map Layers</span>
-        </div>
-        <Settings className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-90' : ''
-          }`} />
+        <Layers className="w-5 h-5 text-blue-400" />
       </button>
 
       {/* Expanded Controls */}

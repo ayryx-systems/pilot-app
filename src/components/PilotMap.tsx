@@ -998,7 +998,7 @@ export function PilotMap({
       : 'h-full rounded-xl overflow-hidden border relative'
       }`}>
       {/* Fullscreen and Recenter buttons */}
-      <div className="absolute bottom-4 right-4 z-10 flex flex-col gap-2">
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 1000 }}>
         {/* Fullscreen toggle button */}
         <button
           onClick={toggleFullscreen}

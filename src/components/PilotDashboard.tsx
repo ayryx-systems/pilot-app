@@ -52,7 +52,7 @@ export function PilotDashboard() {
     showGroundTracks: true,
   });
 
-  const [showPirepPanel, setShowPirepPanel] = useState(true);
+  const [showPirepPanel, setShowPirepPanel] = useState(false);
 
   // Auto-refresh data every 30 seconds when connected
   useEffect(() => {
@@ -229,11 +229,11 @@ export function PilotDashboard() {
           </div>
         </div>
 
-        {/* PIREP Panel Toggle Button (when panel is closed) */}
+        {/* PIREP Panel Toggle Button (when panel is closed) - Positioned halfway down left side */}
         {!showPirepPanel && (
           <button
             onClick={() => setShowPirepPanel(true)}
-            className="absolute left-2 top-2 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 rounded-lg 
+            className="absolute left-2 top-1/2 -translate-y-1/2 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 rounded-lg 
                      hover:bg-slate-700/95 transition-colors flex items-center space-x-2"
             style={{ zIndex: 1000 }}
           >
