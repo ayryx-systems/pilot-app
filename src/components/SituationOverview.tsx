@@ -83,9 +83,9 @@ export function SituationOverview({
 
   return (
     <div className="relative" style={{ zIndex: 2147483647 }}>
-      {/* Header */}
+      {/* Header - More compact */}
       <div className="mb-2">
-        <h2 className="text-base font-semibold text-white">Situation Overview</h2>
+        <h2 className="text-sm font-semibold text-white">Situation Overview</h2>
       </div>
 
       {/* Main Condition Grid - Always Visible */}
@@ -97,16 +97,16 @@ export function SituationOverview({
             {(weather || summary.conditions.weather) && (
               <button
                 onClick={() => setIsWeatherModalOpen(true)}
-                className="flex flex-col items-center justify-center p-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-center transition-all duration-200 hover:scale-105"
+                className="flex flex-col items-center justify-center p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-center transition-all duration-200 hover:scale-105"
               >
-                <div className="flex items-center justify-center w-6 h-6 mb-1 rounded-full bg-slate-600">
-                  <Cloud className="w-4 h-4 text-blue-400" />
+                <div className="flex items-center justify-center w-5 h-5 mb-1 rounded-full bg-slate-600">
+                  <Cloud className="w-3 h-3 text-blue-400" />
                 </div>
                 <span className="text-xs font-medium text-white">Weather</span>
                 <div className="flex items-center mt-1">
                   {getStatusIcon(summary.conditions.weather?.status)}
                   <span className="ml-1 text-xs text-gray-300 capitalize">
-                    {summary.conditions.weather?.status || 'normal'}
+                    {summary.conditions.weather?.status || 'Normal'}
                   </span>
                 </div>
               </button>
@@ -138,16 +138,16 @@ export function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className="flex flex-col items-center justify-center p-2 bg-slate-700/70 hover:bg-slate-600/70 rounded-lg text-center transition-all duration-200 hover:scale-105"
+                    className="flex flex-col items-center justify-center p-1.5 bg-slate-700/70 hover:bg-slate-600/70 rounded-lg text-center transition-all duration-200 hover:scale-105"
                   >
-                    <div className="flex items-center justify-center w-6 h-6 mb-1 rounded-full bg-slate-600/50">
+                    <div className="flex items-center justify-center w-5 h-5 mb-1 rounded-full bg-slate-600/50">
                       <span className="text-sm">{getConditionIcon(key)}</span>
                     </div>
                     <span className="text-xs font-medium text-white capitalize">{key}</span>
                     <div className="flex items-center mt-1">
                       {getStatusIcon(condition.status)}
                       <span className="ml-1 text-xs text-gray-300 capitalize">
-                        {condition.status || 'normal'}
+                        {condition.status || 'Normal'}
                       </span>
                     </div>
                   </button>

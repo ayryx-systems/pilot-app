@@ -9,7 +9,7 @@ import { PirepsList } from './PirepsList';
 import { MapControls } from './MapControls';
 import { usePilotData } from '@/hooks/usePilotData';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
@@ -51,6 +51,8 @@ export function PilotDashboard() {
     showPireps: true,
     showGroundTracks: true,
   });
+
+  const [showPirepPanel, setShowPirepPanel] = useState(true);
 
   // Auto-refresh data every 30 seconds when connected
   useEffect(() => {
@@ -101,15 +103,14 @@ export function PilotDashboard() {
 
   return (
     <div className="h-screen flex flex-col bg-slate-900 text-white overflow-hidden">
-      {/* Header */}
-      <header className="flex items-center justify-between p-2 sm:p-4 bg-slate-800 border-b border-slate-700 flex-shrink-0">
-        <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+      {/* Compact Header Bar */}
+      <header className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
           <img
             src="/logo4.png"
             alt="AYRYX"
-            className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0"
+            className="h-6 w-6 flex-shrink-0"
           />
-
           <AirportSelector
             airports={airports}
             selectedAirport={selectedAirport}
@@ -118,8 +119,7 @@ export function PilotDashboard() {
           />
         </div>
 
-        <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
-          {/* Data Age Indicator */}
+        <div className="flex items-center space-x-2 flex-shrink-0">
           {selectedAirport && (() => {
             const dataStatus = getDataStatus();
             return (
@@ -127,138 +127,68 @@ export function PilotDashboard() {
                 timestamp={dataStatus.timestamp}
                 isLive={dataStatus.isLive}
                 offline={!connectionStatus.connected}
-                size="md"
+                size="sm"
               />
             );
           })()}
 
-          {/* Connection Status */}
           <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
             {getConnectionStatusIcon()}
-            <span className="text-xs hidden sm:inline">
+            <span className="text-xs hidden md:inline">
               {connectionStatus.connected ? 'Online' : 'Offline'}
             </span>
           </div>
 
-          {/* Single, Smart Refresh Button */}
           <button
             onClick={handleRefresh}
             disabled={loading}
-            className="flex items-center space-x-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
-                     rounded text-xs sm:text-sm transition-colors"
+            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
+                     rounded text-xs transition-colors"
           >
-            <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-            <span>{loading ? 'Updating...' : 'Refresh'}</span>
+            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{loading ? 'Updating...' : 'Refresh'}</span>
           </button>
         </div>
-
-        {/* Debug info - last connection test timestamp */}
-        {process.env.NODE_ENV === 'development' && (
-          <div className="absolute top-full left-0 p-1 text-xs text-gray-500 font-mono bg-slate-800/50">
-            <DebugTimestamp
-              serverTimestamp={connectionStatus.lastUpdate.toISOString()}
-              source="connection test"
-              className="opacity-60"
-            />
-          </div>
-        )}
       </header>
 
       {/* App Update Notifier */}
       <AppUpdateNotifier />
 
-      {/* Offline notification */}
+      {/* Status Notifications */}
       {!connectionStatus.connected && (
-        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
+        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
           <div className="flex items-center text-red-200">
             <WifiOff className="w-4 h-4 mr-2" />
-            <span className="text-sm">
-              Offline - no data available. Please check your internet connection.
-            </span>
+            <span>Offline - no data available</span>
           </div>
         </div>
       )}
 
-      {/* Error display for when we have no data at all */}
       {error && error.includes('No data available') && (
-        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-3 mx-4 mt-2 rounded">
+        <div className="bg-red-900/30 border-red-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
           <div className="flex items-center text-red-200">
             <AlertTriangle className="w-4 h-4 mr-2" />
-            <span className="text-sm">{error}</span>
+            <span>{error}</span>
           </div>
         </div>
       )}
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Sidebar - Mobile first, then desktop right */}
-        <div className="
-          w-full lg:w-80 xl:w-96 
-          h-1/2 lg:h-full 
-          bg-slate-800 
-          border-t lg:border-t-0 lg:border-l border-slate-700 
-          flex flex-col 
-          order-1 lg:order-2
-          relative
-          overflow-y-auto
-        "
-          style={{
-            zIndex: 2147483647,
-            isolation: 'isolate'
-          }}
-        >
-          {/* Situation Overview - Ultra Compact */}
-          <div className="p-2 border-b border-slate-700">
-            <SituationOverview
-              summary={summary}
-              weather={airportOverview?.weather}
-              loading={loading}
-              connectionStatus={connectionStatus}
-              airportCode={selectedAirport || undefined}
-              summaryMetadata={summaryMetadata}
-            />
-          </div>
+      {/* Top Information Strip - Weather and Summary */}
+      <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 p-2 flex-shrink-0" style={{ zIndex: 1000 }}>
+        <SituationOverview
+          summary={summary}
+          weather={airportOverview?.weather}
+          loading={loading}
+          connectionStatus={connectionStatus}
+          airportCode={selectedAirport || undefined}
+          summaryMetadata={summaryMetadata}
+        />
+      </div>
 
-          {/* PIREPs List - Maximum space */}
-          <div className="flex-1 p-2 overflow-y-auto max-h-32 lg:max-h-none">
-            <PirepsList
-              pireps={pireps}
-              onDismissPirep={(id) => {
-                console.log('Dismiss PIREP from list:', id);
-              }}
-              connectionStatus={connectionStatus}
-              pirepsMetadata={pirepsMetadata}
-            />
-          </div>
-
-          {/* Airport Info Footer - Compact */}
-          {airportOverview && (
-            <div className="p-2 border-t border-slate-700 bg-slate-800 flex-shrink-0 mt-auto mb-4 lg:mb-0">
-              <div className="text-xs space-y-1">
-                <div className="flex justify-between">
-                  <span className="text-gray-400">{airportOverview.airport.code}</span>
-                  <span className="flex items-center space-x-2">
-                    <span>{airportOverview.runways.length} RWY</span>
-                    <span className={airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}>
-                      {airportOverview.operational.active ? '●' : '●'}
-                    </span>
-                  </span>
-                </div>
-
-                {/* Debug timestamp - compact */}
-                <div className="pt-1 border-t border-slate-600/30">
-                  <DebugTimestamp
-                    serverTimestamp={airportOverview.timestamp}
-                    source="live data"
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Map Area - Below sidebar on mobile, right side on desktop */}
-        <div className="flex-1 relative order-2 lg:order-1 lg:min-h-0" style={{ zIndex: 1 }}>
+      {/* Main Content: Map-Prominent Layout */}
+      <div className="flex-1 relative overflow-hidden">
+        {/* Map - Takes remaining space below situation overview */}
+        <div className="absolute inset-0">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -266,26 +196,91 @@ export function PilotDashboard() {
             tracks={tracks}
             displayOptions={mapDisplayOptions}
             onDismissPirep={(id) => {
-              // Handle PIREP dismissal
               console.log('Dismiss PIREP:', id);
             }}
           />
-
-          {/* Map Controls Overlay - Positioned at top-right to avoid zoom controls */}
-          {selectedAirport && (
-            <div
-              className="absolute top-2 right-2 lg:top-4 lg:right-6 pointer-events-none"
-              style={{ zIndex: 10 }}
-            >
-              <div className="pointer-events-auto">
-                <MapControls
-                  displayOptions={mapDisplayOptions}
-                  onOptionsChange={setMapDisplayOptions}
-                />
-              </div>
-            </div>
-          )}
         </div>
+
+        {/* Left Side Panel - PIREPs (Collapsible, Full Width on Mobile) */}
+        <div className={`absolute left-0 top-0 bottom-12 w-full sm:w-80 lg:w-96 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
+                        transform transition-transform duration-200 ease-in-out ${
+                          showPirepPanel ? 'translate-x-0' : '-translate-x-full'
+                        }`} style={{ zIndex: 1000 }}>
+          <div className="p-2 sm:p-3 h-full">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
+              <button
+                onClick={() => setShowPirepPanel(false)}
+                className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+              >
+                <X className="w-4 h-4 text-gray-400" />
+              </button>
+            </div>
+            <div className="h-full overflow-y-auto">
+              <PirepsList
+                pireps={pireps}
+                onDismissPirep={(id) => {
+                  console.log('Dismiss PIREP from list:', id);
+                }}
+                connectionStatus={connectionStatus}
+                pirepsMetadata={pirepsMetadata}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PIREP Panel Toggle Button (when panel is closed) */}
+        {!showPirepPanel && (
+          <button
+            onClick={() => setShowPirepPanel(true)}
+            className="absolute left-2 top-2 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 rounded-lg 
+                     hover:bg-slate-700/95 transition-colors flex items-center space-x-2"
+            style={{ zIndex: 1000 }}
+          >
+            <Menu className="w-4 h-4 text-gray-300" />
+            <div className="flex flex-col items-start">
+              <span className="text-xs text-gray-300 font-medium">PIREPs</span>
+              <span className="text-xs text-gray-400">
+                {pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
+              </span>
+            </div>
+          </button>
+        )}
+
+        {/* Map Controls - Top Right */}
+        {selectedAirport && (
+          <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
+            <MapControls
+              displayOptions={mapDisplayOptions}
+              onOptionsChange={setMapDisplayOptions}
+            />
+          </div>
+        )}
+
+        {/* Bottom Status Bar - Airport Info */}
+        {airportOverview && (
+          <div className="absolute bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ zIndex: 1000 }}>
+            <div className="flex justify-between items-center text-xs">
+              <div className="flex items-center space-x-4">
+                <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
+                <span>{airportOverview.runways.length} Runways</span>
+                <span className={`flex items-center space-x-1 ${airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}`}>
+                  <span>●</span>
+                  <span>{airportOverview.operational.active ? 'Active' : 'Inactive'}</span>
+                </span>
+              </div>
+
+              {/* Debug info */}
+              {process.env.NODE_ENV === 'development' && (
+                <DebugTimestamp
+                  serverTimestamp={airportOverview.timestamp}
+                  source="live data"
+                  className="opacity-60"
+                />
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
