@@ -247,7 +247,7 @@ export function PilotDashboard() {
       {!showPirepPanel && (
         <button
           onClick={() => setShowPirepPanel(true)}
-          className={`absolute left-2 bottom-16 lg:bottom-2 px-3 py-2 rounded-lg 
+          className={`absolute left-2 bottom-16 lg:bottom-14 px-3 py-2 rounded-lg 
                    hover:bg-slate-700/95 transition-colors flex items-center space-x-2 backdrop-blur-sm border
                    ${pireps && pireps.length > 0 
                      ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200' 
