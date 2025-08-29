@@ -206,6 +206,15 @@ export function PilotDashboard() {
         </div>
       </div>
 
+      {/* PIREP Panel Backdrop - Click outside to close */}
+      {showPirepPanel && (
+        <div 
+          className="absolute inset-0 bg-black/20 backdrop-blur-sm"
+          style={{ zIndex: 999 }}
+          onClick={() => setShowPirepPanel(false)}
+        />
+      )}
+
       {/* Left Side Panel - PIREPs (Collapsible, Fixed Width) */}
       <div className={`absolute left-0 top-0 bottom-12 lg:bottom-0 w-80 max-w-[85vw] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
                       transform transition-transform duration-200 ease-in-out ${
