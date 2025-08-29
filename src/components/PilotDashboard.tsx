@@ -175,9 +175,23 @@ export function PilotDashboard() {
       )}
 
       {/* Main Content: Responsive Layout */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Map Section - Full width on mobile, left side on desktop */}
-        <div className="flex-1 relative">
+      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
+        {/* Situation Overview Panel - Top on mobile, right side on desktop */}
+        {!mapFullscreen && (
+          <div className="lg:order-2 lg:w-96 lg:min-w-96 bg-slate-800/95 backdrop-blur-sm border-b lg:border-b-0 lg:border-l border-slate-700/50 p-2 lg:p-4 flex-shrink-0 lg:overflow-y-auto" style={{ zIndex: 1000 }}>
+            <SituationOverview
+              summary={summary}
+              weather={airportOverview?.weather}
+              loading={loading}
+              connectionStatus={connectionStatus}
+              airportCode={selectedAirport || undefined}
+              summaryMetadata={summaryMetadata}
+            />
+          </div>
+        )}
+
+        {/* Map Section - Below situation overview on mobile, left side on desktop */}
+        <div className="flex-1 lg:order-1 relative">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -190,20 +204,6 @@ export function PilotDashboard() {
             onFullscreenChange={setMapFullscreen}
           />
         </div>
-
-        {/* Situation Overview Panel - Top on mobile, right side on desktop */}
-        {!mapFullscreen && (
-          <div className="absolute top-0 left-0 right-0 lg:relative lg:top-auto lg:left-auto lg:right-auto lg:w-96 lg:min-w-96 bg-slate-800/95 backdrop-blur-sm border-b lg:border-b-0 lg:border-l border-slate-700/50 p-2 lg:p-4 flex-shrink-0 lg:overflow-y-auto" style={{ zIndex: 1000 }}>
-            <SituationOverview
-              summary={summary}
-              weather={airportOverview?.weather}
-              loading={loading}
-              connectionStatus={connectionStatus}
-              airportCode={selectedAirport || undefined}
-              summaryMetadata={summaryMetadata}
-            />
-          </div>
-        )}
       </div>
 
       {/* Left Side Panel - PIREPs (Collapsible, Full Width on Mobile) */}
