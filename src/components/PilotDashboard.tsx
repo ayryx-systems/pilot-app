@@ -53,6 +53,7 @@ export function PilotDashboard() {
   });
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);
+  const [mapFullscreen, setMapFullscreen] = useState(false);
 
   // Auto-refresh data every 30 seconds when connected
   useEffect(() => {
@@ -173,17 +174,19 @@ export function PilotDashboard() {
         </div>
       )}
 
-      {/* Top Information Strip - Weather and Summary */}
-      <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 p-2 flex-shrink-0" style={{ zIndex: 1000 }}>
-        <SituationOverview
-          summary={summary}
-          weather={airportOverview?.weather}
-          loading={loading}
-          connectionStatus={connectionStatus}
-          airportCode={selectedAirport || undefined}
-          summaryMetadata={summaryMetadata}
-        />
-      </div>
+      {/* Top Information Strip - Weather and Summary - Hidden in fullscreen */}
+      {!mapFullscreen && (
+        <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 p-2 flex-shrink-0" style={{ zIndex: 1000 }}>
+          <SituationOverview
+            summary={summary}
+            weather={airportOverview?.weather}
+            loading={loading}
+            connectionStatus={connectionStatus}
+            airportCode={selectedAirport || undefined}
+            summaryMetadata={summaryMetadata}
+          />
+        </div>
+      )}
 
       {/* Main Content: Map-Prominent Layout */}
       <div className="flex-1 relative overflow-hidden">
@@ -198,6 +201,7 @@ export function PilotDashboard() {
             onDismissPirep={(id) => {
               console.log('Dismiss PIREP:', id);
             }}
+            onFullscreenChange={setMapFullscreen}
           />
         </div>
 

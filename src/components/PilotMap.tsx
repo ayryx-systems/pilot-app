@@ -13,6 +13,7 @@ interface PilotMapProps {
   tracks: GroundTrack[];
   displayOptions: MapDisplayOptions;
   onDismissPirep: (id: string) => void;
+  onFullscreenChange?: (isFullscreen: boolean) => void;
 }
 
 export function PilotMap({
@@ -21,7 +22,8 @@ export function PilotMap({
   pireps,
   tracks,
   displayOptions,
-  onDismissPirep
+  onDismissPirep,
+  onFullscreenChange
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -973,6 +975,11 @@ export function PilotMap({
   const toggleFullscreen = () => {
     const newFullscreenState = !isFullscreen;
     setIsFullscreen(newFullscreenState);
+
+    // Call the parent callback if provided
+    if (onFullscreenChange) {
+      onFullscreenChange(newFullscreenState);
+    }
 
     // Notify about fullscreen state change
     setTimeout(() => {
