@@ -174,24 +174,10 @@ export function PilotDashboard() {
         </div>
       )}
 
-      {/* Top Information Strip - Weather and Summary - Hidden in fullscreen */}
-      {!mapFullscreen && (
-        <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 p-2 flex-shrink-0" style={{ zIndex: 1000 }}>
-          <SituationOverview
-            summary={summary}
-            weather={airportOverview?.weather}
-            loading={loading}
-            connectionStatus={connectionStatus}
-            airportCode={selectedAirport || undefined}
-            summaryMetadata={summaryMetadata}
-          />
-        </div>
-      )}
-
-      {/* Main Content: Map-Prominent Layout */}
-      <div className="flex-1 relative overflow-hidden">
-        {/* Map - Takes remaining space below situation overview */}
-        <div className="absolute inset-0">
+      {/* Main Content: Responsive Layout */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Map Section - Full width on mobile, left side on desktop */}
+        <div className="flex-1 relative">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -205,87 +191,101 @@ export function PilotDashboard() {
           />
         </div>
 
-        {/* Left Side Panel - PIREPs (Collapsible, Full Width on Mobile) */}
-        <div className={`absolute left-0 top-0 bottom-12 w-full sm:w-80 lg:w-96 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
-                        transform transition-transform duration-200 ease-in-out ${
-                          showPirepPanel ? 'translate-x-0' : '-translate-x-full'
-                        }`} style={{ zIndex: 1000 }}>
-          <div className="p-2 sm:p-3 h-full">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
-              <button
-                onClick={() => setShowPirepPanel(false)}
-                className="p-1 hover:bg-slate-700/50 rounded transition-colors"
-              >
-                <X className="w-4 h-4 text-gray-400" />
-              </button>
-            </div>
-            <div className="h-full overflow-y-auto">
-              <PirepsList
-                pireps={pireps}
-                onDismissPirep={(id) => {
-                  console.log('Dismiss PIREP from list:', id);
-                }}
-                connectionStatus={connectionStatus}
-                pirepsMetadata={pirepsMetadata}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* PIREP Panel Toggle Button (when panel is closed) - Positioned halfway down left side */}
-        {!showPirepPanel && (
-          <button
-            onClick={() => setShowPirepPanel(true)}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 rounded-lg 
-                     hover:bg-slate-700/95 transition-colors flex items-center space-x-2"
-            style={{ zIndex: 1000 }}
-          >
-            <Menu className="w-4 h-4 text-gray-300" />
-            <div className="flex flex-col items-start">
-              <span className="text-xs text-gray-300 font-medium">PIREPs</span>
-              <span className="text-xs text-gray-400">
-                {pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
-              </span>
-            </div>
-          </button>
-        )}
-
-        {/* Map Controls - Top Right */}
-        {selectedAirport && (
-          <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
-            <MapControls
-              displayOptions={mapDisplayOptions}
-              onOptionsChange={setMapDisplayOptions}
+        {/* Situation Overview Panel - Top on mobile, right side on desktop */}
+        {!mapFullscreen && (
+          <div className="absolute top-0 left-0 right-0 lg:relative lg:top-auto lg:left-auto lg:right-auto lg:w-96 lg:min-w-96 bg-slate-800/95 backdrop-blur-sm border-b lg:border-b-0 lg:border-l border-slate-700/50 p-2 lg:p-4 flex-shrink-0 lg:overflow-y-auto" style={{ zIndex: 1000 }}>
+            <SituationOverview
+              summary={summary}
+              weather={airportOverview?.weather}
+              loading={loading}
+              connectionStatus={connectionStatus}
+              airportCode={selectedAirport || undefined}
+              summaryMetadata={summaryMetadata}
             />
           </div>
         )}
-
-        {/* Bottom Status Bar - Airport Info */}
-        {airportOverview && (
-          <div className="absolute bottom-0 left-0 right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ zIndex: 1000 }}>
-            <div className="flex justify-between items-center text-xs">
-              <div className="flex items-center space-x-4">
-                <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
-                <span>{airportOverview.runways.length} Runways</span>
-                <span className={`flex items-center space-x-1 ${airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}`}>
-                  <span>●</span>
-                  <span>{airportOverview.operational.active ? 'Active' : 'Inactive'}</span>
-                </span>
-              </div>
-
-              {/* Debug info */}
-              {process.env.NODE_ENV === 'development' && (
-                <DebugTimestamp
-                  serverTimestamp={airportOverview.timestamp}
-                  source="live data"
-                  className="opacity-60"
-                />
-              )}
-            </div>
-          </div>
-        )}
       </div>
+
+      {/* Left Side Panel - PIREPs (Collapsible, Full Width on Mobile) */}
+      <div className={`absolute left-0 top-0 bottom-12 lg:bottom-0 w-full sm:w-80 lg:w-96 bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
+                      transform transition-transform duration-200 ease-in-out ${
+                        showPirepPanel ? 'translate-x-0' : '-translate-x-full'
+                      }`} style={{ zIndex: 1000 }}>
+        <div className="p-2 sm:p-3 h-full">
+          <div className="flex items-center justify-between mb-2">
+            <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
+            <button
+              onClick={() => setShowPirepPanel(false)}
+              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+            >
+              <X className="w-4 h-4 text-gray-400" />
+            </button>
+          </div>
+          <div className="h-full overflow-y-auto">
+            <PirepsList
+              pireps={pireps}
+              onDismissPirep={(id) => {
+                console.log('Dismiss PIREP from list:', id);
+              }}
+              connectionStatus={connectionStatus}
+              pirepsMetadata={pirepsMetadata}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* PIREP Panel Toggle Button (when panel is closed) - Positioned halfway down left side */}
+      {!showPirepPanel && (
+        <button
+          onClick={() => setShowPirepPanel(true)}
+          className="absolute left-2 top-1/2 -translate-y-1/2 lg:top-1/3 bg-slate-800/95 backdrop-blur-sm border border-slate-700/50 px-3 py-2 rounded-lg 
+                   hover:bg-slate-700/95 transition-colors flex items-center space-x-2"
+          style={{ zIndex: 1000 }}
+        >
+          <Menu className="w-4 h-4 text-gray-300" />
+          <div className="flex flex-col items-start">
+            <span className="text-xs text-gray-300 font-medium">PIREPs</span>
+            <span className="text-xs text-gray-400">
+              {pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
+            </span>
+          </div>
+        </button>
+      )}
+
+      {/* Map Controls - Top Right of Map Area */}
+      {selectedAirport && (
+        <div className="absolute top-2 right-2 lg:right-[25rem]" style={{ zIndex: 1001 }}>
+          <MapControls
+            displayOptions={mapDisplayOptions}
+            onOptionsChange={setMapDisplayOptions}
+          />
+        </div>
+      )}
+
+      {/* Bottom Status Bar - Airport Info */}
+      {airportOverview && (
+        <div className="absolute bottom-0 left-0 right-0 lg:right-96 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ zIndex: 1000 }}>
+          <div className="flex justify-between items-center text-xs">
+            <div className="flex items-center space-x-4">
+              <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
+              <span>{airportOverview.runways.length} Runways</span>
+              <span className={`flex items-center space-x-1 ${airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}`}>
+                <span>●</span>
+                <span>{airportOverview.operational.active ? 'Active' : 'Inactive'}</span>
+              </span>
+            </div>
+
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+              <DebugTimestamp
+                serverTimestamp={airportOverview.timestamp}
+                source="live data"
+                className="opacity-60"
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

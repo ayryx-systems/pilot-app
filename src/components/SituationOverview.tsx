@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { SituationSummary, ConnectionStatus } from '@/types';
-import { AlertTriangle, CheckCircle, Info, Cloud, Wind, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Cloud, Wind } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 
@@ -42,7 +42,6 @@ export function SituationOverview({
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false);
 
   const openConditionModal = (key: string, condition: any) => {
     setSelectedCondition({ key, condition });
@@ -101,6 +100,7 @@ export function SituationOverview({
     }
   };
 
+
   if (loading) {
     return (
       <div className="animate-pulse">
@@ -119,6 +119,21 @@ export function SituationOverview({
       <div className="mb-3">
         <h2 className="text-lg font-semibold text-white">Situation Overview</h2>
       </div>
+
+      {/* Current Situation - Fixed Element */}
+      {summary && (
+        <div className="p-3 rounded-lg border-2 mb-4 bg-slate-700/50 border-slate-500/50 text-gray-200">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center">
+              <Info className="w-4 h-4 text-blue-400" />
+              <span className="ml-2 text-sm font-semibold">Current Situation</span>
+            </div>
+          </div>
+          <div className="mt-2 text-sm leading-relaxed">
+            {summary.situation_overview}
+          </div>
+        </div>
+      )}
 
       {/* Main Condition Grid - Always Visible */}
       {summary?.conditions ? (
@@ -196,61 +211,55 @@ export function SituationOverview({
               })}
           </div>
 
-          {/* Expandable Details Section */}
-          <div>
-            <button
-              onClick={() => setIsExpanded(!isExpanded)}
-              className="w-full flex items-center justify-between p-1.5 hover:bg-slate-700/30 rounded transition-colors"
-            >
-              <span className="text-xs font-medium text-gray-300">
-                {isExpanded ? 'Hide Details' : 'Show Details'}
-              </span>
-              {isExpanded ? (
-                <ChevronUp className="w-4 h-4 text-gray-400" />
-              ) : (
-                <ChevronDown className="w-4 h-4 text-gray-400" />
-              )}
-            </button>
+          {/* Additional Conditions if any - Show as regular buttons below the main grid */}
+          {Object.entries(summary.conditions).length > 6 && (
+            <div className="grid grid-cols-2 gap-3">
+              {Object.entries(summary.conditions)
+                .filter(([key]) => key !== 'weather' && key !== 'processing')
+                .slice(5) // Additional conditions beyond the first 6
+                .map(([key, condition]) => {
+                  const getConditionIcon = (conditionKey: string) => {
+                    switch (conditionKey.toLowerCase()) {
+                      case 'traffic':
+                        return <Wind className="w-5 h-5 text-white" />;
+                      case 'approach':
+                        return <div className="w-5 h-5 text-white flex items-center justify-center">🛬</div>;
+                      case 'runway':
+                        return <div className="w-5 h-5 text-white flex items-center justify-center">🛫</div>;
+                      case 'ground':
+                        return <div className="w-5 h-5 text-white flex items-center justify-center">🚛</div>;
+                      case 'special':
+                        return <AlertTriangle className="w-5 h-5 text-white" />;
+                      default:
+                        return <Info className="w-5 h-5 text-white" />;
+                    }
+                  };
 
-            {/* Expanded Content */}
-            {isExpanded && (
-              <div className="mt-2 space-y-2 bg-slate-800 border border-slate-600 rounded-lg p-2 relative" style={{ zIndex: 2147483647 }}>
-                {/* Situation Summary */}
-                {summary && (
-                  <div className="p-2 bg-slate-700/30 rounded text-xs text-gray-200 max-h-24 overflow-y-auto">
-                    <div className="font-medium text-white mb-1">Current Situation</div>
-                    <div className="text-xs leading-relaxed">
-                      {summary.situation_overview}
-                    </div>
-                  </div>
-                )}
-
-                {/* Additional Conditions if any */}
-                {Object.entries(summary.conditions).length > 6 && (
-                  <div className="grid grid-cols-1 gap-1">
-                    {Object.entries(summary.conditions)
-                      .filter(([key]) => key !== 'weather')
-                      .slice(5) // Additional conditions beyond the first 6
-                      .map(([key, condition]) => (
-                        <button
-                          key={key}
-                          onClick={() => openConditionModal(key, condition)}
-                          className="p-1.5 bg-slate-700/30 hover:bg-slate-600/30 rounded text-left transition-colors"
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center">
-                              {getStatusIcon(condition.status)}
-                              <span className="ml-2 text-xs font-medium capitalize text-white">{key}</span>
-                            </div>
-                            <span className="text-xs text-gray-400 capitalize">{condition.status}</span>
-                          </div>
-                        </button>
-                      ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => openConditionModal(key, condition)}
+                      className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                        getStatusColor(condition.status)
+                      }`}
+                    >
+                      <div className="flex items-center justify-between w-full mb-2">
+                        <div className="flex items-center">
+                          {getConditionIcon(key)}
+                          <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
+                        </div>
+                        {getStatusIcon(condition.status)}
+                      </div>
+                      <div className="text-xs text-gray-300 leading-tight">
+                        {condition.short_summary || 
+                         (condition.status?.charAt(0).toUpperCase() + 
+                          condition.status?.slice(1) || 'Normal conditions')}
+                      </div>
+                    </button>
+                  );
+                })}
+            </div>
+          )}
         </div>
       ) : (
         // Loading/No Data State
