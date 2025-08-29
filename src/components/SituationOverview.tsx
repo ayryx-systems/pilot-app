@@ -69,6 +69,38 @@ export function SituationOverview({
     }
   };
 
+  const getStatusColor = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
+    switch (status) {
+      case 'warning':
+        return 'bg-slate-700 border-red-500';
+      case 'caution':
+        return 'bg-slate-700 border-yellow-500';
+      case 'check-overview':
+        return 'bg-slate-700 border-blue-500';
+      case 'inactive':
+      case 'unavailable':
+        return 'bg-slate-700 border-gray-500';
+      default:
+        return 'bg-slate-700 border-green-500';
+    }
+  };
+
+  const getStatusTextColor = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
+    switch (status) {
+      case 'warning':
+        return 'text-red-400';
+      case 'caution':
+        return 'text-yellow-400';
+      case 'check-overview':
+        return 'text-blue-400';
+      case 'inactive':
+      case 'unavailable':
+        return 'text-gray-400';
+      default:
+        return 'text-green-400';
+    }
+  };
+
   if (loading) {
     return (
       <div className="animate-pulse">
@@ -84,53 +116,58 @@ export function SituationOverview({
   return (
     <div className="relative" style={{ zIndex: 2147483647 }}>
       {/* Header - More compact */}
-      <div className="mb-2">
-        <h2 className="text-sm font-semibold text-white">Situation Overview</h2>
+      <div className="mb-3">
+        <h2 className="text-lg font-semibold text-white">Situation Overview</h2>
       </div>
 
       {/* Main Condition Grid - Always Visible */}
       {summary?.conditions ? (
         <div className="space-y-2">
           {/* Primary Grid - All conditions visible */}
-          <div className="grid grid-cols-2 gap-1.5">
+          <div className="grid grid-cols-2 gap-3">
             {/* Weather Button */}
             {(weather || summary.conditions.weather) && (
               <button
                 onClick={() => setIsWeatherModalOpen(true)}
-                className="flex flex-col items-center justify-center p-1.5 bg-slate-700 hover:bg-slate-600 rounded-lg text-center transition-all duration-200 hover:scale-105"
+                className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                  getStatusColor(summary.conditions.weather?.status)
+                }`}
               >
-                <div className="flex items-center justify-center w-5 h-5 mb-1 rounded-full bg-slate-600">
-                  <Cloud className="w-3 h-3 text-blue-400" />
-                </div>
-                <span className="text-xs font-medium text-white">Weather</span>
-                <div className="flex items-center mt-1">
+                <div className="flex items-center justify-between w-full mb-2">
+                  <div className="flex items-center">
+                    <Cloud className="w-5 h-5 text-white mr-2" />
+                    <span className={`text-sm font-semibold ${getStatusTextColor(summary.conditions.weather?.status)}`}>Weather</span>
+                  </div>
                   {getStatusIcon(summary.conditions.weather?.status)}
-                  <span className="ml-1 text-xs text-gray-300 capitalize">
-                    {summary.conditions.weather?.status || 'Normal'}
-                  </span>
+                </div>
+                <div className="text-xs text-gray-300 leading-tight">
+                  {summary.conditions.weather?.short_summary || 
+                   (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' : 
+                    summary.conditions.weather?.status?.charAt(0).toUpperCase() + 
+                    summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
                 </div>
               </button>
             )}
 
             {/* Other Conditions */}
             {Object.entries(summary.conditions)
-              .filter(([key]) => key !== 'weather')
+              .filter(([key]) => key !== 'weather' && key !== 'processing')
               .slice(0, 5) // Show up to 5 more conditions (6 total)
               .map(([key, condition]) => {
                 const getConditionIcon = (conditionKey: string) => {
                   switch (conditionKey.toLowerCase()) {
                     case 'traffic':
-                      return '✈️';
+                      return <Wind className="w-5 h-5 text-white" />;
                     case 'approach':
-                      return '🛬';
+                      return <div className="w-5 h-5 text-white flex items-center justify-center">🛬</div>;
                     case 'runway':
-                      return '🛫';
+                      return <div className="w-5 h-5 text-white flex items-center justify-center">🛫</div>;
                     case 'ground':
-                      return '🚛';
+                      return <div className="w-5 h-5 text-white flex items-center justify-center">🚛</div>;
                     case 'special':
-                      return '⚠️';
+                      return <AlertTriangle className="w-5 h-5 text-white" />;
                     default:
-                      return '📋';
+                      return <Info className="w-5 h-5 text-white" />;
                   }
                 };
 
@@ -138,17 +175,21 @@ export function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className="flex flex-col items-center justify-center p-1.5 bg-slate-700/70 hover:bg-slate-600/70 rounded-lg text-center transition-all duration-200 hover:scale-105"
+                    className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                      getStatusColor(condition.status)
+                    }`}
                   >
-                    <div className="flex items-center justify-center w-5 h-5 mb-1 rounded-full bg-slate-600/50">
-                      <span className="text-sm">{getConditionIcon(key)}</span>
-                    </div>
-                    <span className="text-xs font-medium text-white capitalize">{key}</span>
-                    <div className="flex items-center mt-1">
+                    <div className="flex items-center justify-between w-full mb-2">
+                      <div className="flex items-center">
+                        {getConditionIcon(key)}
+                        <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
+                      </div>
                       {getStatusIcon(condition.status)}
-                      <span className="ml-1 text-xs text-gray-300 capitalize">
-                        {condition.status || 'Normal'}
-                      </span>
+                    </div>
+                    <div className="text-xs text-gray-300 leading-tight">
+                      {condition.short_summary || 
+                       (condition.status?.charAt(0).toUpperCase() + 
+                        condition.status?.slice(1) || 'Normal conditions')}
                     </div>
                   </button>
                 );
@@ -213,12 +254,19 @@ export function SituationOverview({
         </div>
       ) : (
         // Loading/No Data State
-        <div className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-3">
           {['Weather', 'Traffic', 'Approach', 'Runway', 'Ground', 'Special'].map((label) => (
-            <div key={label} className="flex flex-col items-center justify-center p-2 bg-slate-700/30 rounded-lg">
-              <div className="w-6 h-6 mb-1 rounded-full bg-slate-600/50 animate-pulse"></div>
-              <span className="text-xs font-medium text-gray-400">{label}</span>
-              <span className="text-xs text-gray-500 mt-1">Loading...</span>
+            <div key={label} className="flex flex-col p-3 rounded-xl border-2 border-slate-600 bg-slate-700">
+              <div className="flex items-center justify-between w-full mb-2">
+                <div className="flex items-center">
+                  <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
+                  <span className="text-sm font-semibold text-gray-400">{label}</span>
+                </div>
+                <div className="w-4 h-4 rounded-full bg-slate-500 animate-pulse"></div>
+              </div>
+              <div className="text-xs text-gray-400 animate-pulse">
+                Loading...
+              </div>
             </div>
           ))}
         </div>
