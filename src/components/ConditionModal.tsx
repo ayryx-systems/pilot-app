@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { X, AlertTriangle, CheckCircle, Info, Cloud } from 'lucide-react';
 
 interface ConditionModalProps {
@@ -80,9 +81,18 @@ export function ConditionModal({
         }
     };
 
-    return (
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black bg-opacity-50 p-4">
-            <div ref={modalRef} className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full max-h-[80vh] overflow-y-auto">
+    const modalContent = (
+        <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50 py-4 px-4" style={{ zIndex: 999999999 }}>
+            <div 
+                ref={modalRef} 
+                className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full overflow-hidden"
+                style={{ 
+                    marginTop: '4rem',
+                    marginBottom: '2rem',
+                    maxHeight: 'calc(100vh - 6rem)'
+                }}
+            >
+                <div className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 6rem)' }}>
                 {/* Header */}
                 <div className="flex items-center justify-between p-4 border-b border-slate-700">
                     <div className="flex items-center gap-2">
@@ -138,18 +148,22 @@ export function ConditionModal({
                             </p>
                         </div>
                     )}
-                </div>
+                    </div>
 
-                {/* Footer */}
-                <div className="p-4 border-t border-slate-700">
-                    <button
-                        onClick={onClose}
-                        className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
-                    >
-                        Close
-                    </button>
+                    {/* Footer */}
+                    <div className="p-4 border-t border-slate-700">
+                        <button
+                            onClick={onClose}
+                            className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                        >
+                            Close
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
     );
+
+    // Render modal using portal to document.body to escape any stacking context issues
+    return typeof document !== 'undefined' ? createPortal(modalContent, document.body) : null;
 }

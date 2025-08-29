@@ -93,13 +93,9 @@ export function PilotMap({
           position: relative;
         }
         
-        /* Map controls should be above map tiles but below sidebar */
-        .leaflet-control-container {
-          z-index: 5;
-        }
-        
-        .leaflet-control {
-          z-index: 5;
+        /* Ensure map container doesn't interfere with overlaid controls */
+        .leaflet-container {
+          position: relative;
         }
       `;
       document.head.appendChild(style);
@@ -1005,7 +1001,7 @@ export function PilotMap({
       : 'h-full rounded-xl overflow-hidden border relative'
       }`}>
       {/* Fullscreen and Recenter buttons */}
-      <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 1000 }}>
+      <div className="absolute bottom-4 right-4 flex flex-col gap-2" style={{ zIndex: 100 }}>
         {/* Fullscreen toggle button */}
         <button
           onClick={toggleFullscreen}
