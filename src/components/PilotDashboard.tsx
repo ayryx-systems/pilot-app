@@ -203,6 +203,16 @@ export function PilotDashboard() {
             }}
             onFullscreenChange={setMapFullscreen}
           />
+          
+          {/* Map Controls - Top Right of Map Area */}
+          {selectedAirport && (
+            <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
+              <MapControls
+                displayOptions={mapDisplayOptions}
+                onOptionsChange={setMapDisplayOptions}
+              />
+            </div>
+          )}
         </div>
       </div>
 
@@ -264,15 +274,6 @@ export function PilotDashboard() {
         </button>
       )}
 
-      {/* Map Controls - Top Right of Map Area */}
-      {selectedAirport && (
-        <div className="absolute top-2 right-2 lg:right-[25rem]" style={{ zIndex: 1001 }}>
-          <MapControls
-            displayOptions={mapDisplayOptions}
-            onOptionsChange={setMapDisplayOptions}
-          />
-        </div>
-      )}
 
       {/* Bottom Status Bar - Airport Info */}
       {airportOverview && (

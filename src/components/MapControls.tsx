@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { MapDisplayOptions } from '@/types';
 import { Settings, Eye, EyeOff, Layers } from 'lucide-react';
 
@@ -11,6 +11,24 @@ interface MapControlsProps {
 
 export function MapControls({ displayOptions, onOptionsChange }: MapControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsExpanded(false);
+      }
+    };
+
+    if (isExpanded) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isExpanded]);
 
   const handleToggle = (key: keyof MapDisplayOptions) => {
     onOptionsChange({
@@ -31,6 +49,7 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
 
   return (
     <div
+      ref={containerRef}
       className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600"
       style={{
         position: 'relative',
