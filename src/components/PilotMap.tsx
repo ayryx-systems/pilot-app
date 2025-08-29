@@ -89,28 +89,15 @@ export function PilotMap({
         /* Ensure map container doesn't interfere with overlaid controls */
         .leaflet-container {
           position: relative;
-          z-index: 1 !important;
         }
         
-        /* Force all Leaflet layers to stay below custom controls */
-        .leaflet-tile-pane,
-        .leaflet-overlay-pane,
-        .leaflet-shadow-pane,
-        .leaflet-marker-pane,
-        .leaflet-tooltip-pane,
-        .leaflet-popup-pane {
-          z-index: 1 !important;
-        }
-        
-        /* Ensure map controls are above everything */
+        /* Map controls should be above map tiles but below sidebar */
         .leaflet-control-container {
-          pointer-events: none;
-          z-index: 1 !important;
+          z-index: 5;
         }
         
         .leaflet-control {
-          pointer-events: auto;
-          z-index: 1 !important;
+          z-index: 5;
         }
       `;
       document.head.appendChild(style);

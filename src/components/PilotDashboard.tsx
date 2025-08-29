@@ -191,48 +191,24 @@ export function PilotDashboard() {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Map Area */}
-        <div className="flex-1 relative order-2 lg:order-1">
-          <PilotMap
-            airport={airportOverview?.airport}
-            airportData={airportOverview || undefined}
-            pireps={pireps}
-            tracks={tracks}
-            displayOptions={mapDisplayOptions}
-            onDismissPirep={(id) => {
-              // Handle PIREP dismissal
-              console.log('Dismiss PIREP:', id);
-            }}
-          />
-
-          {/* Map Controls Overlay - Positioned at top-right to avoid zoom controls */}
-          {selectedAirport && (
-            <div
-              className="absolute top-2 right-2 lg:top-4 lg:right-6 pointer-events-none"
-              style={{ zIndex: 40 }}
-            >
-              <div className="pointer-events-auto">
-                <MapControls
-                  displayOptions={mapDisplayOptions}
-                  onOptionsChange={setMapDisplayOptions}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar - Responsive layout */}
+        {/* Sidebar - Mobile first, then desktop right */}
         <div className="
           w-full lg:w-80 xl:w-96 
-          h-72 sm:h-80 lg:h-full 
+          h-1/2 lg:h-full 
           bg-slate-800 
           border-t lg:border-t-0 lg:border-l border-slate-700 
           flex flex-col 
           order-1 lg:order-2
-          overflow-hidden
-        ">
+          relative
+          overflow-y-auto
+        "
+          style={{
+            zIndex: 2147483647,
+            isolation: 'isolate'
+          }}
+        >
           {/* Situation Overview - Ultra Compact */}
-          <div className="p-2 border-b border-slate-700 flex-shrink-0">
+          <div className="p-2 border-b border-slate-700">
             <SituationOverview
               summary={summary}
               weather={airportOverview?.weather}
@@ -244,22 +220,20 @@ export function PilotDashboard() {
           </div>
 
           {/* PIREPs List - Maximum space */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <div className="p-2">
-              <PirepsList
-                pireps={pireps}
-                onDismissPirep={(id) => {
-                  console.log('Dismiss PIREP from list:', id);
-                }}
-                connectionStatus={connectionStatus}
-                pirepsMetadata={pirepsMetadata}
-              />
-            </div>
+          <div className="flex-1 p-2 overflow-y-auto max-h-32 lg:max-h-none">
+            <PirepsList
+              pireps={pireps}
+              onDismissPirep={(id) => {
+                console.log('Dismiss PIREP from list:', id);
+              }}
+              connectionStatus={connectionStatus}
+              pirepsMetadata={pirepsMetadata}
+            />
           </div>
 
           {/* Airport Info Footer - Compact */}
           {airportOverview && (
-            <div className="p-2 border-t border-slate-700 bg-slate-800 flex-shrink-0">
+            <div className="p-2 border-t border-slate-700 bg-slate-800 flex-shrink-0 mt-auto mb-4 lg:mb-0">
               <div className="text-xs space-y-1">
                 <div className="flex justify-between">
                   <span className="text-gray-400">{airportOverview.airport.code}</span>
@@ -278,6 +252,36 @@ export function PilotDashboard() {
                     source="live data"
                   />
                 </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Map Area - Below sidebar on mobile, right side on desktop */}
+        <div className="flex-1 relative order-2 lg:order-1 lg:min-h-0" style={{ zIndex: 1 }}>
+          <PilotMap
+            airport={airportOverview?.airport}
+            airportData={airportOverview || undefined}
+            pireps={pireps}
+            tracks={tracks}
+            displayOptions={mapDisplayOptions}
+            onDismissPirep={(id) => {
+              // Handle PIREP dismissal
+              console.log('Dismiss PIREP:', id);
+            }}
+          />
+
+          {/* Map Controls Overlay - Positioned at top-right to avoid zoom controls */}
+          {selectedAirport && (
+            <div
+              className="absolute top-2 right-2 lg:top-4 lg:right-6 pointer-events-none"
+              style={{ zIndex: 10 }}
+            >
+              <div className="pointer-events-auto">
+                <MapControls
+                  displayOptions={mapDisplayOptions}
+                  onOptionsChange={setMapDisplayOptions}
+                />
               </div>
             </div>
           )}
