@@ -186,7 +186,7 @@ export function PilotDashboard() {
         )}
 
         {/* Map Section - Below situation overview on mobile, left side on desktop */}
-        <div className="flex-1 lg:order-1 relative">
+        <div className="flex-1 lg:order-1 relative pb-12 lg:pb-0">
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
