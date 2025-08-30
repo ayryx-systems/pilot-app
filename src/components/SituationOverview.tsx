@@ -117,14 +117,8 @@ export function SituationOverview({
 
       {/* Current Situation - Fixed Element */}
       {summary && (
-        <div className="p-3 rounded-lg border-2 mb-4 bg-slate-700/50 border-slate-500/50 text-gray-200">
-          <div className="flex items-start justify-between">
-            <div className="flex items-center">
-              <Info className="w-4 h-4 text-blue-400" />
-              <span className="ml-2 text-sm font-semibold">Current Situation</span>
-            </div>
-          </div>
-          <div className="mt-2 text-sm leading-relaxed">
+        <div className="p-2 rounded-lg border-2 mb-3 bg-slate-700/50 border-slate-500/50 text-gray-200">
+          <div className="text-sm leading-relaxed">
             {summary.situation_overview}
           </div>
         </div>

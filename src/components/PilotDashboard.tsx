@@ -124,15 +124,12 @@ export function PilotDashboard() {
           {selectedAirport && (() => {
             const dataStatus = getDataStatus();
             return (
-              <div className={`flex items-center space-x-1 ${getConnectionStatusColor()}`}>
-                {getConnectionStatusIcon()}
-                <SimpleDataAge
-                  timestamp={dataStatus.timestamp}
-                  isLive={dataStatus.isLive}
-                  offline={!connectionStatus.connected}
-                  size="sm"
-                />
-              </div>
+              <SimpleDataAge
+                timestamp={dataStatus.timestamp}
+                isLive={dataStatus.isLive}
+                offline={!connectionStatus.connected}
+                size="sm"
+              />
             );
           })()}
 
