@@ -73,15 +73,15 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
               <button
                 key={key}
                 onClick={() => handleToggle(key)}
-                className={`w-full flex items-center justify-between p-2 rounded text-sm
+                className={`w-full flex items-center justify-between py-1 px-2 rounded text-xs
                   hover:bg-slate-700/50 transition-colors ${displayOptions[key]
                     ? 'text-white bg-slate-700/30'
                     : 'text-gray-400'
                   }`}
               >
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1">
                   <span className="text-xs">{icon}</span>
-                  <span>{label}</span>
+                  <span className="text-xs">{label}</span>
                 </div>
                 {displayOptions[key] ? (
                   <Eye className="w-3 h-3" />
@@ -92,47 +92,6 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
             ))}
           </div>
 
-          {/* Quick Actions */}
-          <div className="border-t border-slate-600 mt-2 pt-2">
-            <div className="flex space-x-1">
-              <button
-                onClick={() => {
-                  const allOn: MapDisplayOptions = {
-                    showRunways: true,
-                    showDmeRings: true,
-                    showWaypoints: true,
-                    showApproachRoutes: true,
-                    showExtendedCenterlines: true,
-                    showPireps: true,
-                    showGroundTracks: true,
-                  };
-                  onOptionsChange(allOn);
-                }}
-                className="flex-1 px-2 py-1 text-xs bg-green-700/30 hover:bg-green-700/50 
-                         text-green-400 rounded transition-colors"
-              >
-                All On
-              </button>
-              <button
-                onClick={() => {
-                  const allOff: MapDisplayOptions = {
-                    showRunways: false,
-                    showDmeRings: false,
-                    showWaypoints: false,
-                    showApproachRoutes: false,
-                    showExtendedCenterlines: false,
-                    showPireps: false,
-                    showGroundTracks: false,
-                  };
-                  onOptionsChange(allOff);
-                }}
-                className="flex-1 px-2 py-1 text-xs bg-red-700/30 hover:bg-red-700/50 
-                         text-red-400 rounded transition-colors"
-              >
-                All Off
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
