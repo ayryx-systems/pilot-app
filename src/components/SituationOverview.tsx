@@ -104,7 +104,6 @@ export function SituationOverview({
   if (loading) {
     return (
       <div className="animate-pulse">
-        <h2 className="text-lg font-semibold mb-3 text-white">Situation Overview</h2>
         <div className="space-y-2">
           <div className="h-4 bg-slate-600 rounded"></div>
           <div className="h-4 bg-slate-600 rounded w-3/4"></div>
@@ -115,10 +114,6 @@ export function SituationOverview({
 
   return (
     <div className="relative" style={{ zIndex: 2147483647 }}>
-      {/* Header - More compact */}
-      <div className="mb-3">
-        <h2 className="text-lg font-semibold text-white">Situation Overview</h2>
-      </div>
 
       {/* Current Situation - Fixed Element */}
       {summary && (
@@ -144,11 +139,11 @@ export function SituationOverview({
             {(weather || summary.conditions.weather) && (
               <button
                 onClick={() => setIsWeatherModalOpen(true)}
-                className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
                   getStatusColor(summary.conditions.weather?.status)
                 }`}
               >
-                <div className="flex items-center justify-between w-full mb-2">
+                <div className="flex items-center justify-between w-full mb-1">
                   <div className="flex items-center">
                     <Cloud className="w-5 h-5 text-white mr-2" />
                     <span className={`text-sm font-semibold ${getStatusTextColor(summary.conditions.weather?.status)}`}>Weather</span>
@@ -190,11 +185,11 @@ export function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
                       getStatusColor(condition.status)
                     }`}
                   >
-                    <div className="flex items-center justify-between w-full mb-2">
+                    <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center">
                         {getConditionIcon(key)}
                         <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
@@ -239,11 +234,11 @@ export function SituationOverview({
                     <button
                       key={key}
                       onClick={() => openConditionModal(key, condition)}
-                      className={`flex flex-col p-3 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
+                      className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
                         getStatusColor(condition.status)
                       }`}
                     >
-                      <div className="flex items-center justify-between w-full mb-2">
+                      <div className="flex items-center justify-between w-full mb-1">
                         <div className="flex items-center">
                           {getConditionIcon(key)}
                           <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
@@ -265,8 +260,8 @@ export function SituationOverview({
         // Loading/No Data State
         <div className="grid grid-cols-2 gap-3">
           {['Weather', 'Traffic', 'Approach', 'Runway', 'Ground', 'Special'].map((label) => (
-            <div key={label} className="flex flex-col p-3 rounded-xl border-2 border-slate-600 bg-slate-700">
-              <div className="flex items-center justify-between w-full mb-2">
+            <div key={label} className="flex flex-col p-2 rounded-xl border-2 border-slate-600 bg-slate-700">
+              <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center">
                   <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
                   <span className="text-sm font-semibold text-gray-400">{label}</span>

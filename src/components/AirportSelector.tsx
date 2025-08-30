@@ -42,13 +42,6 @@ export function AirportSelector({
       <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
         <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
       </div>
-
-      {selectedAirportData && (
-        <div className="flex items-center mt-1 text-xs text-gray-400">
-          <Plane className="w-3 h-3 mr-1" />
-          <span>{selectedAirportData.active ? 'Active' : 'Inactive'}</span>
-        </div>
-      )}
     </div>
   );
 }

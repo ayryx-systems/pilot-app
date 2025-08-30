@@ -34,6 +34,14 @@ body {
   overflow: hidden;
 }
 
+/* Support for safe areas on mobile devices */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+
 /* Custom scrollbar for internal scrollable areas */
 .custom-scrollbar {
   scrollbar-width: thin;
