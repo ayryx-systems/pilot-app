@@ -27,8 +27,8 @@ export function AirportSelector({
         disabled={loading}
         className="appearance-none bg-slate-700 text-white px-2 sm:px-3 py-1 sm:py-2 pr-6 sm:pr-8 rounded-lg 
                    border border-slate-600 focus:border-blue-400 focus:outline-none
-                   disabled:opacity-50 disabled:cursor-not-allowed min-w-[160px] sm:min-w-[200px]
-                   text-sm sm:text-base"
+                   disabled:opacity-50 disabled:cursor-not-allowed max-w-[140px] sm:max-w-[180px]
+                   text-xs sm:text-sm truncate"
       >
         <option value="">Select Airport...</option>
         {airports.map(airport => (
