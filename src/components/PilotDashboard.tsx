@@ -47,7 +47,7 @@ export function PilotDashboard() {
     showDmeRings: true,
     showWaypoints: true,
     showApproachRoutes: true,
-    showExtendedCenterlines: false,
+    showExtendedCenterlines: true,
     showPireps: true,
     showGroundTracks: true,
   });

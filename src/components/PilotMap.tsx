@@ -532,17 +532,7 @@ export function PilotMap({
               });
 
               if (approachWaypoints.length > 1) {
-                // Add approach path line
-                const approachPath = L.polyline(approachWaypoints, {
-                  color: '#fbbf24', // Brighter amber for approach routes
-                  weight: 3, // Slightly thicker for better visibility
-                  opacity: 0.8,
-                  dashArray: '8, 8' // Longer dashes for better distinction
-                }).bindPopup(
-                  `<strong>${approach.name} Approach</strong><br/>Runway ${runway.name}`
-                );
-
-                layerGroupsRef.current.approachRoutes.addLayer(approachPath);
+                // Skip adding approach path line - only show waypoints
 
                 // Add approach waypoint markers - using similar style to regular waypoints
                 approach.waypoints.forEach((waypoint, index) => {
@@ -610,8 +600,8 @@ export function PilotMap({
 
         runways.forEach(runway => {
           if (runway.threshold && runway.oppositeEnd) {
-            // Calculate extended centerline points (extend 10 NM from each end)
-            const extensionDistanceNm = 10;
+            // Calculate extended centerline points (extend 20 NM from each end)
+            const extensionDistanceNm = 20;
             const extensionDistanceMeters = extensionDistanceNm * 1852;
 
             // Calculate runway bearing
