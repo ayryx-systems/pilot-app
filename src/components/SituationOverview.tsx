@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { SituationSummary, ConnectionStatus } from '@/types';
-import { AlertTriangle, CheckCircle, Info, Cloud, Wind } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Radio, Zap, MapPin, Navigation, Car } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 
@@ -161,13 +161,13 @@ export function SituationOverview({
                 const getConditionIcon = (conditionKey: string) => {
                   switch (conditionKey.toLowerCase()) {
                     case 'traffic':
-                      return <Wind className="w-5 h-5 text-white" />;
+                      return <Plane className="w-5 h-5 text-white" />;
                     case 'approach':
-                      return <div className="w-5 h-5 text-white flex items-center justify-center">🛬</div>;
+                      return <Navigation className="w-5 h-5 text-white" />;
                     case 'runway':
-                      return <div className="w-5 h-5 text-white flex items-center justify-center">🛫</div>;
+                      return <MapPin className="w-5 h-5 text-white" />;
                     case 'ground':
-                      return <div className="w-5 h-5 text-white flex items-center justify-center">🚛</div>;
+                      return <Car className="w-5 h-5 text-white" />;
                     case 'special':
                       return <AlertTriangle className="w-5 h-5 text-white" />;
                     default:
@@ -210,13 +210,13 @@ export function SituationOverview({
                   const getConditionIcon = (conditionKey: string) => {
                     switch (conditionKey.toLowerCase()) {
                       case 'traffic':
-                        return <Wind className="w-5 h-5 text-white" />;
+                        return <Plane className="w-5 h-5 text-white" />;
                       case 'approach':
-                        return <div className="w-5 h-5 text-white flex items-center justify-center">🛬</div>;
+                        return <Navigation className="w-5 h-5 text-white" />;
                       case 'runway':
-                        return <div className="w-5 h-5 text-white flex items-center justify-center">🛫</div>;
+                        return <MapPin className="w-5 h-5 text-white" />;
                       case 'ground':
-                        return <div className="w-5 h-5 text-white flex items-center justify-center">🚛</div>;
+                        return <Car className="w-5 h-5 text-white" />;
                       case 'special':
                         return <AlertTriangle className="w-5 h-5 text-white" />;
                       default:
