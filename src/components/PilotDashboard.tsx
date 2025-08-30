@@ -103,7 +103,7 @@ export function PilotDashboard() {
   };
 
   return (
-    <div className="h-screen flex flex-col bg-slate-900 text-white overflow-hidden">
+    <div className="flex flex-col bg-slate-900 text-white overflow-hidden" style={{ height: '100dvh' }}>
       {/* Compact Header Bar */}
       <header className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0">
         <div className="flex items-center space-x-2 min-w-0 flex-1">
@@ -186,7 +186,7 @@ export function PilotDashboard() {
         )}
 
         {/* Map Section - Below situation overview on mobile, left side on desktop */}
-        <div className="flex-1 lg:order-1 relative pb-12 lg:pb-0">
+        <div className="flex-1 lg:order-1 relative" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -272,7 +272,7 @@ export function PilotDashboard() {
 
       {/* Bottom Status Bar - Airport Info */}
       {airportOverview && (
-        <div className="absolute bottom-0 left-0 right-0 lg:right-96 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ zIndex: 1000 }}>
+        <div className="absolute left-0 right-0 lg:right-96 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
           <div className="flex justify-between items-center text-xs">
             <div className="flex items-center space-x-4">
               <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
