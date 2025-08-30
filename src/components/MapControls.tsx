@@ -38,7 +38,6 @@ export function MapControls({ displayOptions, onOptionsChange }: MapControlsProp
   };
 
   const controls = [
-    { key: 'showRunways' as const, label: 'Runways', icon: '✈️' },
     { key: 'showDmeRings' as const, label: 'DME Rings', icon: '⭕' },
     { key: 'showWaypoints' as const, label: 'Waypoints', icon: '📍' },
     { key: 'showApproachRoutes' as const, label: 'Approach Routes', icon: '🛩️' },

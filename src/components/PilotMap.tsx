@@ -246,51 +246,60 @@ export function PilotMap({
       // Clear existing runways
       layerGroupsRef.current.runways.clearLayers();
 
-      if (displayOptions.showRunways) {
-        // Use runways from airportData if available, fallback to airportConfig
-        const runways = airportData?.runways || airportConfig?.runways || [];
-        runways.forEach(runway => {
-          if (runway.threshold && runway.oppositeEnd) {
-            const runwayLine = L.polyline([
-              [runway.threshold.lat, runway.threshold.lon],
-              [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
-            ], {
-              color: '#333333',
-              weight: 8,
-              opacity: 0.9
-            }).bindPopup(
-              `<div class="runway-popup">
-                <h4><strong>Runway ${runway.name}/${runway.oppositeEnd.name}</strong></h4>
-                <p><strong>Length:</strong> ${runway.length.toLocaleString()} ft</p>
-                <p><strong>Heading:</strong> ${runway.heading}°/${runway.oppositeHeading}°</p>
-              </div>`
-            );
+      // Always show runways - they are now permanently enabled
+      // Use runways from airportData if available, fallback to airportConfig
+      const runways = airportData?.runways || airportConfig?.runways || [];
+      runways.forEach(runway => {
+        if (runway.threshold && runway.oppositeEnd) {
+          const runwayLine = L.polyline([
+            [runway.threshold.lat, runway.threshold.lon],
+            [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
+          ], {
+            color: '#22d3ee', // Bright cyan color for better visibility
+            weight: 4, // Thinner than before (was 8)
+            opacity: 0.95
+          }).bindPopup(
+            `<div class="runway-popup">
+              <h4><strong>Runway ${runway.name}/${runway.oppositeEnd.name}</strong></h4>
+              <p><strong>Length:</strong> ${runway.length.toLocaleString()} ft</p>
+              <p><strong>Heading:</strong> ${runway.heading}°/${runway.oppositeHeading}°</p>
+            </div>`
+          );
 
-            layerGroupsRef.current.runways.addLayer(runwayLine);
+          layerGroupsRef.current.runways.addLayer(runwayLine);
 
-            // Add runway threshold markers
-            const thresholdIcon = L.divIcon({
-              html: `<div style="
-                background: #333;
-                color: white;
-                font-size: 10px;
-                font-weight: bold;
-                padding: 2px 4px;
-                border-radius: 2px;
-                border: 1px solid white;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-              ">${runway.name}</div>`,
-              className: 'runway-threshold-marker',
-              iconAnchor: [10, 5]
-            });
+          // Add runway labels at both ends (no threshold boxes)
+          const runwayLabelStyle = `
+            background: none;
+            color: #22d3ee;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 0;
+            border: none;
+            text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
+          `;
 
-            const thresholdMarker = L.marker([runway.threshold.lat, runway.threshold.lon], { icon: thresholdIcon })
-              .bindPopup(`<strong>Runway ${runway.name}</strong><br/>Threshold`);
+          // Label at threshold end
+          const thresholdLabel = L.divIcon({
+            html: `<div style="${runwayLabelStyle}">${runway.name}</div>`,
+            className: 'runway-label',
+            iconAnchor: [15, 10]
+          });
 
-            layerGroupsRef.current.runways.addLayer(thresholdMarker);
-          }
-        });
-      }
+          const thresholdMarker = L.marker([runway.threshold.lat, runway.threshold.lon], { icon: thresholdLabel });
+          layerGroupsRef.current.runways.addLayer(thresholdMarker);
+
+          // Label at opposite end
+          const oppositeLabel = L.divIcon({
+            html: `<div style="${runwayLabelStyle}">${runway.oppositeEnd.name}</div>`,
+            className: 'runway-label',
+            iconAnchor: [15, 10]
+          });
+
+          const oppositeMarker = L.marker([runway.oppositeEnd.lat, runway.oppositeEnd.lon], { icon: oppositeLabel });
+          layerGroupsRef.current.runways.addLayer(oppositeMarker);
+        }
+      });
     };
 
     updateRunways();
@@ -525,10 +534,10 @@ export function PilotMap({
               if (approachWaypoints.length > 1) {
                 // Add approach path line
                 const approachPath = L.polyline(approachWaypoints, {
-                  color: '#f59e0b',
-                  weight: 2,
-                  opacity: 0.7,
-                  dashArray: '5, 10'
+                  color: '#fbbf24', // Brighter amber for approach routes
+                  weight: 3, // Slightly thicker for better visibility
+                  opacity: 0.8,
+                  dashArray: '8, 8' // Longer dashes for better distinction
                 }).bindPopup(
                   `<strong>${approach.name} Approach</strong><br/>Runway ${runway.name}`
                 );
@@ -640,10 +649,10 @@ export function PilotMap({
               [runway.threshold.lat, runway.threshold.lon],
               [extLat1, extLon1]
             ], {
-              color: '#3b82f6', // Blue color
-              weight: 1.5,
-              opacity: 0.6,
-              dashArray: '5,5',
+              color: '#06b6d4', // Bright cyan-blue for extended centerlines
+              weight: 2,
+              opacity: 0.7,
+              dashArray: '10,10', // Longer dashes for distinction from approaches
               interactive: false,
             });
 
@@ -652,10 +661,10 @@ export function PilotMap({
               [runway.oppositeEnd.lat, runway.oppositeEnd.lon],
               [extLat2, extLon2]
             ], {
-              color: '#3b82f6', // Blue color
-              weight: 1.5,
-              opacity: 0.6,
-              dashArray: '5,5',
+              color: '#06b6d4', // Bright cyan-blue for extended centerlines
+              weight: 2,
+              opacity: 0.7,
+              dashArray: '10,10', // Longer dashes for distinction from approaches
               interactive: false,
             });
 
@@ -808,22 +817,22 @@ export function PilotMap({
           }
 
           // Determine track color based on status and callsign
-          let color = '#3b82f6'; // Default blue for active flights
+          let color = '#a855f7'; // Purple for active ground tracks (distinct from runways/approaches)
           if (track.status === 'COMPLETED') {
-            color = '#6b7280'; // Gray for completed flights
+            color = '#64748b'; // Muted slate for completed flights
           } else if (track.status === 'EMERGENCY') {
             color = '#ef4444'; // Red for emergency
           } else if (track.callsign?.includes('UAL')) {
-            color = '#8b5cf6'; // Purple for United
+            color = '#8b5cf6'; // Violet for United
           } else if (track.callsign?.includes('AAL')) {
-            color = '#10b981'; // Green for American
+            color = '#10b981'; // Emerald for American
           } else {
             // Use a hash of the callsign for consistent coloring per flight
             const hash = track.callsign ? track.callsign.split('').reduce((a, b) => {
               a = ((a << 5) - a) + b.charCodeAt(0);
               return a & a;
             }, 0) : 0;
-            const colors = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
+            const colors = ['#a855f7', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
             color = colors[Math.abs(hash) % colors.length];
           }
 
