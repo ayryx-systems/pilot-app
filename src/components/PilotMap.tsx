@@ -247,8 +247,8 @@ export function PilotMap({
       layerGroupsRef.current.runways.clearLayers();
 
       // Always show runways - they are now permanently enabled
-      // Use runways from airportData if available, fallback to airportConfig
-      const runways = airportData?.runways || airportConfig?.runways || [];
+      // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
+      const runways = airportConfig?.runways || airportData?.runways || [];
       runways.forEach(runway => {
         if (runway.threshold && runway.oppositeEnd) {
           const runwayLine = L.polyline([
@@ -316,13 +316,15 @@ export function PilotMap({
       // Clear existing DME rings
       layerGroupsRef.current.dmeRings.clearLayers();
 
-      if (displayOptions.showDmeRings && airportConfig?.dmeRings) {
+      if (displayOptions.showDmeRings) {
+        // Use airport's defined DME rings if available, otherwise use default distances
+        const dmeDistances = airportConfig?.dmeRings || [5, 10, 15, 20, 30];
         // Use the same center as the map
         const dmeCenter: [number, number] = airport.position
           ? [airport.position.lat, airport.position.lon]
           : airportConfig?.position || [34.0522, -118.2437];
 
-        airportConfig.dmeRings.forEach(distance => {
+        dmeDistances.forEach(distance => {
           const dmeRing = L.circle(dmeCenter, {
             radius: distance * 1852, // Convert NM to meters
             fill: false,
@@ -501,8 +503,8 @@ export function PilotMap({
       layerGroupsRef.current.approachRoutes.clearLayers();
 
       if (displayOptions.showApproachRoutes) {
-        // Use runways from airportData if available, fallback to airportConfig
-        const runways = airportData?.runways || airportConfig?.runways || [];
+        // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
+        const runways = airportConfig?.runways || airportData?.runways || [];
         runways.forEach(runway => {
           if (runway.approaches) {
             runway.approaches.forEach(approach => {
@@ -595,8 +597,8 @@ export function PilotMap({
       layerGroupsRef.current.extendedCenterlines.clearLayers();
 
       if (displayOptions.showExtendedCenterlines) {
-        // Use runways from airportData if available, fallback to airportConfig
-        const runways = airportData?.runways || airportConfig?.runways || [];
+        // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
+        const runways = airportConfig?.runways || airportData?.runways || [];
 
         runways.forEach(runway => {
           if (runway.threshold && runway.oppositeEnd) {

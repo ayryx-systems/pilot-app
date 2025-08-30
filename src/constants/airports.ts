@@ -403,6 +403,137 @@ export const AIRPORTS: Record<string, AirportData> = {
       { name: "ROCKY", lat: 39.820, lon: -105.055, description: "Rocky Mountain" },
       { name: "FRONT", lat: 39.900, lon: -104.800, description: "Front Range" }
     ]
+  },
+
+  KEWR: {
+    name: "Newark Liberty International Airport",
+    code: "KEWR",
+    position: [40.6895, -74.1745],
+    runways: [
+      {
+        name: "04L",
+        heading: 26,
+        oppositeHeading: 206,
+        length: 11000,
+        threshold: {
+          lat: 40.675381,
+          lon: -74.179449
+        },
+        oppositeEnd: {
+          name: "22R",
+          lat: 40.702560,
+          lon: -74.162172
+        },
+        rightHandPattern: false,
+        approaches: []
+      },
+      {
+        name: "04R",
+        heading: 26,
+        oppositeHeading: 206,
+        length: 9999,
+        threshold: {
+          lat: 40.677583,
+          lon: -74.174245
+        },
+        oppositeEnd: {
+          name: "22L",
+          lat: 40.702289,
+          lon: -74.158538
+        },
+        rightHandPattern: false,
+        approaches: []
+      },
+      {
+        name: "11",
+        heading: 95,
+        oppositeHeading: 275,
+        length: 6725,
+        threshold: {
+          lat: 40.702804,
+          lon: -74.180707
+        },
+        oppositeEnd: {
+          name: "29",
+          lat: 40.701199,
+          lon: -74.156543
+        },
+        rightHandPattern: false,
+        approaches: []
+      }
+    ],
+    dmeRings: [5, 10, 15, 20, 25],
+    cardinalDirections: [
+      { dir: "N", bearing: 0, distance: 0.3 },
+      { dir: "NE", bearing: 45, distance: 0.25 },
+      { dir: "E", bearing: 90, distance: 0.3 },
+      { dir: "SE", bearing: 135, distance: 0.25 },
+      { dir: "S", bearing: 180, distance: 0.3 },
+      { dir: "SW", bearing: 225, distance: 0.25 },
+      { dir: "W", bearing: 270, distance: 0.3 },
+      { dir: "NW", bearing: 315, distance: 0.25 },
+    ],
+    waypoints: [
+      { name: "NYC", lat: 40.7128, lon: -74.0060, description: "New York City" },
+      { name: "EWR", lat: 40.6895, lon: -74.1745, description: "Newark Airport" }
+    ]
+  },
+
+  KLGA: {
+    name: "LaGuardia Airport",
+    code: "KLGA",
+    position: [40.777242, -73.872606],
+    runways: [
+      {
+        name: "04",
+        heading: 32,
+        oppositeHeading: 212,
+        length: 7002,
+        threshold: {
+          lat: 40.769162,
+          lon: -73.884119
+        },
+        oppositeEnd: {
+          name: "22",
+          lat: 40.785436,
+          lon: -73.870673,
+        },
+        rightHandPattern: false,
+        approaches: []
+      },
+      {
+        name: "13",
+        heading: 122,
+        oppositeHeading: 302,
+        length: 7002,
+        threshold: {
+          lat: 40.782296,
+          lon: -73.878519
+        },
+        oppositeEnd: {
+          name: "31",
+          lat: 40.771493,
+          lon: -73.856889
+        },
+        rightHandPattern: false,
+        approaches: []
+      }
+    ],
+    dmeRings: [3, 5, 10, 15, 20],
+    cardinalDirections: [
+      { dir: "N", bearing: 0, distance: 0.2 },
+      { dir: "NE", bearing: 45, distance: 0.15 },
+      { dir: "E", bearing: 90, distance: 0.2 },
+      { dir: "SE", bearing: 135, distance: 0.15 },
+      { dir: "S", bearing: 180, distance: 0.2 },
+      { dir: "SW", bearing: 225, distance: 0.15 },
+      { dir: "W", bearing: 270, distance: 0.2 },
+      { dir: "NW", bearing: 315, distance: 0.15 },
+    ],
+    waypoints: [
+      { name: "NYC", lat: 40.7128, lon: -74.0060, description: "New York City" },
+      { name: "LGA", lat: 40.777242, lon: -73.872606, description: "LaGuardia Airport" }
+    ]
   }
 };
 
