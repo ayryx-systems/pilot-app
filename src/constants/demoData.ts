@@ -26,13 +26,13 @@ export const DENVER_STORM_TRACKS: GroundTrack[] = [
         callsign: "UAL1234",
         aircraft: "B737",
         coordinates: [
-            { lat: 39.95, lon: -104.75, altitude: 3000, timestamp: new Date(Date.now() - 8 * 60 * 1000).toISOString() },
-            { lat: 39.92, lon: -104.72, altitude: 2500, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
-            { lat: 39.89, lon: -104.70, altitude: 2000, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
-            { lat: 39.86, lon: -104.69, altitude: 1500, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
-            { lat: 39.83, lon: -104.68, altitude: 1000, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
-            { lat: 39.80, lon: -104.67, altitude: 500, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
-            { lat: 39.828257, lon: -104.660560, altitude: 0, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() }
+            // { lat: 39.95, lon: -104.75, altitude: 3000, timestamp: new Date(Date.now() - 8 * 60 * 1000).toISOString() },
+            // { lat: 39.92, lon: -104.72, altitude: 2500, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
+            // { lat: 39.89, lon: -104.70, altitude: 2000, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
+            // { lat: 39.86, lon: -104.69, altitude: 1500, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            // { lat: 39.83, lon: -104.68, altitude: 1000, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            // { lat: 39.80, lon: -104.67, altitude: 500, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            // { lat: 39.828257, lon: -104.660560, altitude: 0, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() }
         ],
         runway: "35L",
         status: "ACTIVE",
@@ -44,13 +44,13 @@ export const DENVER_STORM_TRACKS: GroundTrack[] = [
         callsign: "SWA5678",
         aircraft: "B737",
         coordinates: [
-            { lat: 39.94, lon: -104.76, altitude: 3000, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
-            { lat: 39.91, lon: -104.73, altitude: 2500, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
-            { lat: 39.88, lon: -104.71, altitude: 2000, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
-            { lat: 39.85, lon: -104.70, altitude: 1500, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
-            { lat: 39.82, lon: -104.69, altitude: 1000, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
-            { lat: 39.79, lon: -104.68, altitude: 500, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
-            { lat: 39.828257, lon: -104.660560, altitude: 0, timestamp: new Date(Date.now() - 1 * 60 * 1000).toISOString() }
+            // { lat: 39.94, lon: -104.76, altitude: 3000, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
+            // { lat: 39.91, lon: -104.73, altitude: 2500, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
+            // { lat: 39.88, lon: -104.71, altitude: 2000, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            // { lat: 39.85, lon: -104.70, altitude: 1500, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            // { lat: 39.82, lon: -104.69, altitude: 1000, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            // { lat: 39.79, lon: -104.68, altitude: 500, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+            // { lat: 39.828257, lon: -104.660560, altitude: 0, timestamp: new Date(Date.now() - 1 * 60 * 1000).toISOString() }
         ],
         runway: "35L",
         status: "ACTIVE",
