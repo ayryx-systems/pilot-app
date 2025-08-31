@@ -50,27 +50,27 @@ class WeatherService {
    * Get available weather layers for aviation use
    */
   getWeatherLayers(): WeatherLayer[] {
-    // SIMPLIFIED - Using only validated, working layers with conservative parameters
+    // Using NOAA GeoServer for real-time radar data
     return [
       {
         id: 'radar',
-        name: 'Weather Radar',
-        url: 'https://mapservices.weather.noaa.gov/raster/services/obs/rfc_qpe/MapServer/WMSServer',
-        layers: '28', // 24-hour QPE layer that's known to work
+        name: 'Weather Radar (Real-time)',
+        url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows',
+        layers: 'conus_bref_qcd', // CONUS Base Reflectivity
         format: 'image/png',
         transparent: true,
         opacity: 0.7,
-        crs: 'EPSG:3857'
+        crs: 'EPSG:4326'
       },
       {
-        id: 'precipitation',
-        name: 'Precipitation Forecast',
-        url: this.WEATHER_SERVICES.NDFD_FORECAST.baseUrl,
-        layers: 'ndfd.conus.qpf.points', // Corrected layer name from GetCapabilities
+        id: 'radar_composite',
+        name: 'Weather Radar (Composite)',
+        url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_comp_n0r_time/ows',
+        layers: 'conus_comp_n0r_time', // CONUS Composite Reflectivity
         format: 'image/png',
         transparent: true,
-        opacity: 0.6,
-        crs: 'EPSG:3857'
+        opacity: 0.7,
+        crs: 'EPSG:4326'
       }
     ];
   }

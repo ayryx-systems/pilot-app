@@ -974,28 +974,32 @@ export function PilotMap({
       }
 
       if (displayOptions.showWeatherRadar) {
-        const radarLayer = weatherLayers.find(layer => layer.id === 'radar');
+        let radarLayer = weatherLayers.find(layer => layer.id === 'radar');
+        
+        // Fallback to composite radar if primary not available
+        if (!radarLayer) {
+          radarLayer = weatherLayers.find(layer => layer.id === 'radar_composite');
+          console.log('[PilotMap] Using composite radar as fallback');
+        }
         
         if (radarLayer) {
           try {
             console.log('[PilotMap] Adding weather radar with conservative settings');
             
-            // Create WMS tile layer with conservative settings to avoid API spam
+            // Create WMS tile layer with real-time radar settings
+            const crs = radarLayer.crs === 'EPSG:4326' ? L.CRS.EPSG4326 : L.CRS.EPSG3857;
             const wmsLayer = L.tileLayer.wms(radarLayer.url, {
               layers: radarLayer.layers,
               format: radarLayer.format,
               transparent: radarLayer.transparent,
               opacity: radarLayer.opacity,
               version: '1.3.0',
-              crs: L.CRS.EPSG3857,
-              attribution: 'NOAA Weather Service',
+              crs: crs,
+              attribution: 'NOAA/NWS Weather Radar',
               updateWhenIdle: true, // Only update when map stops moving
-              updateInterval: 300,   // Limit update frequency
-              maxZoom: 10,          // Limit zoom to reduce tile requests
-              bounds: [             // Limit to CONUS to avoid unnecessary requests
-                [24.396308, -125.0],
-                [49.384358, -66.93457]
-              ]
+              updateInterval: 200,   // Slightly faster for real-time data
+              maxZoom: 12,          // Allow higher zoom for radar detail
+              styles: ''            // Ensure empty styles parameter
             });
 
             // Add to weather layer group
@@ -1007,6 +1011,28 @@ export function PilotMap({
             });
 
             console.log('[PilotMap] Weather radar overlay added successfully');
+            
+            // Add debugging: test a sample tile request
+            const testUrl = wmsLayer._url;
+            console.log('[PilotMap] WMS Service URL:', testUrl);
+            console.log('[PilotMap] WMS Layers:', radarLayer.layers);
+            
+            // Test if the WMS service responds
+            const sampleTileUrl = `${radarLayer.url}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX=-180,-90,180,90&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&LAYERS=${radarLayer.layers}&STYLES=&FORMAT=${radarLayer.format}&TRANSPARENT=true`;
+            console.log('[PilotMap] Sample tile URL for testing:', sampleTileUrl);
+            
+            // Add event listeners for debugging
+            wmsLayer.on('loading', () => {
+              console.log('[PilotMap] Weather layer: Loading tiles...');
+            });
+            
+            wmsLayer.on('load', () => {
+              console.log('[PilotMap] Weather layer: Tiles loaded successfully');
+            });
+            
+            wmsLayer.on('tileerror', (e: any) => {
+              console.error('[PilotMap] Weather layer: Tile error:', e);
+            });
           } catch (error) {
             console.error('[PilotMap] Failed to add weather radar:', error);
           }
