@@ -26,7 +26,7 @@ export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusP
   const formatLastUpdate = (date: Date) => {
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
+
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
     return `${Math.floor(diff / 3600)}h ago`;
@@ -70,7 +70,7 @@ export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusP
           <span>Last Update:</span>
           <span>{formatLastUpdate(connectionStatus.lastUpdate)}</span>
         </div>
-        
+
         {connectionStatus.latency && (
           <div className="flex justify-between">
             <span>Response Time:</span>
@@ -79,7 +79,7 @@ export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusP
             </span>
           </div>
         )}
-        
+
         <div className="flex justify-between">
           <span>Data Age:</span>
           <span className={connectionStatus.connected ? 'text-green-400' : 'text-red-400'}>

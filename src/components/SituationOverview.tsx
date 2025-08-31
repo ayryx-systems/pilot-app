@@ -148,9 +148,8 @@ export function SituationOverview({
             {(weather || summary.conditions.weather) && (
               <button
                 onClick={() => setIsWeatherModalOpen(true)}
-                className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
-                  getStatusColor(summary.conditions.weather?.status)
-                }`}
+                className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(summary.conditions.weather?.status)
+                  }`}
               >
                 <div className="flex items-center justify-between w-full mb-1">
                   <div className="flex items-center">
@@ -160,10 +159,10 @@ export function SituationOverview({
                   {getStatusIcon(summary.conditions.weather?.status)}
                 </div>
                 <div className="text-xs text-gray-300 leading-tight">
-                  {summary.conditions.weather?.short_summary || 
-                   (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' : 
-                    summary.conditions.weather?.status?.charAt(0).toUpperCase() + 
-                    summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
+                  {summary.conditions.weather?.short_summary ||
+                    (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
+                      summary.conditions.weather?.status?.charAt(0).toUpperCase() +
+                      summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
                 </div>
               </button>
             )}
@@ -194,9 +193,8 @@ export function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
-                      getStatusColor(condition.status)
-                    }`}
+                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(condition.status)
+                      }`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center">
@@ -206,9 +204,9 @@ export function SituationOverview({
                       {getStatusIcon(condition.status)}
                     </div>
                     <div className="text-xs text-gray-300 leading-tight">
-                      {condition.short_summary || 
-                       (condition.status?.charAt(0).toUpperCase() + 
-                        condition.status?.slice(1) || 'Normal conditions')}
+                      {condition.short_summary ||
+                        (condition.status?.charAt(0).toUpperCase() +
+                          condition.status?.slice(1) || 'Normal conditions')}
                     </div>
                   </button>
                 );
@@ -243,9 +241,8 @@ export function SituationOverview({
                     <button
                       key={key}
                       onClick={() => openConditionModal(key, condition)}
-                      className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${
-                        getStatusColor(condition.status)
-                      }`}
+                      className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(condition.status)
+                        }`}
                     >
                       <div className="flex items-center justify-between w-full mb-1">
                         <div className="flex items-center">
@@ -255,9 +252,9 @@ export function SituationOverview({
                         {getStatusIcon(condition.status)}
                       </div>
                       <div className="text-xs text-gray-300 leading-tight">
-                        {condition.short_summary || 
-                         (condition.status?.charAt(0).toUpperCase() + 
-                          condition.status?.slice(1) || 'Normal conditions')}
+                        {condition.short_summary ||
+                          (condition.status?.charAt(0).toUpperCase() +
+                            condition.status?.slice(1) || 'Normal conditions')}
                       </div>
                     </button>
                   );

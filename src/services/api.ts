@@ -203,7 +203,7 @@ class PilotApiService {
 
       if (error instanceof ApiError && error.status === 0) {
         throw new ApiError('Cannot connect to server - situation summary unavailable while offline', 0);
-    }
+      }
 
       throw error;
     }

@@ -211,7 +211,7 @@ export function PilotDashboard() {
             onFullscreenChange={setMapFullscreen}
             isDemo={selectedAirport === 'KDEN'}
           />
-          
+
           {/* Map Controls - Top Right of Map Area */}
           {selectedAirport && (
             <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
@@ -226,7 +226,7 @@ export function PilotDashboard() {
 
       {/* PIREP Panel Backdrop - Click outside to close */}
       {showPirepPanel && (
-        <div 
+        <div
           className="absolute inset-0 bg-black/20 backdrop-blur-sm"
           style={{ zIndex: 999 }}
           onClick={() => setShowPirepPanel(false)}
@@ -235,9 +235,8 @@ export function PilotDashboard() {
 
       {/* Left Side Panel - PIREPs (Collapsible, Fixed Width) */}
       <div className={`absolute left-0 top-0 bottom-12 lg:bottom-0 w-80 max-w-[85vw] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
-                      transform transition-transform duration-200 ease-in-out ${
-                        showPirepPanel ? 'translate-x-0' : '-translate-x-full'
-                      }`} style={{ zIndex: 1000 }}>
+                      transform transition-transform duration-200 ease-in-out ${showPirepPanel ? 'translate-x-0' : '-translate-x-full'
+        }`} style={{ zIndex: 1000 }}>
         <div className="p-2 sm:p-3 h-full">
           <div className="flex items-center justify-between mb-2">
             <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
@@ -268,9 +267,9 @@ export function PilotDashboard() {
           onClick={() => setShowPirepPanel(true)}
           className={`absolute left-2 bottom-16 lg:bottom-14 px-3 py-2 rounded-lg 
                    hover:bg-slate-700/95 transition-colors flex items-center space-x-2 backdrop-blur-sm border
-                   ${pireps && pireps.length > 0 
-                     ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200' 
-                     : 'bg-slate-800/95 border-slate-700/50 text-gray-300'}`}
+                   ${pireps && pireps.length > 0
+              ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200'
+              : 'bg-slate-800/95 border-slate-700/50 text-gray-300'}`}
           style={{ zIndex: 1000 }}
         >
           <Menu className={`w-4 h-4 ${pireps && pireps.length > 0 ? 'text-yellow-300' : 'text-gray-300'}`} />

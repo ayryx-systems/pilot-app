@@ -88,10 +88,10 @@ export function WeatherModal({
 
     const modalContent = (
         <div className="fixed inset-0 flex items-start justify-center bg-black bg-opacity-50 py-4 px-4" style={{ zIndex: 999999999 }}>
-            <div 
-                ref={modalRef} 
+            <div
+                ref={modalRef}
                 className="bg-slate-800 rounded-lg shadow-xl max-w-2xl w-full overflow-hidden"
-                style={{ 
+                style={{
                     marginTop: '4rem',
                     marginBottom: '2rem',
                     maxHeight: 'calc(100vh - 6rem)'
