@@ -1083,7 +1083,7 @@ export function PilotMap({
             });
 
             // Force the weather layer to the top
-            layerGroupsRef.current.weather.bringToFront();
+            imageOverlay.bringToFront();
             
             console.log('[🌦️ WEATHER API] 🎉 Static weather overlay added - ZERO additional requests on zoom/pan!');
             console.log('[🌦️ WEATHER API] 🔍 DEBUG: Weather layer group has', layerGroupsRef.current.weather.getLayers().length, 'layers');
