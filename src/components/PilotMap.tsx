@@ -17,6 +17,8 @@ interface PilotMapProps {
   onFullscreenChange?: (isFullscreen: boolean) => void;
   isDemo?: boolean;
   onWeatherRefresh?: () => void;
+  loading?: boolean;
+  selectedAirport?: string | null;
 }
 
 export function PilotMap({
@@ -28,7 +30,9 @@ export function PilotMap({
   onDismissPirep,
   onFullscreenChange,
   isDemo,
-  onWeatherRefresh
+  onWeatherRefresh,
+  loading,
+  selectedAirport
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -1261,7 +1265,16 @@ export function PilotMap({
     return (
       <div className="h-full bg-slate-800 flex items-center justify-center">
         <div className="text-center text-gray-400">
-          <p>Select an airport to view map</p>
+          {selectedAirport && loading ? (
+            <div className="flex items-center justify-center space-x-2">
+              <Loader2 className="w-5 h-5 animate-spin" />
+              <p>Loading airport data...</p>
+            </div>
+          ) : selectedAirport ? (
+            <p>No data available for this airport</p>
+          ) : (
+            <p>Select an airport to view map</p>
+          )}
         </div>
       </div>
     );

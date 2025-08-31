@@ -233,6 +233,8 @@ export function PilotDashboard() {
             }}
             onFullscreenChange={setMapFullscreen}
             isDemo={selectedAirport === 'KDEN'}
+            loading={loading}
+            selectedAirport={selectedAirport}
             onWeatherRefresh={() => {
               if ((window as any).refreshWeatherLayer) {
                 (window as any).refreshWeatherLayer();
