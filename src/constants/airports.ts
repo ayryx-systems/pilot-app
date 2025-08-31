@@ -534,9 +534,9 @@ export const AIRPORTS: Record<string, AirportData> = {
           lon: -73.785584 // 73° 47' 8.1029" W
         },
         oppositeEnd: {
-          name: "22",
-          lat: 40.7835, // Corrected to align with actual runway position
-          lon: -73.8750, // Corrected to align with actual runway position
+          name: "22R",
+          lat: 40.650509, // 40° 39' 1.8338" N
+          lon: -73.763322 // 73° 45' 47.9596" W
         },
         rightHandPattern: false, // Standard traffic pattern
         approaches: []
