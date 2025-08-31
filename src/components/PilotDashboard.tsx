@@ -176,6 +176,15 @@ export function PilotDashboard() {
       {/* App Update Notifier */}
       <AppUpdateNotifier />
 
+      {/* Demo Disclaimer */}
+      <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
+        <div className="flex items-center text-blue-200">
+          <AlertTriangle className="w-4 h-4 mr-2" />
+          <span className="font-medium">DEMONSTRATION PURPOSES ONLY</span>
+          <span className="ml-2 text-blue-300">This app is for demonstration and training purposes only. Do not use for actual flight operations.</span>
+        </div>
+      </div>
+
       {/* Demo Mode Notification */}
       {selectedAirport === 'KDEN' && (
         <div className="bg-orange-900/30 border-orange-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
