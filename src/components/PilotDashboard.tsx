@@ -213,6 +213,11 @@ export function PilotDashboard() {
             }}
             onFullscreenChange={setMapFullscreen}
             isDemo={selectedAirport === 'KDEN'}
+            onWeatherRefresh={() => {
+              if ((window as any).refreshWeatherLayer) {
+                (window as any).refreshWeatherLayer();
+              }
+            }}
           />
 
           {/* Map Controls - Top Right of Map Area */}
@@ -222,6 +227,11 @@ export function PilotDashboard() {
                 displayOptions={mapDisplayOptions}
                 onOptionsChange={setMapDisplayOptions}
                 isDemo={selectedAirport === 'KDEN'}
+                onWeatherRefresh={() => {
+                  if ((window as any).refreshWeatherLayer) {
+                    (window as any).refreshWeatherLayer();
+                  }
+                }}
               />
             </div>
           )}

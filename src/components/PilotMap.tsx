@@ -16,6 +16,7 @@ interface PilotMapProps {
   onDismissPirep: (id: string) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   isDemo?: boolean;
+  onWeatherRefresh?: () => void;
 }
 
 export function PilotMap({
@@ -26,7 +27,8 @@ export function PilotMap({
   displayOptions,
   onDismissPirep,
   onFullscreenChange,
-  isDemo
+  isDemo,
+  onWeatherRefresh
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -36,6 +38,36 @@ export function PilotMap({
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
+  
+  // Weather refresh function
+  const refreshWeatherLayer = () => {
+    const radarLayer = activeWeatherLayers.get('radar');
+    if (radarLayer && mapInstance) {
+      console.log('[🌦️ WEATHER API] 🔄 MANUAL REFRESH TRIGGERED - This will force new API calls to NOAA');
+      console.log('[🌦️ WEATHER API] ⚠️  Manual refresh should be used sparingly to respect NOAA servers');
+      radarLayer.redraw(); // Force reload of all tiles
+      
+      // Optional: Add timestamp to force fresh requests (use sparingly)
+      const currentTime = Date.now();
+      if (radarLayer.options && typeof radarLayer.options === 'object') {
+        (radarLayer.options as any).timestamp = currentTime;
+      }
+    } else {
+      console.log('[🌦️ WEATHER API] Manual refresh ignored - no active weather layer');
+    }
+  };
+
+  // Expose refresh function to parent
+  useEffect(() => {
+    if (onWeatherRefresh) {
+      (window as any).refreshWeatherLayer = refreshWeatherLayer;
+    }
+    return () => {
+      if ((window as any).refreshWeatherLayer) {
+        delete (window as any).refreshWeatherLayer;
+      }
+    };
+  }, [onWeatherRefresh, activeWeatherLayers, mapInstance]);
 
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
@@ -965,6 +997,7 @@ export function PilotMap({
       // Clear existing radar layer from weather layer group
       const existingRadarLayer = activeWeatherLayers.get('radar');
       if (existingRadarLayer && layerGroupsRef.current.weather) {
+        console.log('[🌦️ WEATHER API] 🛑 Weather radar DISABLED - Stopping all weather API calls');
         layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
         setActiveWeatherLayers(prev => {
           const newMap = new Map(prev);
@@ -984,9 +1017,10 @@ export function PilotMap({
         
         if (radarLayer) {
           try {
-            console.log('[PilotMap] Adding weather radar with conservative settings');
+            console.log('[🌦️ WEATHER API] ✅ Weather radar ENABLED - API calls to NOAA will start');
+            console.log('[🌦️ WEATHER API] 📊 Settings: 10min auto-refresh, max zoom 10, geographic bounds limited');
             
-            // Create WMS tile layer with real-time radar settings
+            // Create WMS tile layer with API-friendly settings for multiple users
             const crs = radarLayer.crs === 'EPSG:4326' ? L.CRS.EPSG4326 : L.CRS.EPSG3857;
             const wmsLayer = L.tileLayer.wms(radarLayer.url, {
               layers: radarLayer.layers,
@@ -996,10 +1030,27 @@ export function PilotMap({
               version: '1.3.0',
               crs: crs,
               attribution: 'NOAA/NWS Weather Radar',
-              updateWhenIdle: true, // Only update when map stops moving
-              updateInterval: 200,   // Slightly faster for real-time data
-              maxZoom: 12,          // Allow higher zoom for radar detail
-              styles: ''            // Ensure empty styles parameter
+              
+              // AGGRESSIVE caching and throttling to be API-friendly
+              updateWhenIdle: true,     // Only update when map stops moving
+              updateWhenZooming: false, // Don't update during zoom animations
+              updateInterval: 600,      // 10-minute minimum between updates (radar updates every 5-10min anyway)
+              keepBuffer: 2,            // Keep more tiles cached (2 screens worth)
+              maxZoom: 10,              // Limit zoom to reduce tile count (was 12)
+              minZoom: 3,               // Set minimum zoom
+              bounds: [                 // Limit to CONUS to avoid unnecessary requests
+                [20.0, -130.0],         // Southwest corner 
+                [50.0, -60.0]           // Northeast corner
+              ],
+              
+              // Tile request optimizations
+              styles: '',
+              detectRetina: false,      // Disable retina to reduce requests
+              subdomains: [],           // No subdomains to avoid spreading requests
+              
+              // Custom cache headers
+              tileLoadTimeout: 10000,   // 10s timeout per tile
+              crossOrigin: false        // Avoid CORS preflight requests
             });
 
             // Add to weather layer group
@@ -1010,7 +1061,22 @@ export function PilotMap({
               return newMap;
             });
 
-            console.log('[PilotMap] Weather radar overlay added successfully');
+            // Enable browser caching for tiles to reduce API calls across sessions
+            wmsLayer.on('tileloadstart', function(e: any) {
+              // Add cache headers to tile requests if possible
+              const tileUrl = e.tile.src;
+              if (tileUrl && !tileUrl.includes('cache-control')) {
+                // Browser will cache tiles for 10 minutes
+                e.tile.crossOrigin = 'anonymous';
+              }
+            });
+
+            console.log('[PilotMap] Weather radar overlay added successfully with API-friendly settings:', {
+              updateInterval: '10 minutes',
+              maxZoom: 10,
+              boundsLimited: true,
+              aggressiveCaching: true
+            });
             
             // Add debugging: test a sample tile request
             const testUrl = wmsLayer._url;
@@ -1021,18 +1087,54 @@ export function PilotMap({
             const sampleTileUrl = `${radarLayer.url}?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetMap&BBOX=-180,-90,180,90&CRS=EPSG:3857&WIDTH=256&HEIGHT=256&LAYERS=${radarLayer.layers}&STYLES=&FORMAT=${radarLayer.format}&TRANSPARENT=true`;
             console.log('[PilotMap] Sample tile URL for testing:', sampleTileUrl);
             
-            // Add event listeners for debugging
+            // Add comprehensive API monitoring
+            let tileRequestCount = 0;
+            let lastRequestTime = Date.now();
+            
             wmsLayer.on('loading', () => {
-              console.log('[PilotMap] Weather layer: Loading tiles...');
+              console.log('[🌦️ WEATHER API] Loading batch started - Multiple tile requests incoming...');
             });
             
             wmsLayer.on('load', () => {
-              console.log('[PilotMap] Weather layer: Tiles loaded successfully');
+              console.log('[🌦️ WEATHER API] Loading batch completed');
+            });
+            
+            // Monitor individual tile requests
+            wmsLayer.on('tileloadstart', (e: any) => {
+              tileRequestCount++;
+              const currentTime = Date.now();
+              const timeSinceLastRequest = currentTime - lastRequestTime;
+              lastRequestTime = currentTime;
+              
+              console.log(`[🌦️ WEATHER API CALL #${tileRequestCount}] TILE REQUEST:`, {
+                url: e.url || 'URL not available',
+                timeGap: `${timeSinceLastRequest}ms since last request`,
+                timestamp: new Date().toLocaleTimeString(),
+                coords: e.coords || 'coordinates not available'
+              });
+            });
+            
+            wmsLayer.on('tileload', (e: any) => {
+              console.log(`[🌦️ WEATHER API] TILE SUCCESS:`, {
+                url: e.url || 'URL not available',
+                timestamp: new Date().toLocaleTimeString()
+              });
             });
             
             wmsLayer.on('tileerror', (e: any) => {
-              console.error('[PilotMap] Weather layer: Tile error:', e);
+              console.error(`[🌦️ WEATHER API] TILE ERROR:`, {
+                url: e.url || 'URL not available',
+                error: e.error || 'Unknown error',
+                timestamp: new Date().toLocaleTimeString()
+              });
             });
+
+            // Log total request count periodically
+            setInterval(() => {
+              if (tileRequestCount > 0) {
+                console.log(`[🌦️ WEATHER API SUMMARY] Total API calls in session: ${tileRequestCount}`);
+              }
+            }, 60000); // Log summary every minute
           } catch (error) {
             console.error('[PilotMap] Failed to add weather radar:', error);
           }

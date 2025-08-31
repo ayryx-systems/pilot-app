@@ -2,15 +2,16 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapDisplayOptions } from '@/types';
-import { Settings, Eye, EyeOff, Layers } from 'lucide-react';
+import { Settings, Eye, EyeOff, Layers, RefreshCw } from 'lucide-react';
 
 interface MapControlsProps {
   displayOptions: MapDisplayOptions;
   onOptionsChange: (options: MapDisplayOptions) => void;
   isDemo?: boolean;
+  onWeatherRefresh?: () => void;
 }
 
-export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapControlsProps) {
+export function MapControls({ displayOptions, onOptionsChange, isDemo, onWeatherRefresh }: MapControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -95,6 +96,24 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
               </button>
             ))}
           </div>
+
+          {/* Weather Refresh Button - only show if weather radar is enabled */}
+          {displayOptions.showWeatherRadar && onWeatherRefresh && (
+            <div className="pt-2 border-t border-slate-600">
+              <button
+                onClick={() => {
+                  onWeatherRefresh();
+                  console.log('[MapControls] Manual weather refresh triggered');
+                }}
+                className="w-full flex items-center justify-center py-2 px-2 rounded text-xs
+                  hover:bg-slate-700/50 transition-colors text-blue-400"
+                title="Refresh weather data (use sparingly - updates every 10min automatically)"
+              >
+                <RefreshCw className="w-3 h-3 mr-1" />
+                <span className="text-xs">Refresh Weather</span>
+              </button>
+            </div>
+          )}
 
         </div>
       )}
