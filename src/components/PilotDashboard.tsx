@@ -50,6 +50,9 @@ export function PilotDashboard() {
     showExtendedCenterlines: true,
     showPireps: true,
     showGroundTracks: true,
+    showWeatherRadar: false,
+    showWeatherAlerts: false,
+    showVisibility: false,
   });
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);

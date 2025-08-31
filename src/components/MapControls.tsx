@@ -45,6 +45,9 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
     { key: 'showExtendedCenterlines' as const, label: 'Extended Centerlines', icon: '➖' },
     { key: 'showPireps' as const, label: 'PIREPs', icon: '⚠️' },
     { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
+    { key: 'showWeatherRadar' as const, label: 'Weather Radar', icon: '🌦️' },
+    { key: 'showWeatherAlerts' as const, label: 'Weather Alerts', icon: '⚡' },
+    { key: 'showVisibility' as const, label: 'Visibility', icon: '👁️' },
   ];
 
   return (

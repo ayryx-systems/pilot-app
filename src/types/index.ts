@@ -189,6 +189,42 @@ export interface MapDisplayOptions {
   showExtendedCenterlines: boolean;
   showPireps: boolean;
   showGroundTracks: boolean;
+  showWeatherRadar: boolean;
+  showWeatherAlerts: boolean;
+  showVisibility: boolean;
+}
+
+// Weather-related types
+export interface WeatherLayer {
+  id: string;
+  name: string;
+  url: string;
+  layers: string;
+  format: string;
+  transparent: boolean;
+  opacity: number;
+  crs?: string;
+}
+
+export interface WeatherService {
+  id: string;
+  name: string;
+  baseUrl: string;
+  type: 'WMS' | 'WFS' | 'REST';
+  updateFrequency: number; // minutes
+}
+
+export interface WeatherAlert {
+  id: string;
+  title: string;
+  description: string;
+  severity: 'minor' | 'moderate' | 'severe' | 'extreme';
+  urgency: 'immediate' | 'expected' | 'future' | 'past';
+  certainty: 'observed' | 'likely' | 'possible' | 'unlikely' | 'unknown';
+  areas: string[];
+  effective: string;
+  expires: string;
+  status: 'actual' | 'exercise' | 'system' | 'test' | 'draft';
 }
 
 // API Response types

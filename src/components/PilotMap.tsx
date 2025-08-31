@@ -2,8 +2,9 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import type * as L from 'leaflet';
-import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions } from '@/types';
+import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
+import { weatherService } from '@/services/weatherService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 
 interface PilotMapProps {
@@ -31,6 +32,10 @@ export function PilotMap({
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+
+  // Weather layers state
+  const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
+  const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
 
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
@@ -133,6 +138,21 @@ export function PilotMap({
     loadLeaflet();
   }, [leafletLoaded]);
 
+  // Load weather layers on component mount
+  useEffect(() => {
+    const loadWeatherLayers = async () => {
+      try {
+        const layers = weatherService.getWeatherLayers();
+        setWeatherLayers(layers);
+        console.log('[PilotMap] Weather layers loaded:', layers.length);
+      } catch (error) {
+        console.error('[PilotMap] Failed to load weather layers:', error);
+      }
+    };
+
+    loadWeatherLayers();
+  }, []);
+
   // Create/destroy map when airport changes
   useEffect(() => {
     if (!leafletLoaded || !airport) {
@@ -191,6 +211,7 @@ export function PilotMap({
         extendedCenterlines: L.layerGroup().addTo(map),
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
+        weather: L.layerGroup().addTo(map),
       };
 
       // Add scale control (similar to ATC dashboard)
@@ -923,6 +944,143 @@ export function PilotMap({
 
     updateTracks();
   }, [mapInstance, tracks, displayOptions.showGroundTracks]);
+
+  // Update weather radar display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateWeatherRadar = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing weather layers from the map
+      activeWeatherLayers.forEach(layer => {
+        if (mapInstance.hasLayer(layer)) {
+          mapInstance.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showWeatherRadar) {
+        const radarLayer = weatherLayers.find(layer => layer.id === 'radar');
+        if (radarLayer) {
+          try {
+            // Create WMS tile layer for weather radar
+            const wmsLayer = L.tileLayer.wms(radarLayer.url, {
+              layers: radarLayer.layers,
+              format: radarLayer.format,
+              transparent: radarLayer.transparent,
+              opacity: radarLayer.opacity,
+              crs: L.CRS.EPSG3857,
+              attribution: 'NOAA/NWS Weather Radar'
+            });
+
+            mapInstance.addLayer(wmsLayer);
+            setActiveWeatherLayers(prev => {
+              const newMap = new Map(prev);
+              newMap.set('radar', wmsLayer);
+              return newMap;
+            });
+
+            console.log('[PilotMap] Weather radar overlay added');
+          } catch (error) {
+            console.error('[PilotMap] Failed to add weather radar:', error);
+          }
+        }
+      }
+    };
+
+    updateWeatherRadar();
+  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
+
+  // Update weather alerts display  
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateWeatherAlerts = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing alert layers
+      const existingAlertLayer = activeWeatherLayers.get('weather_warnings');
+      if (existingAlertLayer && mapInstance.hasLayer(existingAlertLayer)) {
+        mapInstance.removeLayer(existingAlertLayer);
+      }
+
+      if (displayOptions.showWeatherAlerts) {
+        const alertLayer = weatherLayers.find(layer => layer.id === 'weather_warnings');
+        if (alertLayer) {
+          try {
+            const wmsLayer = L.tileLayer.wms(alertLayer.url, {
+              layers: alertLayer.layers,
+              format: alertLayer.format,
+              transparent: alertLayer.transparent,
+              opacity: alertLayer.opacity,
+              crs: L.CRS.EPSG4326,
+              attribution: 'NOAA/NWS Weather Warnings'
+            });
+
+            mapInstance.addLayer(wmsLayer);
+            setActiveWeatherLayers(prev => {
+              const newMap = new Map(prev);
+              newMap.set('weather_warnings', wmsLayer);
+              return newMap;
+            });
+
+            console.log('[PilotMap] Weather alerts overlay added');
+          } catch (error) {
+            console.error('[PilotMap] Failed to add weather alerts:', error);
+          }
+        }
+      }
+    };
+
+    updateWeatherAlerts();
+  }, [mapInstance, displayOptions.showWeatherAlerts, weatherLayers]);
+
+  // Update visibility display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateVisibility = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing visibility layer
+      const existingVisLayer = activeWeatherLayers.get('visibility');
+      if (existingVisLayer && mapInstance.hasLayer(existingVisLayer)) {
+        mapInstance.removeLayer(existingVisLayer);
+      }
+
+      if (displayOptions.showVisibility) {
+        const visLayer = weatherLayers.find(layer => layer.id === 'visibility');
+        if (visLayer) {
+          try {
+            const wmsLayer = L.tileLayer.wms(visLayer.url, {
+              layers: visLayer.layers,
+              format: visLayer.format,
+              transparent: visLayer.transparent,
+              opacity: visLayer.opacity,
+              crs: L.CRS.EPSG4326,
+              attribution: 'NOAA/NWS Visibility Data'
+            });
+
+            mapInstance.addLayer(wmsLayer);
+            setActiveWeatherLayers(prev => {
+              const newMap = new Map(prev);
+              newMap.set('visibility', wmsLayer);
+              return newMap;
+            });
+
+            console.log('[PilotMap] Visibility overlay added');
+          } catch (error) {
+            console.error('[PilotMap] Failed to add visibility overlay:', error);
+          }
+        }
+      }
+    };
+
+    updateVisibility();
+  }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
 
   // Handle recenter events (similar to ATC dashboard)
   useEffect(() => {
