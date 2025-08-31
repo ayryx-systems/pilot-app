@@ -218,6 +218,7 @@ export function PilotDashboard() {
               <MapControls
                 displayOptions={mapDisplayOptions}
                 onOptionsChange={setMapDisplayOptions}
+                isDemo={selectedAirport === 'KDEN'}
               />
             </div>
           )}
@@ -239,7 +240,14 @@ export function PilotDashboard() {
         }`} style={{ zIndex: 1000 }}>
         <div className="p-2 sm:p-3 h-full">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
+              {selectedAirport === 'KDEN' && (
+                <span className="px-1.5 py-0.5 bg-orange-600 text-white text-xs rounded-full font-medium">
+                  STORM DEMO
+                </span>
+              )}
+            </div>
             <button
               onClick={() => setShowPirepPanel(false)}
               className="p-1 hover:bg-slate-700/50 rounded transition-colors"
@@ -279,6 +287,9 @@ export function PilotDashboard() {
               {pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
             </span>
           </div>
+          {selectedAirport === 'KDEN' && (
+            <div className="absolute -top-1 -right-1 w-2 h-2 bg-orange-500 rounded-full border border-white"></div>
+          )}
         </button>
       )}
 

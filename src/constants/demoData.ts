@@ -2,24 +2,110 @@
 // ===============================================
 // This file contains mock data to simulate a storm situation for demonstration purposes
 
-import { SituationSummary, AirportOverview, PiRep } from '@/types';
+import { SituationSummary, AirportOverview, PiRep, GroundTrack } from '@/types';
 
 // Mock METAR for storm conditions
 export const DENVER_STORM_METAR = {
-    raw: "KDEN 151753Z 28025G40KT 1/2SM R35L/2000FT +TSRA BR BKN008 OVC015CB 12/10 A2992 RMK AO2 PK WND 28045/1745 WSHFT 1740 FZRANO",
-    friendly: "Heavy thunderstorms with rain, 1/2 mile visibility, wind 280° at 25 knots gusting to 40 knots, broken clouds at 800ft, overcast at 1500ft with cumulonimbus",
+    metar: "KDEN 151753Z 28025G40KT 1/2SM R35L/2000FT +TSRA BR BKN008 OVC015CB 12/10 A2992 RMK AO2 PK WND 28045/1745 WSHFT 1740 FZRANO",
+    metarFriendly: "Heavy thunderstorms with rain, 1/2 mile visibility, wind 280° at 25 knots gusting to 40 knots, broken clouds at 800ft, overcast at 1500ft with cumulonimbus",
     conditions: "Heavy thunderstorms with reduced visibility",
     temperature: "12°C",
-    dewpoint: "10°C",
     wind: {
         direction: 280,
         speed: 25,
         gust: 40
     },
     visibility: "1/2 mile",
-    ceiling: "800ft",
     timestamp: new Date().toISOString()
 };
+
+// Mock ground tracks for storm conditions
+export const DENVER_STORM_TRACKS: GroundTrack[] = [
+    {
+        id: "track-001",
+        callsign: "UAL1234",
+        aircraft: "B737",
+        coordinates: [
+            { lat: 39.95, lon: -104.75, altitude: 3000, timestamp: new Date(Date.now() - 8 * 60 * 1000).toISOString() },
+            { lat: 39.92, lon: -104.72, altitude: 2500, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
+            { lat: 39.89, lon: -104.70, altitude: 2000, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
+            { lat: 39.86, lon: -104.69, altitude: 1500, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            { lat: 39.83, lon: -104.68, altitude: 1000, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            { lat: 39.80, lon: -104.67, altitude: 500, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() }
+        ],
+        runway: "35L",
+        status: "ACTIVE",
+        startTime: new Date(Date.now() - 8 * 60 * 1000).toISOString(),
+        endTime: undefined
+    },
+    {
+        id: "track-002",
+        callsign: "SWA5678",
+        aircraft: "B737",
+        coordinates: [
+            { lat: 39.94, lon: -104.76, altitude: 3000, timestamp: new Date(Date.now() - 7 * 60 * 1000).toISOString() },
+            { lat: 39.91, lon: -104.73, altitude: 2500, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
+            { lat: 39.88, lon: -104.71, altitude: 2000, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            { lat: 39.85, lon: -104.70, altitude: 1500, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            { lat: 39.82, lon: -104.69, altitude: 1000, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            { lat: 39.79, lon: -104.68, altitude: 500, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() }
+        ],
+        runway: "35L",
+        status: "ACTIVE",
+        startTime: new Date(Date.now() - 7 * 60 * 1000).toISOString(),
+        endTime: undefined
+    },
+    {
+        id: "track-003",
+        callsign: "AAL9012",
+        aircraft: "B737",
+        coordinates: [
+            { lat: 39.93, lon: -104.77, altitude: 3000, timestamp: new Date(Date.now() - 6 * 60 * 1000).toISOString() },
+            { lat: 39.90, lon: -104.74, altitude: 2500, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            { lat: 39.87, lon: -104.72, altitude: 2000, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            { lat: 39.84, lon: -104.71, altitude: 1500, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            { lat: 39.81, lon: -104.70, altitude: 1000, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+            { lat: 39.78, lon: -104.69, altitude: 500, timestamp: new Date(Date.now() - 1 * 60 * 1000).toISOString() }
+        ],
+        runway: "35L",
+        status: "ACTIVE",
+        startTime: new Date(Date.now() - 6 * 60 * 1000).toISOString(),
+        endTime: undefined
+    },
+    {
+        id: "track-004",
+        callsign: "DLT2345",
+        aircraft: "A320",
+        coordinates: [
+            { lat: 39.96, lon: -104.78, altitude: 3000, timestamp: new Date(Date.now() - 5 * 60 * 1000).toISOString() },
+            { lat: 39.93, lon: -104.75, altitude: 2500, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            { lat: 39.90, lon: -104.73, altitude: 2000, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            { lat: 39.87, lon: -104.72, altitude: 1500, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+            { lat: 39.84, lon: -104.71, altitude: 1000, timestamp: new Date(Date.now() - 1 * 60 * 1000).toISOString() },
+            { lat: 39.81, lon: -104.70, altitude: 500, timestamp: new Date().toISOString() }
+        ],
+        runway: "35L",
+        status: "ACTIVE",
+        startTime: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+        endTime: undefined
+    },
+    {
+        id: "track-005",
+        callsign: "FEX6789",
+        aircraft: "B757",
+        coordinates: [
+            { lat: 39.97, lon: -104.79, altitude: 3000, timestamp: new Date(Date.now() - 4 * 60 * 1000).toISOString() },
+            { lat: 39.94, lon: -104.76, altitude: 2500, timestamp: new Date(Date.now() - 3 * 60 * 1000).toISOString() },
+            { lat: 39.91, lon: -104.74, altitude: 2000, timestamp: new Date(Date.now() - 2 * 60 * 1000).toISOString() },
+            { lat: 39.88, lon: -104.73, altitude: 1500, timestamp: new Date(Date.now() - 1 * 60 * 1000).toISOString() },
+            { lat: 39.85, lon: -104.72, altitude: 1000, timestamp: new Date().toISOString() }
+        ],
+        runway: "35L",
+        status: "ACTIVE",
+        startTime: new Date(Date.now() - 4 * 60 * 1000).toISOString(),
+        endTime: undefined
+    }
+];
 
 // Mock situation summary for storm conditions
 export const DENVER_STORM_SUMMARY: SituationSummary = {
@@ -61,15 +147,6 @@ export const DENVER_STORM_SUMMARY: SituationSummary = {
             long_summary: "Multiple windshear reports from pilots on approach. Thunderstorm warnings in effect for Denver area. Pilots advised to exercise extreme caution and report any windshear encounters.",
             status: "warning"
         }
-    },
-    timestamp: Date.now(),
-    airport: "KDEN",
-    _isCategorized: true,
-    context_summary: {
-        aircraft_count: 8,
-        event_count: 12,
-        active_runways: ["35L"],
-        pirep_count: 3
     }
 };
 

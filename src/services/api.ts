@@ -171,6 +171,12 @@ class PilotApiService {
    * Get ground tracks for an airport
    */
   async getGroundTracks(airportId: string): Promise<TracksResponse> {
+    // Check if demo mode should be used for this airport
+    if (demoService.shouldUseDemo(airportId)) {
+      demoService.enableDemo();
+      return demoService.getDemoTracksResponse();
+    }
+
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
       return await this.handleResponse<TracksResponse>(response);
