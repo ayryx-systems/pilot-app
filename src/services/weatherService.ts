@@ -50,26 +50,26 @@ class WeatherService {
    * Get available weather layers for aviation use
    */
   getWeatherLayers(): WeatherLayer[] {
-    // Using NOAA GeoServer for real-time radar data
+    // Using Iowa Environmental Mesonet - tested and working!
     return [
       {
         id: 'radar',
         name: 'Weather Radar (Real-time)',
-        url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_bref_qcd/ows',
-        layers: 'conus_bref_qcd', // CONUS Base Reflectivity
+        url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi',
+        layers: 'nexrad-n0r', // NEXRAD Base Reflectivity (simplified layer name)
         format: 'image/png',
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.8,
         crs: 'EPSG:4326'
       },
       {
         id: 'radar_composite',
-        name: 'Weather Radar (Composite)',
-        url: 'https://opengeo.ncep.noaa.gov/geoserver/conus/conus_comp_n0r_time/ows',
-        layers: 'conus_comp_n0r_time', // CONUS Composite Reflectivity
+        name: 'Weather Radar (Composite)', 
+        url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi',
+        layers: 'nexrad-n0r', // Same layer for now
         format: 'image/png',
         transparent: true,
-        opacity: 0.7,
+        opacity: 0.8,
         crs: 'EPSG:4326'
       }
     ];
