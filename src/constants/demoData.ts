@@ -6,8 +6,8 @@ import { SituationSummary, AirportOverview, PiRep, GroundTrack } from '@/types';
 
 // Mock METAR for storm conditions
 export const DENVER_STORM_METAR = {
-    metar: "KDEN 151753Z 28025G40KT 1/2SM R35L/2000FT +TSRA BR BKN008 OVC015CB 12/10 A2992 RMK AO2 PK WND 28045/1745 WSHFT 1740 FZRANO",
-    metarFriendly: "Heavy thunderstorms with rain, 1/2 mile visibility, wind 280° at 25 knots gusting to 40 knots, broken clouds at 800ft, overcast at 1500ft with cumulonimbus",
+    metar: "KDEN 151753Z 28025G40KT 2SM R35L/2000FT +TSRA BR BKN008 OVC015CB 12/10 A2992 RMK AO2 PK WND 28045/1745 WSHFT 1740 FZRANO",
+    metarFriendly: "Heavy thunderstorms with rain, 2 mile visibility, wind 280° at 25 knots gusting to 40 knots, broken clouds at 800ft, overcast at 1500ft with cumulonimbus",
     conditions: "Heavy thunderstorms with reduced visibility",
     temperature: "12°C",
     wind: {
@@ -15,7 +15,7 @@ export const DENVER_STORM_METAR = {
         speed: 25,
         gust: 40
     },
-    visibility: "1/2 mile",
+    visibility: "2 miles",
     timestamp: new Date().toISOString()
 };
 
@@ -64,9 +64,9 @@ export const DENVER_STORM_SUMMARY: SituationSummary = {
     situation_overview: "Denver International: Active storm system with heavy thunderstorms, reduced visibility, and windshear reports. Runway 35L remains operational with 5 recent landings.",
     conditions: {
         weather: {
-            description: "Heavy thunderstorms with 1/2 mile visibility, wind 280° at 25kt gusting 40kt",
-            short_summary: "Heavy storms, 1/2mi vis",
-            long_summary: "Active thunderstorm system with heavy rain, 1/2 mile visibility, wind 280° at 25 knots gusting to 40 knots. Ceiling 800ft with cumulonimbus clouds. Conditions deteriorating with embedded thunderstorms.",
+            description: "Heavy thunderstorms with 2 mile visibility, wind 280° at 25kt gusting 40kt",
+            short_summary: "Heavy storms, 2mi vis",
+            long_summary: "Active thunderstorm system with heavy rain, 2 mile visibility, wind 280° at 25 knots gusting to 40 knots. Ceiling 800ft with cumulonimbus clouds. Conditions deteriorating with embedded thunderstorms.",
             status: "warning"
         },
         traffic: {
@@ -77,14 +77,14 @@ export const DENVER_STORM_SUMMARY: SituationSummary = {
         },
         approach: {
             description: "Multiple windshear reports on approach, runway visibility acceptable at 2000ft",
-            short_summary: "Windshear reports, 2000ft vis",
-            long_summary: "Pilots reporting moderate to severe windshear on final approach. Runway 35L visibility reduced to 2000ft but remains above minimums. Approach operations continuing with increased pilot awareness.",
+            short_summary: "Windshear reports, 5 aircraft in queue",
+            long_summary: "Pilots reporting moderate to severe windshear on final approach. Runway 35L visibility reduced to 2000ft but remains above minimums. 5 aircraft in queue for approach. Approach operations continuing with increased pilot awareness.",
             status: "warning"
         },
         runway: {
             description: "Runway 35L active with 5 recent landings, operations continuing despite storm",
             short_summary: "35L active, 5 landings",
-            long_summary: "Runway 35L remains operational with 5 successful landings in the last 20 minutes. Runway visibility at 2000ft, above minimums. Operations continuing with appropriate spacing and pilot awareness.",
+            long_summary: "Runway 35L remains operational with 5 successful landings in the last 20 minutes. Runway visibility at 2000ft, above minimums. Operations continuing. Braking reported good.",
             status: "caution"
         },
         ground: {
