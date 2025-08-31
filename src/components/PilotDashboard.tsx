@@ -293,6 +293,24 @@ export function PilotDashboard() {
         </button>
       )}
 
+      {/* Storm Demo Button - Bottom left position, to the right of PIREP button */}
+      {selectedAirport === 'KDEN' && !showPirepPanel && (
+        <button
+          className="absolute left-2 bottom-16 lg:bottom-14 ml-32 px-3 py-2 rounded-lg 
+                   bg-orange-600/90 hover:bg-orange-700/90 transition-colors flex items-center space-x-2 
+                   backdrop-blur-sm border border-orange-500/60 text-white"
+          style={{ zIndex: 1000 }}
+        >
+          <AlertTriangle className="w-4 h-4 text-orange-200" />
+          <div className="flex flex-col items-start">
+            <span className="text-xs font-medium">STORM DEMO</span>
+            <span className="text-xs opacity-80">
+              Denver Weather
+            </span>
+          </div>
+        </button>
+      )}
+
 
       {/* Bottom Status Bar - Airport Info */}
       {airportOverview && (

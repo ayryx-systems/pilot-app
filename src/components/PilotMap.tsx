@@ -1036,11 +1036,6 @@ export function PilotMap({
       {/* Airport info overlay */}
       <div className="absolute z-10 bottom-2 left-2 bg-black/60 text-white p-1 px-2 text-xs rounded">
         {airport.name} ({airport.code})
-        {isDemo && (
-          <span className="ml-2 px-1 py-0.5 bg-orange-600 text-white text-xs rounded text-[10px]">
-            STORM DEMO
-          </span>
-        )}
       </div>
 
       {!mapReady && (

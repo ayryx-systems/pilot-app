@@ -166,7 +166,7 @@ class DemoService {
             cacheMaxAge: 30000,
             source: 'demo',
             active: true,
-            message: 'Demo storm conditions - 5 active approach tracks to runway 35L'
+            message: 'Demo storm conditions - 2 active approach tracks to runway 35L'
         };
     }
 
