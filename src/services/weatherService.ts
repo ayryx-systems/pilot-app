@@ -30,6 +30,13 @@ class WeatherService {
       type: 'WMS' as const,
       updateFrequency: 60 // Updates every hour
     },
+    RIDGE_RADAR: {
+      id: 'ridge_radar',
+      name: 'NOAA RIDGE Radar',
+      baseUrl: 'https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows',
+      type: 'WMS' as const,
+      updateFrequency: 5 // Updates every 5 minutes
+    },
     NWS_ALERTS: {
       id: 'nws_alerts',
       name: 'NWS Weather Alerts',
@@ -43,12 +50,13 @@ class WeatherService {
    * Get available weather layers for aviation use
    */
   getWeatherLayers(): WeatherLayer[] {
+    // SIMPLIFIED - Using only validated, working layers with conservative parameters
     return [
       {
         id: 'radar',
         name: 'Weather Radar',
-        url: this.WEATHER_SERVICES.NOWCOAST_RADAR.baseUrl,
-        layers: '1', // Base reflectivity layer
+        url: 'https://mapservices.weather.noaa.gov/raster/services/obs/rfc_qpe/MapServer/WMSServer',
+        layers: '28', // 24-hour QPE layer that's known to work
         format: 'image/png',
         transparent: true,
         opacity: 0.7,
@@ -58,41 +66,11 @@ class WeatherService {
         id: 'precipitation',
         name: 'Precipitation Forecast',
         url: this.WEATHER_SERVICES.NDFD_FORECAST.baseUrl,
-        layers: 'ndfd.conus.totalqpf.points',
+        layers: 'ndfd.conus.qpf.points', // Corrected layer name from GetCapabilities
         format: 'image/png',
         transparent: true,
         opacity: 0.6,
-        crs: 'EPSG:4326'
-      },
-      {
-        id: 'visibility',
-        name: 'Visibility',
-        url: this.WEATHER_SERVICES.NDFD_FORECAST.baseUrl,
-        layers: 'ndfd.conus.vis',
-        format: 'image/png',
-        transparent: true,
-        opacity: 0.5,
-        crs: 'EPSG:4326'
-      },
-      {
-        id: 'weather_warnings',
-        name: 'Weather Warnings',
-        url: this.WEATHER_SERVICES.NDFD_FORECAST.baseUrl,
-        layers: 'ndfd.conus.wwa',
-        format: 'image/png',
-        transparent: true,
-        opacity: 0.8,
-        crs: 'EPSG:4326'
-      },
-      {
-        id: 'wind_speed',
-        name: 'Wind Speed',
-        url: this.WEATHER_SERVICES.NDFD_FORECAST.baseUrl,
-        layers: 'ndfd.conus.windspd',
-        format: 'image/png',
-        transparent: true,
-        opacity: 0.4,
-        crs: 'EPSG:4326'
+        crs: 'EPSG:3857'
       }
     ];
   }

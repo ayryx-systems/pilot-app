@@ -202,7 +202,9 @@ export function PilotMap({
         }
       ).addTo(map);
 
-      // Initialize layer groups
+      // Initialize layer groups - weather group needs higher z-index
+      const weatherGroup = L.layerGroup().addTo(map);
+      
       layerGroupsRef.current = {
         runways: L.layerGroup().addTo(map),
         dmeRings: L.layerGroup().addTo(map),
@@ -211,8 +213,15 @@ export function PilotMap({
         extendedCenterlines: L.layerGroup().addTo(map),
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
-        weather: L.layerGroup().addTo(map),
+        weather: weatherGroup,
       };
+
+      // Set weather layer group to render above base tiles
+      const weatherGroupElement = weatherGroup.getPane ? weatherGroup.getPane() : null;
+      if (weatherGroupElement) {
+        weatherGroupElement.style.zIndex = '1000';
+      }
+      console.log('[PilotMap] Weather layer group initialized with high z-index');
 
       // Add scale control (similar to ATC dashboard)
       L.control
@@ -945,7 +954,7 @@ export function PilotMap({
     updateTracks();
   }, [mapInstance, tracks, displayOptions.showGroundTracks]);
 
-  // Update weather radar display
+  // Update weather radar display - FIXED with conservative approach
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
@@ -953,38 +962,56 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Clear existing weather layers from the map
-      activeWeatherLayers.forEach(layer => {
-        if (mapInstance.hasLayer(layer)) {
-          mapInstance.removeLayer(layer);
-        }
-      });
+      // Clear existing radar layer from weather layer group
+      const existingRadarLayer = activeWeatherLayers.get('radar');
+      if (existingRadarLayer && layerGroupsRef.current.weather) {
+        layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
+        setActiveWeatherLayers(prev => {
+          const newMap = new Map(prev);
+          newMap.delete('radar');
+          return newMap;
+        });
+      }
 
       if (displayOptions.showWeatherRadar) {
         const radarLayer = weatherLayers.find(layer => layer.id === 'radar');
+        
         if (radarLayer) {
           try {
-            // Create WMS tile layer for weather radar
+            console.log('[PilotMap] Adding weather radar with conservative settings');
+            
+            // Create WMS tile layer with conservative settings to avoid API spam
             const wmsLayer = L.tileLayer.wms(radarLayer.url, {
               layers: radarLayer.layers,
               format: radarLayer.format,
               transparent: radarLayer.transparent,
               opacity: radarLayer.opacity,
+              version: '1.3.0',
               crs: L.CRS.EPSG3857,
-              attribution: 'NOAA/NWS Weather Radar'
+              attribution: 'NOAA Weather Service',
+              updateWhenIdle: true, // Only update when map stops moving
+              updateInterval: 300,   // Limit update frequency
+              maxZoom: 10,          // Limit zoom to reduce tile requests
+              bounds: [             // Limit to CONUS to avoid unnecessary requests
+                [24.396308, -125.0],
+                [49.384358, -66.93457]
+              ]
             });
 
-            mapInstance.addLayer(wmsLayer);
+            // Add to weather layer group
+            layerGroupsRef.current.weather.addLayer(wmsLayer);
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
               newMap.set('radar', wmsLayer);
               return newMap;
             });
 
-            console.log('[PilotMap] Weather radar overlay added');
+            console.log('[PilotMap] Weather radar overlay added successfully');
           } catch (error) {
             console.error('[PilotMap] Failed to add weather radar:', error);
           }
+        } else {
+          console.warn('[PilotMap] No radar layer available');
         }
       }
     };
@@ -992,18 +1019,21 @@ export function PilotMap({
     updateWeatherRadar();
   }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
 
-  // Update weather alerts display  
+  // Update weather alerts display - TEMPORARILY DISABLED
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
+    
+    // DISABLED - preventing API spam
+    return;
 
     const updateWeatherAlerts = async () => {
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Remove existing alert layers
+      // Remove existing alert layers from weather layer group
       const existingAlertLayer = activeWeatherLayers.get('weather_warnings');
-      if (existingAlertLayer && mapInstance.hasLayer(existingAlertLayer)) {
-        mapInstance.removeLayer(existingAlertLayer);
+      if (existingAlertLayer && layerGroupsRef.current.weather) {
+        layerGroupsRef.current.weather.removeLayer(existingAlertLayer);
       }
 
       if (displayOptions.showWeatherAlerts) {
@@ -1016,10 +1046,11 @@ export function PilotMap({
               transparent: alertLayer.transparent,
               opacity: alertLayer.opacity,
               crs: L.CRS.EPSG4326,
-              attribution: 'NOAA/NWS Weather Warnings'
+              attribution: 'NOAA/NWS Weather Warnings',
+              zIndex: 1001 // Weather alerts above radar
             });
 
-            mapInstance.addLayer(wmsLayer);
+            layerGroupsRef.current.weather.addLayer(wmsLayer);
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
               newMap.set('weather_warnings', wmsLayer);
@@ -1037,18 +1068,21 @@ export function PilotMap({
     updateWeatherAlerts();
   }, [mapInstance, displayOptions.showWeatherAlerts, weatherLayers]);
 
-  // Update visibility display
+  // Update visibility display - TEMPORARILY DISABLED
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
+    
+    // DISABLED - preventing API spam
+    return;
 
     const updateVisibility = async () => {
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Remove existing visibility layer
+      // Remove existing visibility layer from weather layer group
       const existingVisLayer = activeWeatherLayers.get('visibility');
-      if (existingVisLayer && mapInstance.hasLayer(existingVisLayer)) {
-        mapInstance.removeLayer(existingVisLayer);
+      if (existingVisLayer && layerGroupsRef.current.weather) {
+        layerGroupsRef.current.weather.removeLayer(existingVisLayer);
       }
 
       if (displayOptions.showVisibility) {
@@ -1061,10 +1095,11 @@ export function PilotMap({
               transparent: visLayer.transparent,
               opacity: visLayer.opacity,
               crs: L.CRS.EPSG4326,
-              attribution: 'NOAA/NWS Visibility Data'
+              attribution: 'NOAA/NWS Visibility Data',
+              zIndex: 999 // Visibility below radar but above base tiles
             });
 
-            mapInstance.addLayer(wmsLayer);
+            layerGroupsRef.current.weather.addLayer(wmsLayer);
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
               newMap.set('visibility', wmsLayer);
