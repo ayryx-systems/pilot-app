@@ -38,6 +38,12 @@ export function PilotMap({
   const [mapReady, setMapReady] = useState(false);
   const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
   const [leafletLoaded, setLeafletLoaded] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure consistent rendering between server and client
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
@@ -1265,7 +1271,10 @@ export function PilotMap({
     return (
       <div className="h-full bg-slate-800 flex items-center justify-center">
         <div className="text-center text-gray-400">
-          {selectedAirport && loading ? (
+          {!mounted ? (
+            // Show generic message during SSR to prevent hydration mismatch
+            <p>Select an airport to view map</p>
+          ) : selectedAirport && loading ? (
             <div className="flex items-center justify-center space-x-2">
               <Loader2 className="w-5 h-5 animate-spin" />
               <p>Loading airport data...</p>

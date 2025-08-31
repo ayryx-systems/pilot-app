@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Clock, Wifi, WifiOff } from 'lucide-react';
 
 interface SimpleDataAgeProps {
@@ -16,6 +16,12 @@ export function SimpleDataAge({
     offline = false,
     size = 'sm'
 }: SimpleDataAgeProps) {
+    const [mounted, setMounted] = useState(false);
+
+    // Ensure component is only rendered on client after hydration
+    useEffect(() => {
+        setMounted(true);
+    }, []);
 
     const formatAge = (timestamp: Date): string => {
         const now = new Date();
@@ -45,6 +51,16 @@ export function SimpleDataAge({
     };
 
     const sizeClass = size === 'md' ? 'text-sm' : 'text-xs';
+
+    // Show a static placeholder during SSR to prevent hydration mismatch
+    if (!mounted) {
+        return (
+            <div className={`flex items-center space-x-1 text-gray-400 ${sizeClass}`}>
+                <Clock className="w-3 h-3" />
+                <span>Loading...</span>
+            </div>
+        );
+    }
 
     return (
         <div className={`flex items-center space-x-1 ${getStatusColor()} ${sizeClass}`}>

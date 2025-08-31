@@ -15,6 +15,12 @@ import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
 
 export function PilotDashboard() {
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component is only fully rendered after hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const {
     selectedAirport,
     setSelectedAirport,
@@ -146,17 +152,14 @@ export function PilotDashboard() {
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
-          {selectedAirport && (() => {
-            const dataStatus = getDataStatus();
-            return (
-              <SimpleDataAge
-                timestamp={dataStatus.timestamp}
-                isLive={dataStatus.isLive}
-                offline={!connectionStatus.connected}
-                size="sm"
-              />
-            );
-          })()}
+          {mounted && selectedAirport && (
+            <SimpleDataAge
+              timestamp={getDataStatus().timestamp}
+              isLive={getDataStatus().isLive}
+              offline={!connectionStatus.connected}
+              size="sm"
+            />
+          )}
 
           <button
             onClick={handleRefresh}
