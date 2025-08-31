@@ -14,6 +14,7 @@ interface PilotMapProps {
   displayOptions: MapDisplayOptions;
   onDismissPirep: (id: string) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  isDemo?: boolean;
 }
 
 export function PilotMap({
@@ -23,7 +24,8 @@ export function PilotMap({
   tracks,
   displayOptions,
   onDismissPirep,
-  onFullscreenChange
+  onFullscreenChange,
+  isDemo
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -1034,6 +1036,11 @@ export function PilotMap({
       {/* Airport info overlay */}
       <div className="absolute z-10 bottom-2 left-2 bg-black/60 text-white p-1 px-2 text-xs rounded">
         {airport.name} ({airport.code})
+        {isDemo && (
+          <span className="ml-2 px-1 py-0.5 bg-orange-600 text-white text-xs rounded text-[10px]">
+            STORM DEMO
+          </span>
+        )}
       </div>
 
       {!mapReady && (

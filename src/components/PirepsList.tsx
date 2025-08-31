@@ -17,9 +17,10 @@ interface PirepsListProps {
     source?: 'live' | 'cache' | 'stale-cache';
     serverTimestamp?: string;
   };
+  isDemo?: boolean;
 }
 
-export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMetadata }: PirepsListProps) {
+export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMetadata, isDemo }: PirepsListProps) {
   const [isExpanded, setIsExpanded] = useState(true); // Start expanded by default to ensure visibility
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
@@ -69,6 +70,16 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
 
   return (
     <div>
+      {/* Demo Mode Indicator */}
+      {isDemo && (
+        <div className="mb-3 p-2 rounded-lg bg-orange-600/20 border border-orange-500/50 text-orange-200">
+          <div className="flex items-center gap-2 text-xs font-medium">
+            <AlertTriangle className="w-3 h-3" />
+            STORM DEMO - PIREPs show windshear and turbulence reports
+          </div>
+        </div>
+      )}
+
       {/* Collapsible Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

@@ -34,7 +34,7 @@ export function AirportSelector({
         {airports.map(airport => (
           <option key={airport.id} value={airport.id}>
             {airport.code} - {airport.name}
-            {airport.active ? '' : ' (Inactive)'}
+            {airport.id === 'KDEN' ? ' (Storm Demo)' : airport.active ? '' : ' (Inactive)'}
           </option>
         ))}
       </select>

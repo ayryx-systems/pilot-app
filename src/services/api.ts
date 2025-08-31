@@ -9,6 +9,7 @@ import {
   TracksResponse,
   SummaryResponse
 } from '@/types';
+import { demoService } from './demoService';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
@@ -122,6 +123,12 @@ class PilotApiService {
    * Get airport overview (weather, runways, operational data)
    */
   async getAirportOverview(airportId: string): Promise<AirportOverview> {
+    // Check if demo mode should be used for this airport
+    if (demoService.shouldUseDemo(airportId)) {
+      demoService.enableDemo();
+      return demoService.getDemoAirportOverviewResponse();
+    }
+
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
       return await this.handleResponse<AirportOverview>(response);
@@ -140,6 +147,12 @@ class PilotApiService {
    * Get PIREPs for an airport
    */
   async getPireps(airportId: string): Promise<PirepsResponse> {
+    // Check if demo mode should be used for this airport
+    if (demoService.shouldUseDemo(airportId)) {
+      demoService.enableDemo();
+      return demoService.getDemoPirepsResponse();
+    }
+
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
       return await this.handleResponse<PirepsResponse>(response);
@@ -176,6 +189,12 @@ class PilotApiService {
    * Get situation summary for an airport
    */
   async getSituationSummary(airportId: string): Promise<SummaryResponse> {
+    // Check if demo mode should be used for this airport
+    if (demoService.shouldUseDemo(airportId)) {
+      demoService.enableDemo();
+      return demoService.getDemoSummaryResponse();
+    }
+
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
       return await this.handleResponse<SummaryResponse>(response);
@@ -184,7 +203,7 @@ class PilotApiService {
 
       if (error instanceof ApiError && error.status === 0) {
         throw new ApiError('Cannot connect to server - situation summary unavailable while offline', 0);
-      }
+    }
 
       throw error;
     }

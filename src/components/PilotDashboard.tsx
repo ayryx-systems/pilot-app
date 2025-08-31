@@ -150,6 +150,17 @@ export function PilotDashboard() {
       {/* App Update Notifier */}
       <AppUpdateNotifier />
 
+      {/* Demo Mode Notification */}
+      {selectedAirport === 'KDEN' && (
+        <div className="bg-orange-900/30 border-orange-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
+          <div className="flex items-center text-orange-200">
+            <AlertTriangle className="w-4 h-4 mr-2" />
+            <span className="font-medium">STORM DEMO MODE</span>
+            <span className="ml-2 text-orange-300">Denver International - Simulating severe weather conditions</span>
+          </div>
+        </div>
+      )}
+
       {/* Status Notifications */}
       {!connectionStatus.connected && (
         <div className="bg-red-900/30 border-red-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
@@ -181,6 +192,7 @@ export function PilotDashboard() {
               connectionStatus={connectionStatus}
               airportCode={selectedAirport || undefined}
               summaryMetadata={summaryMetadata}
+              isDemo={selectedAirport === 'KDEN'}
             />
           </div>
         )}
@@ -197,6 +209,7 @@ export function PilotDashboard() {
               console.log('Dismiss PIREP:', id);
             }}
             onFullscreenChange={setMapFullscreen}
+            isDemo={selectedAirport === 'KDEN'}
           />
           
           {/* Map Controls - Top Right of Map Area */}
@@ -243,6 +256,7 @@ export function PilotDashboard() {
               }}
               connectionStatus={connectionStatus}
               pirepsMetadata={pirepsMetadata}
+              isDemo={selectedAirport === 'KDEN'}
             />
           </div>
         </div>

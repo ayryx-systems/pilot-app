@@ -6,9 +6,10 @@ import { Wifi, WifiOff, Clock, Signal } from 'lucide-react';
 
 interface ConnectionStatusProps {
   connectionStatus: ConnectionStatusType;
+  isDemo?: boolean;
 }
 
-export function ConnectionStatus({ connectionStatus }: ConnectionStatusProps) {
+export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusProps) {
   const getStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
     if (connectionStatus.latency && connectionStatus.latency > 2000) return 'text-yellow-400';
@@ -50,6 +51,19 @@ export function ConnectionStatus({ connectionStatus }: ConnectionStatusProps) {
           </span>
         </div>
       </div>
+
+      {/* Demo Mode Indicator */}
+      {isDemo && (
+        <div className="mb-2 p-2 rounded bg-orange-600/20 border border-orange-500/50 text-orange-200 text-xs">
+          <div className="flex items-center gap-1 font-medium">
+            <Signal className="w-3 h-3" />
+            STORM DEMO MODE
+          </div>
+          <div className="text-orange-300 mt-1">
+            Simulating live data for Denver storm conditions
+          </div>
+        </div>
+      )}
 
       <div className="space-y-1 text-xs text-gray-400">
         <div className="flex justify-between">

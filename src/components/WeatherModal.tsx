@@ -25,6 +25,7 @@ interface WeatherModalProps {
         long_summary: string;
         status: 'normal' | 'caution' | 'warning' | 'check-overview' | 'unavailable';
     };
+    isDemo?: boolean;
 }
 
 export function WeatherModal({
@@ -32,7 +33,8 @@ export function WeatherModal({
     onClose,
     airportCode,
     weatherData,
-    summaryData
+    summaryData,
+    isDemo
 }: WeatherModalProps) {
     const modalRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +104,11 @@ export function WeatherModal({
                             <Cloud className="w-5 h-5 text-blue-400" />
                             <h2 className="text-xl font-semibold text-white">
                                 Weather Details - {airportCode}
+                                {isDemo && (
+                                    <span className="ml-2 px-2 py-1 bg-orange-600 text-white text-xs rounded-full font-medium">
+                                        STORM DEMO
+                                    </span>
+                                )}
                             </h2>
                         </div>
                         <button
