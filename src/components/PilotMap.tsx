@@ -189,13 +189,7 @@ export function PilotMap({
         extendedCenterlines: L.layerGroup().addTo(map),
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
-        airport: L.layerGroup().addTo(map),
       };
-
-      // Add airport marker at correct position
-      const airportMarker = L.marker(mapCenter)
-        .bindPopup(`<strong>${airport.code}</strong><br/>${airport.name}`);
-      layerGroupsRef.current.airport.addLayer(airportMarker);
 
       // Add scale control (similar to ATC dashboard)
       L.control
