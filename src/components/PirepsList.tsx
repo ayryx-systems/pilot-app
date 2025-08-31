@@ -2,13 +2,12 @@
 
 import React, { useState } from 'react';
 import { PiRep, ConnectionStatus } from '@/types';
-import { AlertTriangle, Clock, X, Plane, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertTriangle, Clock, Plane, ChevronDown, ChevronUp } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { DebugTimestamp } from './DebugTimestamp';
 
 interface PirepsListProps {
   pireps: PiRep[];
-  onDismissPirep: (id: string) => void;
   connectionStatus: ConnectionStatus;
   pirepsMetadata?: {
     active: boolean;
@@ -20,7 +19,7 @@ interface PirepsListProps {
   isDemo?: boolean;
 }
 
-export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMetadata, isDemo }: PirepsListProps) {
+export function PirepsList({ pireps, connectionStatus, pirepsMetadata, isDemo }: PirepsListProps) {
   const [isExpanded, setIsExpanded] = useState(true); // Start expanded by default to ensure visibility
   const getPriorityIcon = (priority: string) => {
     switch (priority) {
@@ -164,14 +163,6 @@ export function PirepsList({ pireps, onDismissPirep, connectionStatus, pirepsMet
                           </p>
                         </div>
                       </div>
-
-                      <button
-                        onClick={() => onDismissPirep(pirep.id)}
-                        className="ml-2 p-1 hover:bg-slate-600 rounded text-gray-400 hover:text-white"
-                        title="Dismiss PIREP"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
                     </div>
                   </div>
                 ))

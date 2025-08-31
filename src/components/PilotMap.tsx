@@ -13,7 +13,6 @@ interface PilotMapProps {
   pireps: PiRep[];
   tracks: GroundTrack[];
   displayOptions: MapDisplayOptions;
-  onDismissPirep: (id: string) => void;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   isDemo?: boolean;
   onWeatherRefresh?: () => void;
@@ -27,7 +26,6 @@ export function PilotMap({
   pireps,
   tracks,
   displayOptions,
-  onDismissPirep,
   onFullscreenChange,
   isDemo,
   onWeatherRefresh,
@@ -127,6 +125,15 @@ export function PilotMap({
         
         .pirep-popup {
           min-width: 200px;
+        }
+        
+        /* Ensure PIREP popups render above all map elements */
+        .leaflet-popup-pane {
+          z-index: 2000 !important;
+        }
+        
+        .leaflet-popup {
+          z-index: 2000 !important;
         }
         
         .track-popup h4 {
@@ -807,12 +814,8 @@ export function PilotMap({
 
           const popupContent = `
             <div class="pirep-popup" style="min-width: 200px;">
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <div style="margin-bottom: 8px;">
                 <h4 style="margin: 0; color: ${color};"><strong>PIREP</strong></h4>
-                <button 
-                  onclick="window.dismissPirep('${pirep.id}')"
-                  style="background: #f3f4f6; border: none; border-radius: 4px; padding: 4px 8px; cursor: pointer; font-size: 12px;"
-                >Dismiss</button>
               </div>
               <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">
                 ${pirep.timestamp ? new Date(pirep.timestamp).toLocaleString() : 'Unknown time'}<br/>
@@ -829,17 +832,11 @@ export function PilotMap({
           marker.bindPopup(popupContent);
           layerGroupsRef.current.pireps.addLayer(marker);
         });
-
-        // Make dismiss function globally available
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (window as any).dismissPirep = (pirepId: string) => {
-          onDismissPirep(pirepId);
-        };
       }
     };
 
     updatePireps();
-  }, [mapInstance, pireps, displayOptions.showPireps, onDismissPirep]);
+  }, [mapInstance, pireps, displayOptions.showPireps]);
 
   // Update ground tracks
   useEffect(() => {

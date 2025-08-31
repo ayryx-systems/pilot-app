@@ -231,9 +231,6 @@ export function PilotDashboard() {
             pireps={pireps}
             tracks={tracks}
             displayOptions={mapDisplayOptions}
-            onDismissPirep={(id) => {
-              console.log('Dismiss PIREP:', id);
-            }}
             onFullscreenChange={setMapFullscreen}
             isDemo={selectedAirport === 'KDEN'}
             loading={loading}
@@ -296,9 +293,6 @@ export function PilotDashboard() {
           <div className="h-full overflow-y-auto">
             <PirepsList
               pireps={pireps}
-              onDismissPirep={(id) => {
-                console.log('Dismiss PIREP from list:', id);
-              }}
               connectionStatus={connectionStatus}
               pirepsMetadata={pirepsMetadata}
               isDemo={selectedAirport === 'KDEN'}
