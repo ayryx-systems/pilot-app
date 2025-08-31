@@ -643,7 +643,19 @@ export const AIRPORTS: Record<string, AirportData> = {
           lon: -73.856889 // 73° 51' 25.6017" W - Runway 31 threshold
         },
         rightHandPattern: false, // Standard traffic pattern
-        approaches: []
+        approaches: [
+          {
+            name: "ILS",
+            waypoints: [
+              { name: "DCTRK", position: parseFAACoordinate("N40454511W073501370") },
+              { name: "KEYTH", position: parseFAACoordinate("N40444304W073495507") },
+              { name: "DRRYL", position: parseFAACoordinate("N40434913W073503960") },
+              { name: "GACAR", position: parseFAACoordinate("N40430746W073543906") },
+              { name: "SHAYY", position: parseFAACoordinate("N40414577W073563471") },
+              { name: "PACHU", position: parseFAACoordinate("N40393659W073582634") }
+            ]
+          }
+        ]
       }
     ],
     dmeRings: [3, 5, 10, 15, 20],
