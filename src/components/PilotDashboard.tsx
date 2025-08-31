@@ -177,11 +177,10 @@ export function PilotDashboard() {
       <AppUpdateNotifier />
 
       {/* Demo Disclaimer */}
-      <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-2 mx-3 mt-1 rounded text-sm">
+      <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">
         <div className="flex items-center text-blue-200">
-          <AlertTriangle className="w-4 h-4 mr-2" />
-          <span className="font-medium">DEMONSTRATION PURPOSES ONLY</span>
-          <span className="ml-2 text-blue-300">This app is for demonstration and training purposes only. Do not use for actual flight operations.</span>
+          <AlertTriangle className="w-3 h-3 mr-1" />
+          <span className="font-medium">DEMO ONLY - NOT FOR FLIGHT OPERATIONS</span>
         </div>
       </div>
 
