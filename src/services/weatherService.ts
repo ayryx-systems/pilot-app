@@ -13,7 +13,7 @@ class WeatherApiError extends Error {
 
 class WeatherService {
   private cache = new Map<string, { data: any; timestamp: number; expiry: number }>();
-  
+
   // NOAA Weather Data Services
   private readonly WEATHER_SERVICES = {
     NOWCOAST_RADAR: {
@@ -59,17 +59,17 @@ class WeatherService {
         layers: 'nexrad-n0r', // NEXRAD Base Reflectivity (simplified layer name)
         format: 'image/png',
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.15,
         crs: 'EPSG:4326'
       },
       {
         id: 'radar_composite',
-        name: 'Weather Radar (Composite)', 
+        name: 'Weather Radar (Composite)',
         url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi',
         layers: 'nexrad-n0r', // Same layer for now
         format: 'image/png',
         transparent: true,
-        opacity: 0.8,
+        opacity: 0.15,
         crs: 'EPSG:4326'
       }
     ];
@@ -81,14 +81,14 @@ class WeatherService {
   async getWeatherAlerts(bounds: { north: number; south: number; east: number; west: number }): Promise<WeatherAlert[]> {
     const cacheKey = `alerts_${bounds.north}_${bounds.south}_${bounds.east}_${bounds.west}`;
     const cached = this.getCachedData(cacheKey, 5); // Cache for 5 minutes
-    
+
     if (cached) {
       return cached;
     }
 
     try {
       const url = `${this.WEATHER_SERVICES.NWS_ALERTS.baseUrl}/active?area=us&status=actual`;
-      
+
       const response = await fetch(url, {
         headers: {
           'User-Agent': 'AYRYX-PilotApp/1.0 (https://github.com/ayryx/pilot-app)',
@@ -101,7 +101,7 @@ class WeatherService {
       }
 
       const data = await response.json();
-      
+
       // Filter alerts by bounding box and relevance to aviation
       const relevantAlerts = data.features
         ?.filter((feature: any) => {
@@ -114,8 +114,8 @@ class WeatherService {
 
           return coords.some((coord: [number, number]) => {
             const [lon, lat] = coord;
-            return lat >= bounds.south && lat <= bounds.north && 
-                   lon >= bounds.west && lon <= bounds.east;
+            return lat >= bounds.south && lat <= bounds.north &&
+              lon >= bounds.west && lon <= bounds.east;
           });
         })
         ?.map((feature: any) => {
@@ -139,11 +139,11 @@ class WeatherService {
 
     } catch (error) {
       console.error('Failed to fetch weather alerts:', error);
-      
+
       if (error instanceof WeatherApiError) {
         throw error;
       }
-      
+
       throw new WeatherApiError(
         `Failed to fetch weather alerts: ${error instanceof Error ? error.message : 'Unknown error'}`,
         0
@@ -157,7 +157,7 @@ class WeatherService {
   async validateWeatherLayer(layer: WeatherLayer): Promise<boolean> {
     const cacheKey = `validate_${layer.id}`;
     const cached = this.getCachedData(cacheKey, 60); // Cache validation for 1 hour
-    
+
     if (cached !== undefined) {
       return cached;
     }
@@ -165,7 +165,7 @@ class WeatherService {
     try {
       // Test GetCapabilities request
       const capabilitiesUrl = `${layer.url}?REQUEST=GetCapabilities&SERVICE=WMS&VERSION=1.3.0`;
-      
+
       const response = await fetch(capabilitiesUrl, {
         headers: {
           'User-Agent': 'AYRYX-PilotApp/1.0 (https://github.com/ayryx/pilot-app)'
@@ -173,7 +173,7 @@ class WeatherService {
       });
 
       const isValid = response.ok && response.headers.get('content-type')?.includes('xml');
-      
+
       this.setCachedData(cacheKey, isValid, 60);
       return isValid;
 
@@ -244,7 +244,7 @@ class WeatherService {
    */
   private mapSeverity(severity?: string): 'minor' | 'moderate' | 'severe' | 'extreme' {
     if (!severity) return 'minor';
-    
+
     const sev = severity.toLowerCase();
     if (sev.includes('extreme')) return 'extreme';
     if (sev.includes('severe')) return 'severe';
