@@ -42,21 +42,41 @@ export function PilotDashboard() {
     }
   }, [tracks, pireps]);
 
-  const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>({
-    showRunways: true,
-    showDmeRings: true,
-    showWaypoints: true,
-    showApproachRoutes: true,
-    showExtendedCenterlines: true,
-    showPireps: true,
-    showGroundTracks: true,
-    showWeatherRadar: false,
-    showWeatherAlerts: false,
-    showVisibility: false,
+  // Load map display options from localStorage or use defaults
+  const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pilotApp_mapDisplayOptions');
+      if (saved) {
+        try {
+          return JSON.parse(saved);
+        } catch (e) {
+          console.warn('Failed to parse saved map display options:', e);
+        }
+      }
+    }
+    return {
+      showRunways: true,
+      showDmeRings: true,
+      showWaypoints: true,
+      showApproachRoutes: true,
+      showExtendedCenterlines: true,
+      showPireps: true,
+      showGroundTracks: true,
+      showWeatherRadar: false,
+      showWeatherAlerts: false,
+      showVisibility: false,
+    };
   });
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
+
+  // Save map display options to localStorage whenever they change
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('pilotApp_mapDisplayOptions', JSON.stringify(mapDisplayOptions));
+    }
+  }, [mapDisplayOptions]);
 
   // Auto-refresh data every 30 seconds when connected
   useEffect(() => {

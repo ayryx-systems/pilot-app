@@ -13,22 +13,27 @@ import {
 } from '@/types';
 
 export function usePilotData() {
-  const [state, setState] = useState<PilotAppState>({
-    selectedAirport: null,
-    airports: [],
-    airportOverview: null,
-    pireps: [],
-    tracks: [],
-    summary: null,
-    connectionStatus: {
-      connected: false,
-      lastUpdate: new Date(),
-    },
-    loading: false,
-    error: null,
-    pirepsMetadata: undefined,
-    tracksMetadata: undefined,
-    summaryMetadata: undefined,
+  const [state, setState] = useState<PilotAppState>(() => {
+    // Initialize with saved airport from localStorage
+    const savedAirport = typeof window !== 'undefined' ? localStorage.getItem('pilotApp_selectedAirport') : null;
+    
+    return {
+      selectedAirport: savedAirport || null,
+      airports: [],
+      airportOverview: null,
+      pireps: [],
+      tracks: [],
+      summary: null,
+      connectionStatus: {
+        connected: false,
+        lastUpdate: new Date(),
+      },
+      loading: false,
+      error: null,
+      pirepsMetadata: undefined,
+      tracksMetadata: undefined,
+      summaryMetadata: undefined,
+    };
   });
 
   // Test connection and update status
@@ -204,6 +209,15 @@ export function usePilotData() {
 
   // Set selected airport
   const setSelectedAirport = useCallback((airportId: string | null) => {
+    // Save to localStorage
+    if (typeof window !== 'undefined') {
+      if (airportId) {
+        localStorage.setItem('pilotApp_selectedAirport', airportId);
+      } else {
+        localStorage.removeItem('pilotApp_selectedAirport');
+      }
+    }
+    
     setState(prev => ({
       ...prev,
       selectedAirport: airportId,
