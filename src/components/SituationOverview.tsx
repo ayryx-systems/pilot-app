@@ -117,18 +117,7 @@ export function SituationOverview({
   return (
     <div className="relative" style={{ zIndex: 2147483647 }}>
 
-      {/* Demo Mode Indicator */}
-      {isDemo && (
-        <div className="mb-3 p-3 rounded-lg bg-orange-600/20 border-2 border-orange-500/50 text-orange-200">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <AlertTriangle className="w-4 h-4" />
-            STORM DEMO MODE - Denver International Airport
-          </div>
-          <div className="text-xs text-orange-300 mt-1">
-            Simulating severe weather conditions with windshear reports and reduced visibility
-          </div>
-        </div>
-      )}
+      {/* Demo Mode Indicator - Removed Denver specific disclaimer to save space */}
 
       {/* Current Situation - Fixed Element */}
       {summary && (
