@@ -28,6 +28,21 @@ export interface AirportOverview {
     };
     visibility?: string;
     timestamp: string;
+    taf?: {
+      rawTAF: string;
+      forecast?: {
+        periods: Array<{
+          timeFrom: string;
+          timeTo: string;
+          changeType: string;
+          wind?: { direction: number; speed: number; gust?: number };
+          visibility?: string;
+          weather?: string;
+          clouds?: Array<{ coverage: string; altitude: number }>;
+        }>;
+        summary?: string;
+      };
+    };
   };
   runways: Array<{
     name: string;

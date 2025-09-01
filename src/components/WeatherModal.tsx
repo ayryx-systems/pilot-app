@@ -20,6 +20,21 @@ interface WeatherModalProps {
         };
         visibility?: string;
         timestamp: string;
+        taf?: {
+            rawTAF: string;
+            forecast?: {
+                periods: Array<{
+                    timeFrom: string;
+                    timeTo: string;
+                    changeType: string;
+                    wind?: { direction: number; speed: number; gust?: number };
+                    visibility?: string;
+                    weather?: string;
+                    clouds?: Array<{ coverage: string; altitude: number }>;
+                }>;
+                summary?: string;
+            };
+        };
     };
     summaryData?: {
         long_summary: string;
@@ -135,7 +150,7 @@ export function WeatherModal({
                                 </h3>
                                 <div className="bg-slate-900 rounded-lg p-3">
                                     <p className="text-gray-300 text-sm leading-relaxed">
-                                        {summaryData.long_summary || summaryData.description || 'Weather summary unavailable'}
+                                        {summaryData.long_summary || 'Weather summary unavailable'}
                                     </p>
                                 </div>
                             </div>
@@ -208,6 +223,104 @@ export function WeatherModal({
                                     <code className="text-green-400 text-sm font-mono break-all">
                                         {weatherData.metar}
                                     </code>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* TAF Forecast */}
+                        {summaryData?.long_summary && (
+                            <div>
+                                <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+                                    <Cloud className="w-4 h-4 text-blue-400" />
+                                    TAF Forecast
+                                </h3>
+                                <div className="bg-slate-900 rounded-lg p-3">
+                                    <p className="text-gray-300 text-sm leading-relaxed">
+                                        {summaryData.long_summary}
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Enhanced TAF Section */}
+                        {((summaryData?.long_summary && summaryData.long_summary.includes('TAF')) || weatherData?.taf) && (
+                            <div>
+                                <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+                                    <Cloud className="w-4 h-4 text-blue-400" />
+                                    Terminal Aerodrome Forecast
+                                </h3>
+                                <div className="bg-blue-900/30 rounded-lg border border-blue-700 p-3">
+                                    <div className="space-y-3">
+                                        {/* Current Conditions Summary */}
+                                        <div className="text-blue-200 text-sm">
+                                            <strong>Current:</strong> {weatherData?.metarFriendly || 'Current conditions unavailable'}
+                                        </div>
+
+                                        {/* TAF Forecast Periods */}
+                                        {weatherData?.taf?.forecast?.periods && weatherData.taf.forecast.periods.length > 0 && (
+                                            <div className="text-blue-300 text-sm">
+                                                <strong>Forecast Periods:</strong>
+                                                <div className="mt-2 space-y-2">
+                                                    {weatherData.taf.forecast.periods.map((period, index) => (
+                                                        <div key={index} className="border-l-2 border-blue-600 pl-3">
+                                                            <div className="font-medium text-blue-200">
+                                                                {period.timeFrom} - {period.timeTo}
+                                                            </div>
+                                                            <div className="text-blue-400 text-xs">
+                                                                {period.changeType === 'BECMG' ? 'Becoming' :
+                                                                    period.changeType === 'TEMPO' ? 'Temporary' :
+                                                                        period.changeType === 'PROB30' ? '30% Probability' :
+                                                                            period.changeType}
+                                                            </div>
+                                                            {period.wind && (
+                                                                <div className="text-blue-300 text-xs">
+                                                                    Wind: {period.wind.direction}° at {period.wind.speed}kt
+                                                                    {period.wind.gust ? ` gusting ${period.wind.gust}kt` : ''}
+                                                                </div>
+                                                            )}
+                                                            {period.visibility && (
+                                                                <div className="text-blue-300 text-xs">
+                                                                    Visibility: {period.visibility}
+                                                                </div>
+                                                            )}
+                                                            {period.weather && (
+                                                                <div className="text-blue-300 text-xs">
+                                                                    Weather: {period.weather}
+                                                                </div>
+                                                            )}
+                                                            {period.clouds && period.clouds.length > 0 && (
+                                                                <div className="text-blue-300 text-xs">
+                                                                    Clouds: {period.clouds.map((c: any) => `${c.coverage} ${c.altitude}ft`).join(', ')}
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* TAF Summary from LLM */}
+                                        {summaryData?.long_summary && (
+                                            <div className="text-blue-300 text-sm border-t border-blue-600 pt-2">
+                                                <strong>LLM Analysis:</strong>
+                                                <div className="mt-1 text-blue-400 text-xs">
+                                                    {summaryData.long_summary}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Raw TAF */}
+                                        {weatherData?.taf?.rawTAF && (
+                                            <div className="text-blue-300 text-sm border-t border-blue-600 pt-2">
+                                                <strong>Raw TAF:</strong>
+                                                <div className="mt-1">
+                                                    <code className="text-blue-400 text-xs font-mono break-all">
+                                                        {weatherData.taf.rawTAF}
+                                                    </code>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
                         )}
