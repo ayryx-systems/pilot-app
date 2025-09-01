@@ -30,6 +30,7 @@ export interface AirportOverview {
     timestamp: string;
     taf?: {
       rawTAF: string;
+      tafFriendly?: string;
       forecast?: {
         periods: Array<{
           timeFrom: string;

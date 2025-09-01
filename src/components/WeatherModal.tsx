@@ -22,6 +22,7 @@ interface WeatherModalProps {
         timestamp: string;
         taf?: {
             rawTAF: string;
+            tafFriendly?: string;
             forecast?: {
                 periods: Array<{
                     timeFrom: string;
@@ -256,6 +257,13 @@ export function WeatherModal({
                                             <strong>Current:</strong> {weatherData?.metarFriendly || 'Current conditions unavailable'}
                                         </div>
 
+                                        {/* TAF Summary */}
+                                        {weatherData?.taf?.tafFriendly && (
+                                            <div className="text-blue-200 text-sm">
+                                                <strong>Forecast:</strong> {weatherData.taf.tafFriendly}
+                                            </div>
+                                        )}
+
                                         {/* TAF Forecast Periods */}
                                         {weatherData?.taf?.forecast?.periods && weatherData.taf.forecast.periods.length > 0 && (
                                             <div className="text-blue-300 text-sm">
@@ -321,6 +329,21 @@ export function WeatherModal({
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Raw TAF - Separate Section */}
+                        {weatherData?.taf?.rawTAF && (
+                            <div>
+                                <h3 className="text-lg font-medium text-white mb-2 flex items-center gap-2">
+                                    <Cloud className="w-4 h-4 text-blue-400" />
+                                    Raw TAF
+                                </h3>
+                                <div className="bg-blue-900/20 rounded-lg border border-blue-600 p-3">
+                                    <code className="text-blue-300 text-sm font-mono break-all leading-relaxed">
+                                        {weatherData.taf.rawTAF}
+                                    </code>
                                 </div>
                             </div>
                         )}
