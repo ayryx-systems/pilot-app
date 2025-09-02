@@ -11,11 +11,23 @@ interface ConnectionStatusProps {
 
 export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusProps) {
   const [mounted, setMounted] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
 
   // Ensure component is only fully rendered after hydration
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Update current time every few seconds to keep age calculation current
+  useEffect(() => {
+    if (!mounted) return;
+
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 5000); // Update every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [mounted]);
 
   const getStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
@@ -33,8 +45,7 @@ export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusP
   const formatLastUpdate = (date: Date) => {
     if (!mounted) return 'Loading...';
 
-    const now = new Date();
-    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    const diff = Math.floor((currentTime.getTime() - date.getTime()) / 1000);
 
     if (diff < 60) return `${diff}s ago`;
     if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;

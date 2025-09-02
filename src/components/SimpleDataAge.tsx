@@ -17,15 +17,28 @@ export function SimpleDataAge({
     size = 'sm'
 }: SimpleDataAgeProps) {
     const [mounted, setMounted] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
 
     // Ensure component is only rendered on client after hydration
     useEffect(() => {
         setMounted(true);
     }, []);
 
+    // Update current time every few seconds to keep age calculation current
+    useEffect(() => {
+        if (!mounted) return;
+
+        // Update every 5 seconds for live data, every 30 seconds for offline data
+        // This ensures the "just now" and "X ago" text stays current without excessive re-renders
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, isLive ? 5000 : 30000);
+
+        return () => clearInterval(interval);
+    }, [mounted, isLive]);
+
     const formatAge = (timestamp: Date): string => {
-        const now = new Date();
-        const diff = Math.floor((now.getTime() - timestamp.getTime()) / 1000);
+        const diff = Math.floor((currentTime.getTime() - timestamp.getTime()) / 1000);
 
         if (diff < 30) return 'Just now';
         if (diff < 60) return `${diff}s ago`;
@@ -37,7 +50,7 @@ export function SimpleDataAge({
     const getStatusColor = () => {
         if (offline) return 'text-red-400';
 
-        const ageMinutes = (new Date().getTime() - timestamp.getTime()) / (1000 * 60);
+        const ageMinutes = (currentTime.getTime() - timestamp.getTime()) / (1000 * 60);
         if (isLive && ageMinutes < 2) return 'text-green-400';
         if (ageMinutes < 5) return 'text-blue-400';
         if (ageMinutes < 30) return 'text-yellow-400';
