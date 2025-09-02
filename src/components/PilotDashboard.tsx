@@ -76,6 +76,7 @@ export function PilotDashboard() {
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   // Save map display options to localStorage whenever they change
   useEffect(() => {
@@ -97,11 +98,17 @@ export function PilotDashboard() {
 
   // Smart refresh that always tries to get the best available data
   const handleRefresh = async () => {
+    if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+
+    console.log('[PilotDashboard] Starting manual refresh...');
+    setIsRefreshing(true);
     try {
-      // Always try to get fresh data, fall back to cache if needed
       await refreshData();
+      console.log('[PilotDashboard] Manual refresh completed successfully');
     } catch (error) {
-      console.error('Refresh failed:', error);
+      console.error('[PilotDashboard] Manual refresh failed:', error);
+    } finally {
+      setIsRefreshing(false);
     }
   };
 
@@ -130,6 +137,8 @@ export function PilotDashboard() {
       isLive: connectionStatus.connected
     };
   };
+
+
 
   return (
     <div className="flex flex-col bg-slate-900 text-white overflow-hidden" style={{ height: '100dvh' }}>
@@ -163,18 +172,28 @@ export function PilotDashboard() {
 
           <button
             onClick={handleRefresh}
-            disabled={loading}
+            disabled={loading || isRefreshing}
             className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
                      rounded text-xs transition-colors"
           >
-            <RefreshCw className={`w-3 h-3 ${loading ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{loading ? 'Updating...' : 'Refresh'}</span>
+            <RefreshCw className={`w-3 h-3 ${loading || isRefreshing ? 'animate-spin' : ''}`} />
+            <span className="hidden sm:inline">{loading || isRefreshing ? 'Updating...' : 'Refresh'}</span>
           </button>
         </div>
       </header>
 
       {/* App Update Notifier */}
       <AppUpdateNotifier />
+
+      {/* Refresh Notification */}
+      {isRefreshing && (
+        <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">
+          <div className="flex items-center text-blue-200">
+            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
+            <span className="font-medium">Refreshing data...</span>
+          </div>
+        </div>
+      )}
 
       {/* Demo Disclaimer */}
       <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">

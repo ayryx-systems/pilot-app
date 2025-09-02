@@ -106,7 +106,13 @@ class PilotApiService {
    */
   async getAirports(): Promise<AirportsResponse> {
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports`);
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/airports?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       return await this.handleResponse<AirportsResponse>(response);
     } catch (error) {
       console.error('Failed to fetch airports:', error instanceof Error ? error.message : 'Unknown error');
@@ -130,7 +136,13 @@ class PilotApiService {
     }
 
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview`);
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       return await this.handleResponse<AirportOverview>(response);
     } catch (error) {
       console.error(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -154,7 +166,13 @@ class PilotApiService {
     }
 
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps`);
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/pireps?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       return await this.handleResponse<PirepsResponse>(response);
     } catch (error) {
       console.error(`Failed to fetch PIREPs for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -178,7 +196,13 @@ class PilotApiService {
     }
 
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks`);
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/tracks?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       return await this.handleResponse<TracksResponse>(response);
     } catch (error) {
       console.error(`Failed to fetch ground tracks for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -202,7 +226,13 @@ class PilotApiService {
     }
 
     try {
-      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary`);
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/summary?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
       return await this.handleResponse<SummaryResponse>(response);
     } catch (error) {
       console.error(`Failed to fetch situation summary for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');

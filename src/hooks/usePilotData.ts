@@ -111,6 +111,7 @@ export function usePilotData() {
   const loadAirportData = useCallback(async (airportId: string) => {
     if (!airportId) return;
 
+    console.log(`[usePilotData] Loading data for airport: ${airportId}`);
     setState(prev => ({ ...prev, loading: true, error: null }));
 
     try {
@@ -206,6 +207,14 @@ export function usePilotData() {
       } else {
         updates.error = null;
       }
+
+      console.log(`[usePilotData] Data load completed for ${airportId}:`, {
+        overview: !!updates.airportOverview,
+        pireps: updates.pireps?.length || 0,
+        tracks: updates.tracks?.length || 0,
+        summary: !!updates.summary,
+        errors: failedRequests.length
+      });
 
       setState(prev => ({ ...prev, ...updates }));
     } catch (error) {
