@@ -13,10 +13,12 @@ import {
 } from '@/types';
 
 export function usePilotData() {
+  const [mounted, setMounted] = useState(false);
+
   const [state, setState] = useState<PilotAppState>(() => {
     // Initialize with saved airport from localStorage
     const savedAirport = typeof window !== 'undefined' ? localStorage.getItem('pilotApp_selectedAirport') : null;
-    
+
     return {
       selectedAirport: savedAirport || null,
       airports: [],
@@ -26,7 +28,7 @@ export function usePilotData() {
       summary: null,
       connectionStatus: {
         connected: false,
-        lastUpdate: new Date(),
+        lastUpdate: new Date(0), // Use epoch time for SSR consistency
       },
       loading: false,
       error: null,
@@ -36,6 +38,19 @@ export function usePilotData() {
     };
   });
 
+  // Set mounted state after hydration
+  useEffect(() => {
+    setMounted(true);
+    // Update the lastUpdate to current time after mount
+    setState(prev => ({
+      ...prev,
+      connectionStatus: {
+        ...prev.connectionStatus,
+        lastUpdate: new Date(),
+      }
+    }));
+  }, []);
+
   // Test connection and update status
   const testConnection = useCallback(async () => {
     try {
@@ -44,7 +59,7 @@ export function usePilotData() {
         ...prev,
         connectionStatus: {
           connected: result.connected,
-          lastUpdate: new Date(),
+          lastUpdate: mounted ? new Date() : prev.connectionStatus.lastUpdate,
           latency: result.latency,
         },
         error: result.connected ? null : (result.error || 'Connection failed'),
@@ -55,13 +70,13 @@ export function usePilotData() {
         ...prev,
         connectionStatus: {
           connected: false,
-          lastUpdate: new Date(),
+          lastUpdate: mounted ? new Date() : prev.connectionStatus.lastUpdate,
         },
         error: error instanceof Error ? error.message : 'Connection test failed',
       }));
       return false;
     }
-  }, []);
+  }, [mounted]);
 
   // Load airports list
   const loadAirports = useCallback(async () => {
@@ -121,8 +136,7 @@ export function usePilotData() {
         updates.pireps = pirepsResponse.value.pireps;
         updates.pirepsMetadata = {
           active: pirepsResponse.value.active ?? true,
-          message: pirepsResponse.value.message,
-          serverTimestamp: pirepsResponse.value.timestamp
+          message: pirepsResponse.value.message
         };
       } else {
         console.error('Failed to load PIREPs:', pirepsResponse.reason);
@@ -163,10 +177,7 @@ export function usePilotData() {
         updates.summary = null;
         updates.summaryMetadata = {
           active: false,
-          generated: false,
-          message: summaryResponse.reason instanceof Error && summaryResponse.reason.message.includes('offline')
-            ? 'Situation summary unavailable - check internet connection'
-            : undefined
+          generated: false
         };
       }
 
@@ -217,7 +228,7 @@ export function usePilotData() {
         localStorage.removeItem('pilotApp_selectedAirport');
       }
     }
-    
+
     setState(prev => ({
       ...prev,
       selectedAirport: airportId,

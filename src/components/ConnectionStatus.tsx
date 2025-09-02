@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { ConnectionStatus as ConnectionStatusType } from '@/types';
 import { Wifi, WifiOff, Clock, Signal } from 'lucide-react';
 
@@ -10,6 +10,13 @@ interface ConnectionStatusProps {
 }
 
 export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusProps) {
+  const [mounted, setMounted] = useState(false);
+
+  // Ensure component is only fully rendered after hydration
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const getStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
     if (connectionStatus.latency && connectionStatus.latency > 2000) return 'text-yellow-400';
@@ -24,6 +31,8 @@ export function ConnectionStatus({ connectionStatus, isDemo }: ConnectionStatusP
   };
 
   const formatLastUpdate = (date: Date) => {
+    if (!mounted) return 'Loading...';
+
     const now = new Date();
     const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
 

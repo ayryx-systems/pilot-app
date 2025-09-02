@@ -251,7 +251,7 @@ export function PilotDashboard() {
           />
 
           {/* Map Controls - Top Right of Map Area */}
-          {selectedAirport && (
+          {mounted && selectedAirport && (
             <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
               <MapControls
                 displayOptions={mapDisplayOptions}
@@ -324,7 +324,7 @@ export function PilotDashboard() {
           <div className="flex flex-col items-start">
             <span className="text-xs font-medium">PIREPs</span>
             <span className="text-xs opacity-80">
-              {pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
+              {mounted && pireps && pireps.length > 0 ? `${pireps.length} available` : 'None available'}
             </span>
           </div>
           {selectedAirport === 'KDEN' && (
