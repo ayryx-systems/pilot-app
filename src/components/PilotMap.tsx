@@ -46,14 +46,14 @@ export function PilotMap({
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
-  
+
   // Weather refresh function - works with static overlay
   const refreshWeatherLayer = () => {
     const radarLayer = activeWeatherLayers.get('radar');
     if (radarLayer && mapInstance) {
       console.log('[🌦️ WEATHER API] 🔄 MANUAL REFRESH TRIGGERED - Refreshing static weather image');
       console.log('[🌦️ WEATHER API] 🎉 STATIC MODE: Only 1 API call per refresh (not hundreds!)');
-      
+
       // For image overlay, we need to update the URL with a cache-busting parameter
       const imageOverlay = radarLayer as any;
       if (imageOverlay._url && imageOverlay.setUrl) {
@@ -255,7 +255,7 @@ export function PilotMap({
 
       // Initialize layer groups - weather group needs higher z-index
       const weatherGroup = L.layerGroup().addTo(map);
-      
+
       layerGroupsRef.current = {
         runways: L.layerGroup().addTo(map),
         dmeRings: L.layerGroup().addTo(map),
@@ -864,6 +864,18 @@ export function PilotMap({
 
           if (track.coordinates.length < 2) return; // Need at least 2 points for a line
 
+          // Calculate track age based on the most recent coordinate timestamp
+          const now = new Date();
+          const mostRecentCoord = track.coordinates[track.coordinates.length - 1];
+          const trackAge = mostRecentCoord?.timestamp
+            ? (now.getTime() - new Date(mostRecentCoord.timestamp).getTime()) / (1000 * 60) // Age in minutes
+            : 0;
+
+          // Hide tracks over 30 minutes old
+          if (trackAge > 30) {
+            return;
+          }
+
           // Convert coordinates to Leaflet LatLng format with additional safety checks
           const latLngs: [number, number][] = track.coordinates
             .filter(coord => coord && typeof coord.lat === 'number' && typeof coord.lon === 'number')
@@ -895,11 +907,21 @@ export function PilotMap({
             color = colors[Math.abs(hash) % colors.length];
           }
 
+          // Calculate opacity based on track age (fade out over 30 minutes)
+          let opacity = 0.8; // Default opacity
+          if (trackAge > 20) {
+            // Start fading at 20 minutes, completely transparent at 30 minutes
+            const fadeStart = 20; // minutes
+            const fadeEnd = 30; // minutes
+            const fadeProgress = Math.min((trackAge - fadeStart) / (fadeEnd - fadeStart), 1);
+            opacity = 0.8 * (1 - fadeProgress); // Fade from 0.8 to 0
+          }
+
           // Create polyline with styling
           const polyline = L.polyline(latLngs, {
             color: color,
             weight: 3,
-            opacity: 0.8,
+            opacity: opacity,
             dashArray: track.status === 'COMPLETED' ? '5, 5' : undefined // Dashed for completed flights
           });
 
@@ -922,6 +944,7 @@ export function PilotMap({
                 border: 2px solid #ffffff;
                 border-radius: 50%;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                opacity: ${opacity};
               "></div>`,
               className: 'track-start-marker',
               iconSize: [16, 16],
@@ -960,13 +983,14 @@ export function PilotMap({
                 border: 2px solid #ffffff;
                 border-radius: 50%;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+                opacity: ${opacity};
                 ${!isCompleted ? 'animation: pulse 2s infinite;' : ''}
               "></div>
               <style>
                 @keyframes pulse {
-                  0% { opacity: 1; transform: scale(1); }
-                  50% { opacity: 0.7; transform: scale(1.1); }
-                  100% { opacity: 1; transform: scale(1); }
+                  0% { opacity: ${opacity}; transform: scale(1); }
+                  50% { opacity: ${opacity * 0.7}; transform: scale(1.1); }
+                  100% { opacity: ${opacity}; transform: scale(1); }
                 }
               </style>`,
               className: 'track-end-marker',
@@ -1018,43 +1042,43 @@ export function PilotMap({
       if (displayOptions.showWeatherRadar) {
         console.log('[🌦️ WEATHER API] 🎯 WEATHER RADAR TOGGLE: ON - Starting weather overlay');
         console.log('[🌦️ WEATHER API] 📋 Available weather layers:', weatherLayers.length);
-        
+
         let radarLayer = weatherLayers.find(layer => layer.id === 'radar');
-        
+
         // Fallback to composite radar if primary not available
         if (!radarLayer) {
           radarLayer = weatherLayers.find(layer => layer.id === 'radar_composite');
           console.log('[PilotMap] Using composite radar as fallback');
         }
-        
+
         if (radarLayer) {
           try {
             console.log('[🌦️ WEATHER API] ✅ Weather radar ENABLED - STATIC OVERLAY MODE');
             console.log('[🌦️ WEATHER API] 🎯 STATIC MODE: ONE image for entire US, cached in 10min buckets');
             console.log('[🌦️ WEATHER API] 🚀 UNLIMITED ZOOM: No additional requests when zooming!');
-            
+
             // STATIC WEATHER OVERLAY - Single image for entire CONUS
             console.log('[🌦️ WEATHER API] 🗺️  Using STATIC weather overlay - ONE request for entire US');
-            
+
             // Get a single static weather image for the entire CONUS at fixed zoom
             const conus_bbox = "-130,20,-60,50"; // Entire Continental US
             const image_width = 1024;
             const image_height = 512;
-            
+
             // Generate single weather image URL with caching (ONLY ONE API CALL!)
             const cacheTimestamp = Math.floor(Date.now() / (10 * 60 * 1000)) * (10 * 60 * 1000); // 10-minute cache buckets
-            
+
             // Iowa Mesonet uses WMS 1.1.1, different parameter format
             const staticWeatherUrl = `${radarLayer.url}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${radarLayer.layers}&BBOX=${conus_bbox}&WIDTH=${image_width}&HEIGHT=${image_height}&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${cacheTimestamp}`;
-            
+
             console.log('[🌦️ WEATHER API] 📡 Single weather request URL (Iowa Mesonet):', staticWeatherUrl);
-            
+
             // Create image overlay instead of tiled layer
             const bounds: [[number, number], [number, number]] = [
               [20, -130], // Southwest corner of CONUS
               [50, -60]   // Northeast corner of CONUS
             ];
-            
+
             // Create image overlay that scales with zoom
             const imageOverlay = L.imageOverlay(staticWeatherUrl, bounds, {
               opacity: 0.8, // Increased from 0.7 for better visibility
@@ -1063,7 +1087,7 @@ export function PilotMap({
               alt: 'NOAA Weather Radar',
               pane: 'overlayPane' // Ensure it renders on top of base tiles
             });
-            
+
             // Add event listeners for the single image request
             imageOverlay.on('load', () => {
               console.log('[🌦️ WEATHER API] ✅ Static weather image loaded successfully - NO MORE REQUESTS NEEDED!');
@@ -1071,7 +1095,7 @@ export function PilotMap({
               console.log('[🌦️ WEATHER API] 📊 Image bounds:', bounds);
               console.log('[🌦️ WEATHER API] 🎨 Opacity:', 0.8);
             });
-            
+
             imageOverlay.on('error', (e) => {
               console.error('[🌦️ WEATHER API] ❌ Static weather image failed to load:', e);
               console.error('[🌦️ WEATHER API] 🔗 Failed URL:', staticWeatherUrl);
@@ -1087,11 +1111,11 @@ export function PilotMap({
 
             // Force the weather layer to the top
             imageOverlay.bringToFront();
-            
+
             console.log('[🌦️ WEATHER API] 🎉 Static weather overlay added - ZERO additional requests on zoom/pan!');
             console.log('[🌦️ WEATHER API] 🔍 DEBUG: Weather layer group has', layerGroupsRef.current.weather.getLayers().length, 'layers');
             console.log('[🌦️ WEATHER API] 🔍 DEBUG: Image overlay bounds:', imageOverlay.getBounds());
-            
+
             // Add browser caching headers to the single image request
             if (staticWeatherUrl) {
               console.log('[🌦️ WEATHER API] 💾 Browser will cache the static weather image');
@@ -1111,7 +1135,7 @@ export function PilotMap({
   // Update weather alerts display - TEMPORARILY DISABLED
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
-    
+
     // DISABLED - preventing API spam
     return;
 
@@ -1160,7 +1184,7 @@ export function PilotMap({
   // Update visibility display - TEMPORARILY DISABLED
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
-    
+
     // DISABLED - preventing API spam
     return;
 
