@@ -240,6 +240,11 @@ export function PilotMap({
         const data = await pilotOSMService.getAirportOSMData(airport.id);
         setOsmData(data);
         console.log('[PilotMap] OSM data loaded for', airport.id, data ? `${Object.values(data).flat().length} features` : 'no data');
+        if (data?.runways) {
+          console.log('[PilotMap] OSM runways found:', data.runways.length, data.runways.map(r => r.tags?.ref));
+          console.log('[PilotMap] First runway structure:', data.runways[0]);
+        }
+        console.log('[PilotMap] Full OSM data structure:', data);
       } catch (error) {
         console.error('[PilotMap] Failed to load OSM data:', error);
         setOsmData(null);
@@ -304,11 +309,11 @@ export function PilotMap({
       const weatherGroup = L.layerGroup().addTo(map);
 
       layerGroupsRef.current = {
-        runways: L.layerGroup().addTo(map),
+        // runways: DISABLED - now using OSM data
         dmeRings: L.layerGroup().addTo(map),
         waypoints: L.layerGroup().addTo(map),
-        approachRoutes: L.layerGroup().addTo(map),
-        extendedCenterlines: L.layerGroup().addTo(map),
+        // approachRoutes: DISABLED - now using OSM data  
+        // extendedCenterlines: DISABLED - now using OSM data
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
         osm: L.layerGroup().addTo(map),
@@ -360,9 +365,11 @@ export function PilotMap({
     };
   }, [leafletLoaded, airport?.code, airportConfig]);
 
-  // Update runway display
+  // Update runway display (DISABLED - now using OSM data)
   useEffect(() => {
-    if (!mapInstance || !layerGroupsRef.current.runways) return;
+    if (!mapInstance) return;
+    // Runways are now handled by OSM data, no need to process FAA data
+    return;
 
     const updateRunways = async () => {
       const leafletModule = await import('leaflet');
@@ -370,6 +377,10 @@ export function PilotMap({
 
       // Clear existing runways
       layerGroupsRef.current.runways.clearLayers();
+
+      // DISABLED: Using OSM runway data instead of FAA calculations
+      // The OSM data is more accurate and includes proper runway geometry
+      return; // Early return to skip FAA runway rendering
 
       // Always show runways - they are now permanently enabled
       // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
@@ -618,7 +629,9 @@ export function PilotMap({
 
   // Update approach routes display
   useEffect(() => {
-    if (!mapInstance || !layerGroupsRef.current.approachRoutes) return;
+    if (!mapInstance) return;
+    // Approach routes are now handled by OSM data, no need to process FAA data
+    return;
 
     const updateApproachRoutes = async () => {
       const leafletModule = await import('leaflet');
@@ -628,6 +641,10 @@ export function PilotMap({
       layerGroupsRef.current.approachRoutes.clearLayers();
 
       if (displayOptions.showApproachRoutes) {
+        // DISABLED: Using OSM data instead of FAA runway calculations
+        // Approach routes will be handled by OSM features
+        return; // Early return to skip FAA approach route rendering
+        
         // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
         const runways = airportConfig?.runways || airportData?.runways || [];
         runways.forEach(runway => {
@@ -712,7 +729,9 @@ export function PilotMap({
 
   // Update extended centerlines display
   useEffect(() => {
-    if (!mapInstance || !layerGroupsRef.current.extendedCenterlines) return;
+    if (!mapInstance) return;
+    // Extended centerlines are now handled by OSM data, no need to process FAA data
+    return;
 
     const updateExtendedCenterlines = async () => {
       const leafletModule = await import('leaflet');
@@ -722,6 +741,10 @@ export function PilotMap({
       layerGroupsRef.current.extendedCenterlines.clearLayers();
 
       if (displayOptions.showExtendedCenterlines) {
+        // DISABLED: Using OSM data instead of FAA runway calculations
+        // Extended centerlines will be handled by OSM features
+        return; // Early return to skip FAA extended centerline rendering
+        
         // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
         const runways = airportConfig?.runways || airportData?.runways || [];
 
@@ -1266,6 +1289,8 @@ export function PilotMap({
           runways: osmData.runways.length,
           other: osmData.other.length
         });
+        console.log('[PilotMap] OSM data object:', osmData);
+        console.log('[PilotMap] First runway data:', osmData.runways[0]);
 
         // Render taxiways
         osmData.taxiways.forEach(way => {
@@ -1275,9 +1300,10 @@ export function PilotMap({
               color: '#8b5cf6', // Purple color for taxiways
               weight: 2,
               opacity: 0.8,
-              interactive: false
+              interactive: false,
+              pane: 'overlayPane'
             });
-            layerGroupsRef.current.osm.addLayer(taxiway);
+            taxiway.addTo(mapInstance); // Add directly to map
           }
         });
 
@@ -1290,9 +1316,10 @@ export function PilotMap({
               weight: 1,
               opacity: 0.6,
               fillOpacity: 0.2,
-              interactive: false
+              interactive: false,
+              pane: 'overlayPane'
             });
-            layerGroupsRef.current.osm.addLayer(terminal);
+            terminal.addTo(mapInstance); // Add directly to map
           }
         });
 
@@ -1328,7 +1355,27 @@ export function PilotMap({
 
         // Render gates
         osmData.gates.forEach(node => {
-          const gate = L.circleMarker([node.lat, node.lon], {
+          console.log('[PilotMap] Gate node:', node);
+          
+          // Handle different OSM data structures
+          let lat, lon;
+          if (node.lat && node.lon) {
+            // Direct lat/lon properties
+            lat = node.lat;
+            lon = node.lon;
+          } else if (node.geometry && node.geometry.length > 0) {
+            // Geometry array structure
+            const point = node.geometry[0];
+            lat = point.lat;
+            lon = point.lon;
+          }
+          
+          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+            console.warn('[PilotMap] Gate node missing or invalid coordinates:', node);
+            return;
+          }
+          
+          const gate = L.circleMarker([lat, lon], {
             radius: 3,
             color: '#10b981', // Green color for gates
             weight: 1,
@@ -1341,7 +1388,25 @@ export function PilotMap({
 
         // Render control towers
         osmData.controlTowers.forEach(node => {
-          const tower = L.circleMarker([node.lat, node.lon], {
+          // Handle different OSM data structures
+          let lat, lon;
+          if (node.lat && node.lon) {
+            // Direct lat/lon properties
+            lat = node.lat;
+            lon = node.lon;
+          } else if (node.geometry && node.geometry.length > 0) {
+            // Geometry array structure
+            const point = node.geometry[0];
+            lat = point.lat;
+            lon = point.lon;
+          }
+          
+          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+            console.warn('[PilotMap] Control tower missing or invalid coordinates:', node);
+            return;
+          }
+          
+          const tower = L.circleMarker([lat, lon], {
             radius: 4,
             color: '#ef4444', // Red color for control towers
             weight: 2,
@@ -1354,7 +1419,25 @@ export function PilotMap({
 
         // Render parking positions
         osmData.parkingPositions.forEach(node => {
-          const parking = L.circleMarker([node.lat, node.lon], {
+          // Handle different OSM data structures
+          let lat, lon;
+          if (node.lat && node.lon) {
+            // Direct lat/lon properties
+            lat = node.lat;
+            lon = node.lon;
+          } else if (node.geometry && node.geometry.length > 0) {
+            // Geometry array structure
+            const point = node.geometry[0];
+            lat = point.lat;
+            lon = point.lon;
+          }
+          
+          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
+            console.warn('[PilotMap] Parking position missing or invalid coordinates:', node);
+            return;
+          }
+          
+          const parking = L.circleMarker([lat, lon], {
             radius: 2,
             color: '#6b7280', // Gray color for parking positions
             weight: 1,
@@ -1363,6 +1446,101 @@ export function PilotMap({
             interactive: false
           });
           layerGroupsRef.current.osm.addLayer(parking);
+        });
+
+        // Render runways with labels (following dashboard approach)
+        console.log('[PilotMap] Rendering OSM runways:', osmData.runways.length);
+        console.log('[PilotMap] OSM layer group exists:', !!layerGroupsRef.current.osm);
+        osmData.runways.forEach((way, index) => {
+          console.log(`[PilotMap] Rendering runway ${index + 1}:`, way.tags?.ref, way.geometry?.length, 'points');
+          console.log('[PilotMap] Runway way object:', way);
+          if (way.geometry && way.geometry.length > 1) {
+            console.log('[PilotMap] Runway geometry:', way.geometry);
+            const coordinates = way.geometry.map(point => {
+              console.log('[PilotMap] Geometry point:', point);
+              if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
+                console.warn('[PilotMap] Invalid geometry point:', point);
+                return null;
+              }
+              return [point.lat, point.lon] as [number, number];
+            }).filter(coord => coord !== null);
+            
+            if (coordinates.length < 2) {
+              console.warn('[PilotMap] Not enough valid coordinates for runway:', way.tags?.ref);
+              return;
+            }
+            const runway = L.polyline(coordinates, {
+              color: '#0ea5e9', // Blue color for runways
+              weight: 8, // Increased weight for better visibility
+              opacity: 1.0,
+              interactive: false,
+              pane: 'overlayPane' // Use overlay pane like dashboard
+            });
+            console.log(`[PilotMap] Adding runway ${index + 1} directly to map`);
+            runway.addTo(mapInstance); // Add directly to map like dashboard
+
+            // Add runway labels at each end (following dashboard approach)
+            const runwayRef = way.tags?.ref;
+            if (runwayRef && runwayRef.includes('/')) {
+              const runwayNumbers = runwayRef.split('/');
+              const startPoint = coordinates[0];
+              const endPoint = coordinates[coordinates.length - 1];
+              const startRunwayNumber = runwayNumbers[0];
+              const endRunwayNumber = runwayNumbers[1];
+
+              // Start label
+              const startLabel = L.marker(startPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000;
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95);
+                    padding: 1px 3px;
+                    border-radius: 2px;
+                    border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap;
+                    text-align: center;
+                    line-height: 1;
+                    min-width: 16px;
+                    display: inline-block;
+                  ">${startRunwayNumber}</div>`,
+                  iconSize: [20, 14],
+                  iconAnchor: [10, 7],
+                }),
+                interactive: false,
+              });
+              startLabel.addTo(mapInstance); // Add directly to map
+
+              // End label
+              const endLabel = L.marker(endPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000;
+                    font-size: 10px;
+                    font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95);
+                    padding: 1px 3px;
+                    border-radius: 2px;
+                    border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap;
+                    text-align: center;
+                    line-height: 1;
+                    min-width: 16px;
+                    display: inline-block;
+                  ">${endRunwayNumber}</div>`,
+                  iconSize: [20, 14],
+                  iconAnchor: [10, 7],
+                }),
+                interactive: false,
+              });
+              endLabel.addTo(mapInstance); // Add directly to map
+            }
+          }
         });
 
         // Render other features

@@ -61,14 +61,14 @@ export function PilotDashboard() {
       }
     }
     return {
-      showRunways: true,
+      showRunways: false, // Disabled - now handled by OSM features
       showDmeRings: true,
       showWaypoints: true,
       showApproachRoutes: true,
       showExtendedCenterlines: true,
       showPireps: true,
       showGroundTracks: true,
-      showOSMFeatures: true,
+      showOSMFeatures: true, // This includes runways from OSM
       showWeatherRadar: true,
       showWeatherAlerts: false,
       showVisibility: false,
