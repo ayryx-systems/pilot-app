@@ -73,6 +73,18 @@ export interface AirportOverview {
     active: boolean;
     lastUpdate: string;
   };
+  osm?: {
+    taxiways: OSMWay[];
+    terminals: OSMWay[];
+    gates: OSMNode[];
+    aprons: OSMWay[];
+    hangars: OSMWay[];
+    controlTowers: OSMNode[];
+    parkingPositions: OSMNode[];
+    runways: OSMWay[];
+    other: OSMWay[];
+    featureCount: number;
+  };
   timestamp: string;
   cacheMaxAge: number;
 }
@@ -208,6 +220,7 @@ export interface MapDisplayOptions {
   showWeatherRadar: boolean;
   showWeatherAlerts: boolean;
   showVisibility: boolean;
+  showOSMFeatures: boolean;
 }
 
 // Weather-related types
@@ -289,4 +302,39 @@ export interface SummaryResponse {
   source: string;
   generated: boolean;
   active?: boolean;
+}
+
+// OSM Data Types
+export interface OSMNode {
+  id: number;
+  lat: number;
+  lon: number;
+  tags: Record<string, string>;
+}
+
+export interface OSMWay {
+  id: number;
+  nodes: number[];
+  tags: Record<string, string>;
+  geometry?: Array<{ lat: number; lon: number }>;
+}
+
+export interface AirportOSMFeatures {
+  taxiways: OSMWay[];
+  terminals: OSMWay[];
+  gates: OSMNode[];
+  aprons: OSMWay[];
+  hangars: OSMWay[];
+  controlTowers: OSMNode[];
+  parkingPositions: OSMNode[];
+  runways: OSMWay[];
+  other: OSMWay[];
+}
+
+export interface OSMResponse {
+  airportId: string;
+  osm: AirportOSMFeatures & { featureCount: number };
+  timestamp: string;
+  cacheMaxAge: number;
+  source: string;
 }

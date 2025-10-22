@@ -68,6 +68,7 @@ export function PilotDashboard() {
       showExtendedCenterlines: true,
       showPireps: true,
       showGroundTracks: true,
+      showOSMFeatures: true,
       showWeatherRadar: true,
       showWeatherAlerts: false,
       showVisibility: false,

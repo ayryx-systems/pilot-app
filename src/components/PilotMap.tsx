@@ -2,9 +2,10 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import type * as L from 'leaflet';
-import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer } from '@/types';
+import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
 import { weatherService } from '@/services/weatherService';
+import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 
 interface PilotMapProps {
@@ -46,6 +47,10 @@ export function PilotMap({
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
+
+  // OSM data state
+  const [osmData, setOsmData] = useState<AirportOSMFeatures | null>(null);
+  const [osmLoading, setOsmLoading] = useState(false);
 
   // Weather refresh function - works with static overlay
   const refreshWeatherLayer = () => {
@@ -222,6 +227,30 @@ export function PilotMap({
     loadWeatherLayers();
   }, []);
 
+  // Load OSM data when airport changes
+  useEffect(() => {
+    const loadOSMData = async () => {
+      if (!airport?.id) {
+        setOsmData(null);
+        return;
+      }
+
+      setOsmLoading(true);
+      try {
+        const data = await pilotOSMService.getAirportOSMData(airport.id);
+        setOsmData(data);
+        console.log('[PilotMap] OSM data loaded for', airport.id, data ? `${Object.values(data).flat().length} features` : 'no data');
+      } catch (error) {
+        console.error('[PilotMap] Failed to load OSM data:', error);
+        setOsmData(null);
+      } finally {
+        setOsmLoading(false);
+      }
+    };
+
+    loadOSMData();
+  }, [airport?.id]);
+
   // Create/destroy map when airport changes
   useEffect(() => {
     if (!leafletLoaded || !airport) {
@@ -282,6 +311,7 @@ export function PilotMap({
         extendedCenterlines: L.layerGroup().addTo(map),
         pireps: L.layerGroup().addTo(map),
         tracks: L.layerGroup().addTo(map),
+        osm: L.layerGroup().addTo(map),
         weather: weatherGroup,
       };
 
@@ -1212,6 +1242,147 @@ export function PilotMap({
 
     updateVisibility();
   }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
+
+  // Update OSM features display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.osm) return;
+
+    const updateOSMFeatures = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Clear existing OSM features
+      layerGroupsRef.current.osm.clearLayers();
+
+      if (displayOptions.showOSMFeatures && osmData) {
+        console.log('[PilotMap] Rendering OSM features:', {
+          taxiways: osmData.taxiways.length,
+          terminals: osmData.terminals.length,
+          gates: osmData.gates.length,
+          aprons: osmData.aprons.length,
+          hangars: osmData.hangars.length,
+          controlTowers: osmData.controlTowers.length,
+          parkingPositions: osmData.parkingPositions.length,
+          runways: osmData.runways.length,
+          other: osmData.other.length
+        });
+
+        // Render taxiways
+        osmData.taxiways.forEach(way => {
+          if (way.geometry && way.geometry.length > 1) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+            const taxiway = L.polyline(coordinates, {
+              color: '#8b5cf6', // Purple color for taxiways
+              weight: 2,
+              opacity: 0.8,
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(taxiway);
+          }
+        });
+
+        // Render terminals
+        osmData.terminals.forEach(way => {
+          if (way.geometry && way.geometry.length > 2) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+            const terminal = L.polygon(coordinates, {
+              color: '#3b82f6', // Blue color for terminals
+              weight: 1,
+              opacity: 0.6,
+              fillOpacity: 0.2,
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(terminal);
+          }
+        });
+
+        // Render aprons
+        osmData.aprons.forEach(way => {
+          if (way.geometry && way.geometry.length > 2) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+            const apron = L.polygon(coordinates, {
+              color: '#64748b', // Gray color for aprons
+              weight: 1,
+              opacity: 0.5,
+              fillOpacity: 0.1,
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(apron);
+          }
+        });
+
+        // Render hangars
+        osmData.hangars.forEach(way => {
+          if (way.geometry && way.geometry.length > 2) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+            const hangar = L.polygon(coordinates, {
+              color: '#f59e0b', // Orange color for hangars
+              weight: 1,
+              opacity: 0.7,
+              fillOpacity: 0.3,
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(hangar);
+          }
+        });
+
+        // Render gates
+        osmData.gates.forEach(node => {
+          const gate = L.circleMarker([node.lat, node.lon], {
+            radius: 3,
+            color: '#10b981', // Green color for gates
+            weight: 1,
+            opacity: 0.8,
+            fillOpacity: 0.6,
+            interactive: false
+          });
+          layerGroupsRef.current.osm.addLayer(gate);
+        });
+
+        // Render control towers
+        osmData.controlTowers.forEach(node => {
+          const tower = L.circleMarker([node.lat, node.lon], {
+            radius: 4,
+            color: '#ef4444', // Red color for control towers
+            weight: 2,
+            opacity: 0.9,
+            fillOpacity: 0.7,
+            interactive: false
+          });
+          layerGroupsRef.current.osm.addLayer(tower);
+        });
+
+        // Render parking positions
+        osmData.parkingPositions.forEach(node => {
+          const parking = L.circleMarker([node.lat, node.lon], {
+            radius: 2,
+            color: '#6b7280', // Gray color for parking positions
+            weight: 1,
+            opacity: 0.6,
+            fillOpacity: 0.4,
+            interactive: false
+          });
+          layerGroupsRef.current.osm.addLayer(parking);
+        });
+
+        // Render other features
+        osmData.other.forEach(way => {
+          if (way.geometry && way.geometry.length > 1) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+            const other = L.polyline(coordinates, {
+              color: '#a78bfa', // Light purple for other features
+              weight: 1,
+              opacity: 0.5,
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(other);
+          }
+        });
+      }
+    };
+
+    updateOSMFeatures();
+  }, [mapInstance, displayOptions.showOSMFeatures, osmData]);
 
   // Handle recenter events (similar to ATC dashboard)
   useEffect(() => {
