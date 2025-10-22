@@ -1353,8 +1353,13 @@ export function PilotMap({
               color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
             });
             layerGroupsRef.current.osm.addLayer(taxiway);
+          }
+        });
 
-            // Add taxiway labels (unobtrusive)
+        // Taxiway labels (rendered after taxiway lines to ensure they appear on top)
+        osmData.taxiways.forEach(way => {
+          if (way.geometry && way.geometry.length > 1) {
+            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const taxiwayRef = way.tags?.ref;
             if (taxiwayRef && taxiwayRef.length === 1 && /^[A-Z]$/.test(taxiwayRef)) {
               // Calculate midpoint for label placement
@@ -1368,12 +1373,15 @@ export function PilotMap({
                     color: #8b5cf6; font-size: 9px; font-weight: bold;
                     text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
                     background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
-                    border: 1px solid rgba(139,92,246,0.3); white-space: nowrap;
+                    border: 1px solid rgba(139,92,246,0.5); white-space: nowrap;
+                    z-index: 2000;
                   ">${taxiwayRef}</div>`,
                   iconSize: [16, 14], iconAnchor: [8, 7]
                 }),
-                interactive: false
+                interactive: false,
+                pane: 'popupPane' // Use popupPane for higher z-index
               });
+              taxiwayLabel.setZIndexOffset(2000); // Ensure labels are above polylines
               layerGroupsRef.current.osm.addLayer(taxiwayLabel);
             }
           }
