@@ -307,8 +307,9 @@ export interface SummaryResponse {
 // OSM Data Types
 export interface OSMNode {
   id: number;
-  lat: number;
-  lon: number;
+  lat?: number;
+  lon?: number;
+  geometry?: Array<{ lat: number; lon: number }>;
   tags: Record<string, string>;
 }
 

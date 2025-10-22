@@ -407,7 +407,7 @@ export function PilotMap({
       // Always show runways - they are now permanently enabled
       // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
       const runways = airportConfig?.runways || airportData?.runways || [];
-      runways.forEach(runway => {
+      runways.forEach((runway: any) => {
         if (runway.threshold && runway.oppositeEnd) {
           const runwayLine = L.polyline([
             [runway.threshold.lat, runway.threshold.lon],
@@ -478,11 +478,11 @@ export function PilotMap({
         // Use airport's defined DME rings if available, otherwise use default distances
         const dmeDistances = airportConfig?.dmeRings || [5, 10, 15, 20, 30];
         // Use the same center as the map
-        const dmeCenter: [number, number] = airport.position
+        const dmeCenter: [number, number] = airport?.position
           ? [airport.position.lat, airport.position.lon]
           : airportConfig?.position || [34.0522, -118.2437];
 
-        dmeDistances.forEach(distance => {
+        dmeDistances.forEach((distance: number) => {
           const dmeRing = L.circle(dmeCenter, {
             radius: distance * 1852, // Convert NM to meters
             fill: false,
@@ -607,7 +607,7 @@ export function PilotMap({
       layerGroupsRef.current.waypoints.clearLayers();
 
       if (displayOptions.showWaypoints && airportConfig?.waypoints) {
-        airportConfig.waypoints.forEach(waypoint => {
+        airportConfig.waypoints.forEach((waypoint: any) => {
           // Draw waypoint marker - using smaller, less prominent purple dot
           const waypointMarker = L.marker([waypoint.lat, waypoint.lon], {
             icon: L.divIcon({
@@ -669,15 +669,15 @@ export function PilotMap({
         
         // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
         const runways = airportConfig?.runways || airportData?.runways || [];
-        runways.forEach(runway => {
+        runways.forEach((runway: any) => {
           if (runway.approaches) {
-            runway.approaches.forEach(approach => {
+            runway.approaches.forEach((approach: any) => {
               // Calculate waypoint positions along approach path
               const approachWaypoints: [number, number][] = [];
               const runwayHeading = runway.heading;
               const threshold = runway.threshold;
 
-              approach.waypoints.forEach(waypoint => {
+              approach.waypoints.forEach((waypoint: any) => {
                 if (waypoint.position) {
                   approachWaypoints.push(waypoint.position);
                 } else {
@@ -701,7 +701,7 @@ export function PilotMap({
                 // Skip adding approach path line - only show waypoints
 
                 // Add approach waypoint markers - using similar style to regular waypoints
-                approach.waypoints.forEach((waypoint, index) => {
+                approach.waypoints.forEach((waypoint: any, index: number) => {
                   if (index < approachWaypoints.length) {
                     // Draw approach waypoint marker with a different color
                     const waypointMarker = L.marker(approachWaypoints[index], {
@@ -770,7 +770,7 @@ export function PilotMap({
         // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
         const runways = airportConfig?.runways || airportData?.runways || [];
 
-        runways.forEach(runway => {
+        runways.forEach((runway: any) => {
           if (runway.threshold && runway.oppositeEnd) {
             // Calculate extended centerline points (extend 20 NM from each end)
             const extensionDistanceNm = 20;
@@ -1321,7 +1321,7 @@ export function PilotMap({
     updateVisibility();
   }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
 
-  // Update OSM features display - SIMPLIFIED
+  // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {
     if (!mapInstance || !osmData) return;
 
@@ -1329,12 +1329,15 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
+      // Get current zoom level for visibility decisions
+      const currentZoom = mapInstance.getZoom();
+
       // Clear ALL existing OSM features first
       layerGroupsRef.current.osm.clearLayers();
 
       // 1. Render other airport features FIRST (if toggle is enabled)
       if (displayOptions.showOSMFeatures) {
-        console.log('[PilotMap] Rendering airport features (toggle-controlled):', {
+        console.log('[PilotMap] Rendering airport features (toggle-controlled, zoom-based):', {
           taxiways: osmData.taxiways.length,
           terminals: osmData.terminals.length,
           gates: osmData.gates.length,
@@ -1342,254 +1345,272 @@ export function PilotMap({
           hangars: osmData.hangars.length,
           controlTowers: osmData.controlTowers.length,
           parkingPositions: osmData.parkingPositions.length,
-          other: osmData.other.length
+          other: osmData.other.length,
+          currentZoom
         });
 
-        // Taxiways
-        osmData.taxiways.forEach(way => {
-          if (way.geometry && way.geometry.length > 1) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const taxiway = L.polyline(coordinates, {
-              color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
-            });
-            layerGroupsRef.current.osm.addLayer(taxiway);
-          }
-        });
-
-        // Taxiway labels (rendered after taxiway lines to ensure they appear on top)
-        osmData.taxiways.forEach(way => {
-          if (way.geometry && way.geometry.length > 1) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const taxiwayRef = way.tags?.ref;
-            if (taxiwayRef && taxiwayRef.length === 1 && /^[A-Z]$/.test(taxiwayRef)) {
-              // Calculate midpoint for label placement
-              const midIndex = Math.floor(coordinates.length / 2);
-              const midPoint = coordinates[midIndex];
+        // Taxiways - show at zoom 10+, major taxiways at zoom 10+, all at zoom 12+
+        if (currentZoom >= 10) {
+          osmData.taxiways.forEach(way => {
+            if (way.geometry && way.geometry.length > 1) {
+              const taxiwayRef = way.tags?.ref;
+              const isMajorTaxiway = taxiwayRef && taxiwayRef.length === 1 && /^[A-Z]$/.test(taxiwayRef);
+              const isMainTaxiway = taxiwayRef && ['A', 'B', 'C', 'D', 'E', 'F'].includes(taxiwayRef);
               
-              const taxiwayLabel = L.marker([midPoint[0], midPoint[1]], {
-                icon: L.divIcon({
-                  className: "taxiway-label",
-                  html: `<div style="
-                    color: #8b5cf6; font-size: 9px; font-weight: bold;
-                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
-                    background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
-                    border: 1px solid rgba(139,92,246,0.5); white-space: nowrap;
-                    z-index: 2000; display: flex; align-items: center; justify-content: center;
-                    min-width: 12px; min-height: 10px;
-                  ">${taxiwayRef}</div>`,
-                  iconSize: [14, 12], iconAnchor: [7, 6]
-                }),
-                interactive: false,
-                pane: 'popupPane' // Use popupPane for higher z-index
-              });
-              taxiwayLabel.setZIndexOffset(2000); // Ensure labels are above polylines
-              layerGroupsRef.current.osm.addLayer(taxiwayLabel);
+              // Show major taxiways at zoom 10+, all taxiways at zoom 12+
+              const shouldShowTaxiway = isMainTaxiway || currentZoom >= 12;
+              
+              if (shouldShowTaxiway) {
+                const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                const taxiway = L.polyline(coordinates, {
+                  color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
+                });
+                layerGroupsRef.current.osm.addLayer(taxiway);
+
+                // Add taxiway labels for major taxiways at zoom 14+
+                if (isMajorTaxiway && currentZoom >= 14) {
+                  const midIndex = Math.floor(coordinates.length / 2);
+                  const midPoint = coordinates[midIndex];
+                  
+                  const taxiwayLabel = L.marker([midPoint[0], midPoint[1]], {
+                    icon: L.divIcon({
+                      className: "taxiway-label",
+                      html: `<div style="
+                        color: #8b5cf6; font-size: 9px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                        background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
+                        border: 1px solid rgba(139,92,246,0.5); white-space: nowrap;
+                        z-index: 2000; display: flex; align-items: center; justify-content: center;
+                        min-width: 12px; min-height: 10px;
+                      ">${taxiwayRef}</div>`,
+                      iconSize: [14, 12], iconAnchor: [7, 6]
+                    }),
+                    interactive: false,
+                    pane: 'popupPane'
+                  });
+                  taxiwayLabel.setZIndexOffset(2000);
+                  layerGroupsRef.current.osm.addLayer(taxiwayLabel);
+                }
+              }
             }
-          }
-        });
+          });
+        }
 
-        // Terminals
-        osmData.terminals.forEach(way => {
-          if (way.geometry && way.geometry.length > 2) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const terminal = L.polygon(coordinates, {
-              color: '#3b82f6', weight: 1, opacity: 0.6, fillOpacity: 0.2, interactive: false, pane: 'overlayPane'
-            });
-            layerGroupsRef.current.osm.addLayer(terminal);
-
-            // Add terminal labels (unobtrusive)
-            const terminalName = way.tags?.name || way.tags?.ref;
-            if (terminalName) {
-              // Calculate centroid for label placement
-              let sumLat = 0, sumLon = 0;
-              coordinates.forEach(point => {
-                sumLat += point[0];
-                sumLon += point[1];
+        // Terminals - show at zoom 12+
+        if (currentZoom >= 12) {
+          osmData.terminals.forEach(way => {
+            if (way.geometry && way.geometry.length > 2) {
+              const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+              const terminal = L.polygon(coordinates, {
+                color: '#3b82f6', weight: 1, opacity: 0.6, fillOpacity: 0.2, interactive: false, pane: 'overlayPane'
               });
-              const centerLat = sumLat / coordinates.length;
-              const centerLon = sumLon / coordinates.length;
+              layerGroupsRef.current.osm.addLayer(terminal);
 
-              const terminalLabel = L.marker([centerLat, centerLon], {
-                icon: L.divIcon({
-                  className: "terminal-label",
-                  html: `<div style="
-                    color: #3b82f6; font-size: 8px; font-weight: bold;
-                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
-                    background: none; padding: 0; white-space: nowrap;
-                  ">${terminalName}</div>`,
-                  iconSize: [40, 16], iconAnchor: [20, 8]
-                }),
-                interactive: false
-              });
-              layerGroupsRef.current.osm.addLayer(terminalLabel);
+              // Add terminal labels at zoom 14+
+              const terminalName = way.tags?.name || way.tags?.ref;
+              if (terminalName && currentZoom >= 14) {
+                let sumLat = 0, sumLon = 0;
+                coordinates.forEach(point => {
+                  sumLat += point[0];
+                  sumLon += point[1];
+                });
+                const centerLat = sumLat / coordinates.length;
+                const centerLon = sumLon / coordinates.length;
+
+                const terminalLabel = L.marker([centerLat, centerLon], {
+                  icon: L.divIcon({
+                    className: "terminal-label",
+                    html: `<div style="
+                      color: #3b82f6; font-size: 8px; font-weight: bold;
+                      text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                      background: none; padding: 0; white-space: nowrap;
+                    ">${terminalName}</div>`,
+                    iconSize: [40, 16], iconAnchor: [20, 8]
+                  }),
+                  interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(terminalLabel);
+              }
             }
-          }
-        });
+          });
+        }
 
-        // Aprons
-        osmData.aprons.forEach(way => {
-          if (way.geometry && way.geometry.length > 2) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const apron = L.polygon(coordinates, {
-              color: '#64748b', weight: 1, opacity: 0.5, fillOpacity: 0.1, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(apron);
-          }
-        });
-
-        // Hangars
-        osmData.hangars.forEach(way => {
-          if (way.geometry && way.geometry.length > 2) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const hangar = L.polygon(coordinates, {
-              color: '#f59e0b', weight: 1, opacity: 0.7, fillOpacity: 0.3, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(hangar);
-
-            // Add hangar labels (unobtrusive)
-            const hangarName = way.tags?.name || way.tags?.ref || way.tags?.alt_name;
-            if (hangarName) {
-              // Calculate centroid for label placement
-              let sumLat = 0, sumLon = 0;
-              coordinates.forEach(point => {
-                sumLat += point[0];
-                sumLon += point[1];
+        // Aprons - show at zoom 13+
+        if (currentZoom >= 13) {
+          osmData.aprons.forEach(way => {
+            if (way.geometry && way.geometry.length > 2) {
+              const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+              const apron = L.polygon(coordinates, {
+                color: '#64748b', weight: 1, opacity: 0.5, fillOpacity: 0.1, interactive: false
               });
-              const centerLat = sumLat / coordinates.length;
-              const centerLon = sumLon / coordinates.length;
-
-              const hangarLabel = L.marker([centerLat, centerLon], {
-                icon: L.divIcon({
-                  className: "hangar-label",
-                  html: `<div style="
-                    color: #f59e0b; font-size: 7px; font-weight: bold;
-                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
-                    background: none; padding: 0; white-space: nowrap;
-                  ">${hangarName}</div>`,
-                  iconSize: [50, 14], iconAnchor: [25, 7]
-                }),
-                interactive: false
-              });
-              layerGroupsRef.current.osm.addLayer(hangarLabel);
+              layerGroupsRef.current.osm.addLayer(apron);
             }
-          }
-        });
+          });
+        }
 
-        // Gates (labels only, no dots)
-        osmData.gates.forEach(node => {
-          let lat, lon;
-          if (node.lat && node.lon) {
-            lat = node.lat; lon = node.lon;
-          } else if (node.geometry && node.geometry.length > 0) {
-            const point = node.geometry[0];
-            lat = point.lat; lon = point.lon;
-          }
-          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-            // Add gate labels only (no dots)
-            const gateRef = node.tags?.ref;
-            if (gateRef) {
-              const gateLabel = L.marker([lat, lon], {
-                icon: L.divIcon({
-                  className: "gate-label",
-                  html: `<div style="
-                    color: #10b981; font-size: 9px; font-weight: bold;
-                    text-shadow: 0px 0px 2px rgba(0,0,0,1);
-                    background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
-                    border: 1px solid rgba(16,185,129,0.5); white-space: nowrap;
-                    z-index: 2000; display: flex; align-items: center; justify-content: center;
-                    min-width: 12px; min-height: 10px;
-                  ">${gateRef}</div>`,
-                  iconSize: [14, 12], iconAnchor: [7, 6]
-                }),
-                interactive: false,
-                pane: 'popupPane'
+        // Hangars - show at zoom 13+
+        if (currentZoom >= 13) {
+          osmData.hangars.forEach(way => {
+            if (way.geometry && way.geometry.length > 2) {
+              const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+              const hangar = L.polygon(coordinates, {
+                color: '#f59e0b', weight: 1, opacity: 0.7, fillOpacity: 0.3, interactive: false
               });
-              gateLabel.setZIndexOffset(2000);
-              layerGroupsRef.current.osm.addLayer(gateLabel);
+              layerGroupsRef.current.osm.addLayer(hangar);
+
+              // Add hangar labels at zoom 15+
+              const hangarName = way.tags?.name || way.tags?.ref || way.tags?.alt_name;
+              if (hangarName && currentZoom >= 15) {
+                let sumLat = 0, sumLon = 0;
+                coordinates.forEach(point => {
+                  sumLat += point[0];
+                  sumLon += point[1];
+                });
+                const centerLat = sumLat / coordinates.length;
+                const centerLon = sumLon / coordinates.length;
+
+                const hangarLabel = L.marker([centerLat, centerLon], {
+                  icon: L.divIcon({
+                    className: "hangar-label",
+                    html: `<div style="
+                      color: #f59e0b; font-size: 7px; font-weight: bold;
+                      text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                      background: none; padding: 0; white-space: nowrap;
+                    ">${hangarName}</div>`,
+                    iconSize: [50, 14], iconAnchor: [25, 7]
+                  }),
+                  interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(hangarLabel);
+              }
             }
-          }
-        });
+          });
+        }
 
-        // Control towers
-        osmData.controlTowers.forEach(node => {
-          let lat, lon;
-          if (node.lat && node.lon) {
-            lat = node.lat; lon = node.lon;
-          } else if (node.geometry && node.geometry.length > 0) {
-            const point = node.geometry[0];
-            lat = point.lat; lon = point.lon;
-          }
-          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-            const tower = L.circleMarker([lat, lon], {
-              radius: 4, color: '#ef4444', weight: 2, opacity: 0.9, fillOpacity: 0.7, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(tower);
+        // Gates - show at zoom 14+
+        if (currentZoom >= 14) {
+          osmData.gates.forEach(node => {
+            let lat, lon;
+            if (node.lat && node.lon) {
+              lat = node.lat; lon = node.lon;
+            } else if (node.geometry && node.geometry.length > 0) {
+              const point = node.geometry[0];
+              lat = point.lat; lon = point.lon;
+            }
+            if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+              const gateRef = node.tags?.ref;
+              if (gateRef) {
+                const gateLabel = L.marker([lat, lon], {
+                  icon: L.divIcon({
+                    className: "gate-label",
+                    html: `<div style="
+                      color: #10b981; font-size: 9px; font-weight: bold;
+                      text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                      background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
+                      border: 1px solid rgba(16,185,129,0.5); white-space: nowrap;
+                      z-index: 2000; display: flex; align-items: center; justify-content: center;
+                      min-width: 12px; min-height: 10px;
+                    ">${gateRef}</div>`,
+                    iconSize: [14, 12], iconAnchor: [7, 6]
+                  }),
+                  interactive: false,
+                  pane: 'popupPane'
+                });
+                gateLabel.setZIndexOffset(2000);
+                layerGroupsRef.current.osm.addLayer(gateLabel);
+              }
+            }
+          });
+        }
 
-            // Add control tower labels (unobtrusive)
-            const towerName = node.tags?.name || node.tags?.ref || 'TWR';
-            const towerLabel = L.marker([lat, lon], {
-              icon: L.divIcon({
-                className: "tower-label",
-                html: `<div style="
-                  color: #ef4444; font-size: 8px; font-weight: bold;
-                  text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
-                  background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
-                  white-space: nowrap;
-                ">${towerName}</div>`,
-                iconSize: [20, 12], iconAnchor: [10, 6]
-              }),
-              interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(towerLabel);
-          }
-        });
-
-        // Parking positions
-        osmData.parkingPositions.forEach(node => {
-          let lat, lon;
-          if (node.lat && node.lon) {
-            lat = node.lat; lon = node.lon;
-          } else if (node.geometry && node.geometry.length > 0) {
-            const point = node.geometry[0];
-            lat = point.lat; lon = point.lon;
-          }
-          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-            const parking = L.circleMarker([lat, lon], {
-              radius: 2, color: '#6b7280', weight: 1, opacity: 0.6, fillOpacity: 0.4, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(parking);
-
-            // Add parking position labels (unobtrusive)
-            const parkingRef = node.tags?.ref;
-            if (parkingRef) {
-              const parkingLabel = L.marker([lat, lon], {
-                icon: L.divIcon({
-                  className: "parking-label",
-                  html: `<div style="
-                    color: #6b7280; font-size: 7px; font-weight: bold;
-                    text-shadow: 0px 0px 2px rgba(0,0,0,1);
-                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
-                    white-space: nowrap;
-                  ">${parkingRef}</div>`,
-                  iconSize: [16, 10], iconAnchor: [8, 5]
-                }),
-                interactive: false
+        // Control towers - show at zoom 12+
+        if (currentZoom >= 12) {
+          osmData.controlTowers.forEach(node => {
+            let lat, lon;
+            if (node.lat && node.lon) {
+              lat = node.lat; lon = node.lon;
+            } else if (node.geometry && node.geometry.length > 0) {
+              const point = node.geometry[0];
+              lat = point.lat; lon = point.lon;
+            }
+            if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+              const tower = L.circleMarker([lat, lon], {
+                radius: 4, color: '#ef4444', weight: 2, opacity: 0.9, fillOpacity: 0.7, interactive: false
               });
-              layerGroupsRef.current.osm.addLayer(parkingLabel);
-            }
-          }
-        });
+              layerGroupsRef.current.osm.addLayer(tower);
 
-        // Other features
-        osmData.other.forEach(way => {
-          if (way.geometry && way.geometry.length > 1) {
-            const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
-            const other = L.polyline(coordinates, {
-              color: '#a78bfa', weight: 1, opacity: 0.5, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(other);
-          }
-        });
+              // Add control tower labels at zoom 14+
+              const towerName = node.tags?.name || node.tags?.ref || 'TWR';
+              if (currentZoom >= 14) {
+                const towerLabel = L.marker([lat, lon], {
+                  icon: L.divIcon({
+                    className: "tower-label",
+                    html: `<div style="
+                      color: #ef4444; font-size: 8px; font-weight: bold;
+                      text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                      background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                      white-space: nowrap;
+                    ">${towerName}</div>`,
+                    iconSize: [20, 12], iconAnchor: [10, 6]
+                  }),
+                  interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(towerLabel);
+              }
+            }
+          });
+        }
+
+        // Parking positions - show at zoom 15+
+        if (currentZoom >= 15) {
+          osmData.parkingPositions.forEach(node => {
+            let lat, lon;
+            if (node.lat && node.lon) {
+              lat = node.lat; lon = node.lon;
+            } else if (node.geometry && node.geometry.length > 0) {
+              const point = node.geometry[0];
+              lat = point.lat; lon = point.lon;
+            }
+            if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+              const parking = L.circleMarker([lat, lon], {
+                radius: 2, color: '#6b7280', weight: 1, opacity: 0.6, fillOpacity: 0.4, interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(parking);
+
+              // Add parking position labels at zoom 15+
+              const parkingRef = node.tags?.ref;
+              if (parkingRef) {
+                const parkingLabel = L.marker([lat, lon], {
+                  icon: L.divIcon({
+                    className: "parking-label",
+                    html: `<div style="
+                      color: #6b7280; font-size: 7px; font-weight: bold;
+                      text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                      background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                      white-space: nowrap;
+                    ">${parkingRef}</div>`,
+                    iconSize: [16, 10], iconAnchor: [8, 5]
+                  }),
+                  interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(parkingLabel);
+              }
+            }
+          });
+        }
+
+        // Other features - show at zoom 13+
+        if (currentZoom >= 13) {
+          osmData.other.forEach(way => {
+            if (way.geometry && way.geometry.length > 1) {
+              const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+              const other = L.polyline(coordinates, {
+                color: '#a78bfa', weight: 1, opacity: 0.5, interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(other);
+            }
+          });
+        }
       }
 
       // 2. ALWAYS render runways LAST (so they appear on top)
@@ -1662,6 +1683,375 @@ export function PilotMap({
     };
 
     updateOSMFeatures();
+  }, [mapInstance, displayOptions.showOSMFeatures, osmData]);
+
+  // Redraw OSM features when zoom changes
+  useEffect(() => {
+    if (!mapInstance || !osmData) return;
+
+    const handleZoomEnd = () => {
+      // Trigger OSM features update on zoom change
+      const updateOSMFeatures = async () => {
+        const leafletModule = await import('leaflet');
+        const L = leafletModule.default;
+
+        // Get current zoom level for visibility decisions
+        const currentZoom = mapInstance.getZoom();
+
+        // Clear ALL existing OSM features first
+        layerGroupsRef.current.osm.clearLayers();
+
+        // 1. Render other airport features FIRST (if toggle is enabled)
+        if (displayOptions.showOSMFeatures) {
+          console.log('[PilotMap] Redrawing airport features on zoom change:', {
+            currentZoom,
+            taxiways: osmData.taxiways.length,
+            terminals: osmData.terminals.length,
+            gates: osmData.gates.length
+          });
+
+          // Taxiways - show at zoom 10+, major taxiways at zoom 10+, all at zoom 12+
+          if (currentZoom >= 10) {
+            osmData.taxiways.forEach(way => {
+              if (way.geometry && way.geometry.length > 1) {
+                const taxiwayRef = way.tags?.ref;
+                const isMajorTaxiway = taxiwayRef && taxiwayRef.length === 1 && /^[A-Z]$/.test(taxiwayRef);
+                const isMainTaxiway = taxiwayRef && ['A', 'B', 'C', 'D', 'E', 'F'].includes(taxiwayRef);
+                
+                // Show major taxiways at zoom 10+, all taxiways at zoom 12+
+                const shouldShowTaxiway = isMainTaxiway || currentZoom >= 12;
+                
+                if (shouldShowTaxiway) {
+                  const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                  const taxiway = L.polyline(coordinates, {
+                    color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
+                  });
+                  layerGroupsRef.current.osm.addLayer(taxiway);
+
+                  // Add taxiway labels for major taxiways at zoom 14+
+                  if (isMajorTaxiway && currentZoom >= 14) {
+                    const midIndex = Math.floor(coordinates.length / 2);
+                    const midPoint = coordinates[midIndex];
+                    
+                    const taxiwayLabel = L.marker([midPoint[0], midPoint[1]], {
+                      icon: L.divIcon({
+                        className: "taxiway-label",
+                        html: `<div style="
+                          color: #8b5cf6; font-size: 9px; font-weight: bold;
+                          text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                          background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
+                          border: 1px solid rgba(139,92,246,0.5); white-space: nowrap;
+                          z-index: 2000; display: flex; align-items: center; justify-content: center;
+                          min-width: 12px; min-height: 10px;
+                        ">${taxiwayRef}</div>`,
+                        iconSize: [14, 12], iconAnchor: [7, 6]
+                      }),
+                      interactive: false,
+                      pane: 'popupPane'
+                    });
+                    taxiwayLabel.setZIndexOffset(2000);
+                    layerGroupsRef.current.osm.addLayer(taxiwayLabel);
+                  }
+                }
+              }
+            });
+          }
+
+          // Terminals - show at zoom 12+
+          if (currentZoom >= 12) {
+            osmData.terminals.forEach(way => {
+              if (way.geometry && way.geometry.length > 2) {
+                const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                const terminal = L.polygon(coordinates, {
+                  color: '#3b82f6', weight: 1, opacity: 0.6, fillOpacity: 0.2, interactive: false, pane: 'overlayPane'
+                });
+                layerGroupsRef.current.osm.addLayer(terminal);
+
+                // Add terminal labels at zoom 14+
+                const terminalName = way.tags?.name || way.tags?.ref;
+                if (terminalName && currentZoom >= 14) {
+                  let sumLat = 0, sumLon = 0;
+                  coordinates.forEach(point => {
+                    sumLat += point[0];
+                    sumLon += point[1];
+                  });
+                  const centerLat = sumLat / coordinates.length;
+                  const centerLon = sumLon / coordinates.length;
+
+                  const terminalLabel = L.marker([centerLat, centerLon], {
+                    icon: L.divIcon({
+                      className: "terminal-label",
+                      html: `<div style="
+                        color: #3b82f6; font-size: 8px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                        background: none; padding: 0; white-space: nowrap;
+                      ">${terminalName}</div>`,
+                      iconSize: [40, 16], iconAnchor: [20, 8]
+                    }),
+                    interactive: false
+                  });
+                  layerGroupsRef.current.osm.addLayer(terminalLabel);
+                }
+              }
+            });
+          }
+
+          // Aprons - show at zoom 13+
+          if (currentZoom >= 13) {
+            osmData.aprons.forEach(way => {
+              if (way.geometry && way.geometry.length > 2) {
+                const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                const apron = L.polygon(coordinates, {
+                  color: '#64748b', weight: 1, opacity: 0.5, fillOpacity: 0.1, interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(apron);
+              }
+            });
+          }
+
+          // Hangars - show at zoom 13+
+          if (currentZoom >= 13) {
+            osmData.hangars.forEach(way => {
+              if (way.geometry && way.geometry.length > 2) {
+                const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                const hangar = L.polygon(coordinates, {
+                  color: '#f59e0b', weight: 1, opacity: 0.7, fillOpacity: 0.3, interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(hangar);
+
+                // Add hangar labels at zoom 15+
+                const hangarName = way.tags?.name || way.tags?.ref || way.tags?.alt_name;
+                if (hangarName && currentZoom >= 15) {
+                  let sumLat = 0, sumLon = 0;
+                  coordinates.forEach(point => {
+                    sumLat += point[0];
+                    sumLon += point[1];
+                  });
+                  const centerLat = sumLat / coordinates.length;
+                  const centerLon = sumLon / coordinates.length;
+
+                  const hangarLabel = L.marker([centerLat, centerLon], {
+                    icon: L.divIcon({
+                      className: "hangar-label",
+                      html: `<div style="
+                        color: #f59e0b; font-size: 7px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                        background: none; padding: 0; white-space: nowrap;
+                      ">${hangarName}</div>`,
+                      iconSize: [50, 14], iconAnchor: [25, 7]
+                    }),
+                    interactive: false
+                  });
+                  layerGroupsRef.current.osm.addLayer(hangarLabel);
+                }
+              }
+            });
+          }
+
+          // Gates - show at zoom 14+
+          if (currentZoom >= 14) {
+            osmData.gates.forEach(node => {
+              let lat, lon;
+              if (node.lat && node.lon) {
+                lat = node.lat; lon = node.lon;
+              } else if (node.geometry && node.geometry.length > 0) {
+                const point = node.geometry[0];
+                lat = point.lat; lon = point.lon;
+              }
+              if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                const gateRef = node.tags?.ref;
+                if (gateRef) {
+                  const gateLabel = L.marker([lat, lon], {
+                    icon: L.divIcon({
+                      className: "gate-label",
+                      html: `<div style="
+                        color: #10b981; font-size: 9px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                        background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
+                        border: 1px solid rgba(16,185,129,0.5); white-space: nowrap;
+                        z-index: 2000; display: flex; align-items: center; justify-content: center;
+                        min-width: 12px; min-height: 10px;
+                      ">${gateRef}</div>`,
+                      iconSize: [14, 12], iconAnchor: [7, 6]
+                    }),
+                    interactive: false,
+                    pane: 'popupPane'
+                  });
+                  gateLabel.setZIndexOffset(2000);
+                  layerGroupsRef.current.osm.addLayer(gateLabel);
+                }
+              }
+            });
+          }
+
+          // Control towers - show at zoom 12+
+          if (currentZoom >= 12) {
+            osmData.controlTowers.forEach(node => {
+              let lat, lon;
+              if (node.lat && node.lon) {
+                lat = node.lat; lon = node.lon;
+              } else if (node.geometry && node.geometry.length > 0) {
+                const point = node.geometry[0];
+                lat = point.lat; lon = point.lon;
+              }
+              if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                const tower = L.circleMarker([lat, lon], {
+                  radius: 4, color: '#ef4444', weight: 2, opacity: 0.9, fillOpacity: 0.7, interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(tower);
+
+                // Add control tower labels at zoom 14+
+                const towerName = node.tags?.name || node.tags?.ref || 'TWR';
+                if (currentZoom >= 14) {
+                  const towerLabel = L.marker([lat, lon], {
+                    icon: L.divIcon({
+                      className: "tower-label",
+                      html: `<div style="
+                        color: #ef4444; font-size: 8px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                        background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                        white-space: nowrap;
+                      ">${towerName}</div>`,
+                      iconSize: [20, 12], iconAnchor: [10, 6]
+                    }),
+                    interactive: false
+                  });
+                  layerGroupsRef.current.osm.addLayer(towerLabel);
+                }
+              }
+            });
+          }
+
+          // Parking positions - show at zoom 15+
+          if (currentZoom >= 15) {
+            osmData.parkingPositions.forEach(node => {
+              let lat, lon;
+              if (node.lat && node.lon) {
+                lat = node.lat; lon = node.lon;
+              } else if (node.geometry && node.geometry.length > 0) {
+                const point = node.geometry[0];
+                lat = point.lat; lon = point.lon;
+              }
+              if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                const parking = L.circleMarker([lat, lon], {
+                  radius: 2, color: '#6b7280', weight: 1, opacity: 0.6, fillOpacity: 0.4, interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(parking);
+
+                // Add parking position labels at zoom 15+
+                const parkingRef = node.tags?.ref;
+                if (parkingRef) {
+                  const parkingLabel = L.marker([lat, lon], {
+                    icon: L.divIcon({
+                      className: "parking-label",
+                      html: `<div style="
+                        color: #6b7280; font-size: 7px; font-weight: bold;
+                        text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                        background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                        white-space: nowrap;
+                      ">${parkingRef}</div>`,
+                      iconSize: [16, 10], iconAnchor: [8, 5]
+                    }),
+                    interactive: false
+                  });
+                  layerGroupsRef.current.osm.addLayer(parkingLabel);
+                }
+              }
+            });
+          }
+
+          // Other features - show at zoom 13+
+          if (currentZoom >= 13) {
+            osmData.other.forEach(way => {
+              if (way.geometry && way.geometry.length > 1) {
+                const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
+                const other = L.polyline(coordinates, {
+                  color: '#a78bfa', weight: 1, opacity: 0.5, interactive: false
+                });
+                layerGroupsRef.current.osm.addLayer(other);
+              }
+            });
+          }
+        }
+
+        // 2. ALWAYS render runways LAST (so they appear on top)
+        osmData.runways.forEach((way, index) => {
+          if (way.geometry && way.geometry.length > 1) {
+            const coordinates = way.geometry.map(point => {
+              if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
+                return null;
+              }
+              return [point.lat, point.lon] as [number, number];
+            }).filter(coord => coord !== null);
+            
+            if (coordinates.length < 2) return;
+            
+            const runway = L.polyline(coordinates, {
+              color: '#0ea5e9',
+              weight: 8,
+              opacity: 1.0,
+              interactive: false,
+              pane: 'overlayPane'
+            });
+            runway.addTo(mapInstance);
+            runway.bringToFront(); // Ensure runways are on top
+
+            // Add runway labels
+            const runwayRef = way.tags?.ref;
+            if (runwayRef && runwayRef.includes('/')) {
+              const runwayNumbers = runwayRef.split('/');
+              const startPoint = coordinates[0];
+              const endPoint = coordinates[coordinates.length - 1];
+              
+              // Simple label placement at both ends
+              const startLabel = L.marker(startPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000; font-size: 10px; font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95); padding: 1px 3px;
+                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap; text-align: center; line-height: 1;
+                    min-width: 16px; display: inline-block; z-index: 3000;
+                  ">${runwayNumbers[0]}</div>`,
+                  iconSize: [20, 14], iconAnchor: [10, 14]
+                }),
+                interactive: false, pane: 'popupPane'
+              });
+              startLabel.addTo(mapInstance);
+
+              const endLabel = L.marker(endPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000; font-size: 10px; font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95); padding: 1px 3px;
+                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap; text-align: center; line-height: 1;
+                    min-width: 16px; display: inline-block; z-index: 3000;
+                  ">${runwayNumbers[1]}</div>`,
+                  iconSize: [20, 14], iconAnchor: [10, 14]
+                }),
+                interactive: false, pane: 'popupPane'
+              });
+              endLabel.addTo(mapInstance);
+            }
+          }
+        });
+      };
+
+      updateOSMFeatures();
+    };
+
+    // Listen for zoom changes
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    // Cleanup function
+    return () => {
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
   }, [mapInstance, displayOptions.showOSMFeatures, osmData]);
 
   // Handle recenter events (similar to ATC dashboard)
