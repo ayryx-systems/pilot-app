@@ -1053,8 +1053,41 @@ export function PilotMap({
             autoPan: false
           });
 
-          // Auto-dismiss popup after 3 seconds
+          // Create temporary highlight overlay for track visibility
+          const createHighlightOverlay = () => {
+            const highlightLine = L.polyline(latLngs, {
+              color: color,
+              weight: 4, // Thicker than the original 1.5
+              opacity: 1.0, // Full opacity
+              dashArray: undefined, // Continuous line (no dashes)
+              interactive: false
+            });
+
+            // Add highlight overlay to tracks layer
+            if (layerGroupsRef.current.tracks) {
+              layerGroupsRef.current.tracks.addLayer(highlightLine);
+            }
+
+            // Fade out the highlight overlay over 8 seconds
+            let fadeOpacity = 1.0;
+            const fadeInterval = setInterval(() => {
+              fadeOpacity -= 0.0125; // Fade by 1.25% every 50ms (8 seconds total)
+              if (fadeOpacity <= 0) {
+                clearInterval(fadeInterval);
+                if (layerGroupsRef.current.tracks) {
+                  layerGroupsRef.current.tracks.removeLayer(highlightLine);
+                }
+              } else {
+                highlightLine.setStyle({ opacity: fadeOpacity });
+              }
+            }, 50); // Update every 50ms for smooth fade
+          };
+
+          // Auto-dismiss popup and create highlight overlay after 3 seconds
           clickableLine.on('popupopen', () => {
+            // Create the highlight overlay immediately when popup opens
+            createHighlightOverlay();
+            
             setTimeout(() => {
               if (clickableLine.isPopupOpen()) {
                 clickableLine.closePopup();
