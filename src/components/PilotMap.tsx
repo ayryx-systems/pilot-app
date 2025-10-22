@@ -1564,7 +1564,7 @@ export function PilotMap({
                       position: relative;
                     ">${label1.number}</div>`,
                     iconSize: [20, 14],
-                    iconAnchor: [10, 7],
+                    iconAnchor: [10, 14],
                   }),
                   interactive: false,
                   pane: 'popupPane'
@@ -1593,7 +1593,7 @@ export function PilotMap({
                       position: relative;
                     ">${label2.number}</div>`,
                     iconSize: [20, 14],
-                    iconAnchor: [10, 7],
+                    iconAnchor: [10, 14],
                   }),
                   interactive: false,
                   pane: 'popupPane'
@@ -1653,7 +1653,7 @@ export function PilotMap({
                       position: relative;
                     ">${startNumber}</div>`,
                     iconSize: [20, 14],
-                    iconAnchor: [10, 7],
+                    iconAnchor: [10, 14],
                   }),
                   interactive: false,
                   pane: 'popupPane'
@@ -1682,7 +1682,7 @@ export function PilotMap({
                       position: relative;
                     ">${endNumber}</div>`,
                     iconSize: [20, 14],
-                    iconAnchor: [10, 7],
+                    iconAnchor: [10, 14],
                   }),
                   interactive: false,
                   pane: 'popupPane'
