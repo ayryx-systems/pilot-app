@@ -1475,7 +1475,7 @@ export function PilotMap({
           }
         });
 
-        // Gates
+        // Gates (labels only, no dots)
         osmData.gates.forEach(node => {
           let lat, lon;
           if (node.lat && node.lon) {
@@ -1485,12 +1485,7 @@ export function PilotMap({
             lat = point.lat; lon = point.lon;
           }
           if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
-            const gate = L.circleMarker([lat, lon], {
-              radius: 3, color: '#10b981', weight: 1, opacity: 0.8, fillOpacity: 0.6, interactive: false
-            });
-            layerGroupsRef.current.osm.addLayer(gate);
-
-            // Add gate labels (unobtrusive)
+            // Add gate labels only (no dots)
             const gateRef = node.tags?.ref;
             if (gateRef) {
               const gateLabel = L.marker([lat, lon], {
