@@ -8,6 +8,22 @@ import { weatherService } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 
+// Helper function to calculate bearing between two points
+function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+    const toRadians = (degrees: number) => degrees * (Math.PI / 180);
+    const toDegrees = (radians: number) => radians * (180 / Math.PI);
+    
+    const dLon = toRadians(lon2 - lon1);
+    const lat1Rad = toRadians(lat1);
+    const lat2Rad = toRadians(lat2);
+    
+    const y = Math.sin(dLon) * Math.cos(lat2Rad);
+    const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
+    
+    let bearing = toDegrees(Math.atan2(y, x));
+    return (bearing + 360) % 360; // Normalize to 0-360
+}
+
 interface PilotMapProps {
   airport?: Airport;
   airportData?: AirportOverview;
@@ -1584,11 +1600,36 @@ export function PilotMap({
                 });
                 label2Marker.addTo(mapInstance);
               } else {
-                // Fallback: Simple geometric placement (first number at start, second at end)
+                // Fallback: Calculate correct placement based on magnetic heading
                 const startPoint = coordinates[0];
                 const endPoint = coordinates[coordinates.length - 1];
-                const startNumber = runwayNumbers[0];
-                const endNumber = runwayNumbers[1];
+                
+                // Calculate bearing from start to end point
+                const bearing = calculateBearing(startPoint[0], startPoint[1], endPoint[0], endPoint[1]);
+                
+                // Determine which runway number goes where based on magnetic heading
+                const runway1Heading = parseInt(runwayNumbers[0]) * 10; // Convert "4" to 40°
+                const runway2Heading = parseInt(runwayNumbers[1]) * 10; // Convert "22" to 220°
+                
+                // Check which end is closer to which runway heading
+                const bearingToRunway1 = Math.abs(bearing - runway1Heading);
+                const bearingToRunway2 = Math.abs(bearing - runway2Heading);
+                
+                // Normalize angles (handle 360° wraparound)
+                const normalizedBearing1 = Math.min(bearingToRunway1, 360 - bearingToRunway1);
+                const normalizedBearing2 = Math.min(bearingToRunway2, 360 - bearingToRunway2);
+                
+                let startNumber, endNumber;
+                
+                if (normalizedBearing1 < normalizedBearing2) {
+                    // Start point is closer to runway 1 heading
+                    startNumber = runwayNumbers[0];
+                    endNumber = runwayNumbers[1];
+                } else {
+                    // Start point is closer to runway 2 heading
+                    startNumber = runwayNumbers[1];
+                    endNumber = runwayNumbers[0];
+                }
                 
                 // Create start label
                 const startLabel = L.marker(startPoint, {
