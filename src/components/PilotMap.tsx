@@ -972,7 +972,20 @@ export function PilotMap({
             </div>
           `;
           
-          clickableLine.bindPopup(trackPopupContent);
+          clickableLine.bindPopup(trackPopupContent, {
+            autoClose: true,
+            closeOnClick: true,
+            autoPan: false
+          });
+
+          // Auto-dismiss popup after 3 seconds
+          clickableLine.on('popupopen', () => {
+            setTimeout(() => {
+              if (clickableLine.isPopupOpen()) {
+                clickableLine.closePopup();
+              }
+            }, 3000);
+          });
 
           if (layerGroupsRef.current.tracks) {
             layerGroupsRef.current.tracks.addLayer(clickableLine);
