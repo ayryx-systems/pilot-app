@@ -917,54 +917,38 @@ export function PilotMap({
             opacity = 0.8 * (1 - fadeProgress); // Fade from 0.8 to 0
           }
 
-          // Create polyline with styling - thinner and dashed for subtlety
-          const polyline = L.polyline(latLngs, {
-            color: color,
-            weight: 1.5, // Thinner than before (was 3)
-            opacity: opacity, // Keep the existing fade-out logic intact
-            dashArray: '8, 4' // Dashed for all tracks to make them less prominent
+          // Create invisible thick line for easier clicking
+          const clickableLine = L.polyline(latLngs, {
+            color: 'transparent',
+            weight: 8, // Thick invisible line for easy clicking
+            opacity: 0,
+            interactive: true
           });
 
+          // Create visible thin dashed line for display
+          const visibleLine = L.polyline(latLngs, {
+            color: color,
+            weight: 1.5, // Thin visual line
+            opacity: opacity, // Keep the existing fade-out logic intact
+            dashArray: '8, 4', // Dashed for all tracks to make them less prominent
+            interactive: false // Not clickable, just visual
+          });
+
+          // Add popup to clickable line showing aircraft type
+          const trackPopupContent = `
+            <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
+              <p style="margin: 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
+            </div>
+          `;
+          
+          clickableLine.bindPopup(trackPopupContent);
+
           if (layerGroupsRef.current.tracks) {
-            layerGroupsRef.current.tracks.addLayer(polyline);
+            layerGroupsRef.current.tracks.addLayer(clickableLine);
+            layerGroupsRef.current.tracks.addLayer(visibleLine);
           }
 
-          // Add start marker (takeoff)
-          if (latLngs.length > 0 && track.coordinates && track.coordinates.length > 0) {
-            const startCoord = track.coordinates[0];
-            if (!startCoord || typeof startCoord.lat !== 'number' || typeof startCoord.lon !== 'number') {
-              console.warn('[PilotMap] Invalid start coordinate for track:', track.id || track.callsign);
-              return;
-            }
-            const startIcon = L.divIcon({
-              html: `<div style="
-                width: 12px;
-                height: 12px;
-                background: ${color};
-                border: 2px solid #ffffff;
-                border-radius: 50%;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                opacity: ${opacity};
-              "></div>`,
-              className: 'track-start-marker',
-              iconSize: [16, 16],
-              iconAnchor: [8, 8]
-            });
-
-            const popupContent = `
-              <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
-                <h4 style="margin: 0 0 4px 0; color: white;"><strong>${track.callsign || 'No Callsign'}</strong></h4>
-                <p style="margin: 2px 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
-              </div>
-            `;
-
-            const startMarker = L.marker([startCoord.lat, startCoord.lon], { icon: startIcon })
-              .bindPopup(popupContent);
-
-            if (layerGroupsRef.current.tracks) {
-              layerGroupsRef.current.tracks.addLayer(startMarker);
-            }
-          }
+          // Start markers removed - track line will be clickable instead
 
           // End markers removed to prevent accumulation on runways
         });
