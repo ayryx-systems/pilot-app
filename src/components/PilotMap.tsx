@@ -1321,19 +1321,20 @@ export function PilotMap({
     updateVisibility();
   }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
 
-  // Update OSM features display
+  // Update OSM features display - SIMPLIFIED
   useEffect(() => {
-    if (!mapInstance || !layerGroupsRef.current.osm) return;
+    if (!mapInstance || !osmData) return;
 
     const updateOSMFeatures = async () => {
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Clear existing OSM features
+      // Clear ALL existing OSM features first
       layerGroupsRef.current.osm.clearLayers();
 
-      if (displayOptions.showOSMFeatures && osmData) {
-        console.log('[PilotMap] Rendering OSM features:', {
+      // 1. Render other airport features FIRST (if toggle is enabled)
+      if (displayOptions.showOSMFeatures) {
+        console.log('[PilotMap] Rendering airport features (toggle-controlled):', {
           taxiways: osmData.taxiways.length,
           terminals: osmData.terminals.length,
           gates: osmData.gates.length,
@@ -1341,405 +1342,183 @@ export function PilotMap({
           hangars: osmData.hangars.length,
           controlTowers: osmData.controlTowers.length,
           parkingPositions: osmData.parkingPositions.length,
-          runways: osmData.runways.length,
           other: osmData.other.length
         });
-        console.log('[PilotMap] OSM data object:', osmData);
-        console.log('[PilotMap] First runway data:', osmData.runways[0]);
 
-        // Render taxiways
+        // Taxiways
         osmData.taxiways.forEach(way => {
           if (way.geometry && way.geometry.length > 1) {
             const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const taxiway = L.polyline(coordinates, {
-              color: '#8b5cf6', // Purple color for taxiways
-              weight: 2,
-              opacity: 0.8,
-              interactive: false,
-              pane: 'overlayPane'
+              color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
             });
-            taxiway.addTo(mapInstance); // Add directly to map
+            layerGroupsRef.current.osm.addLayer(taxiway);
           }
         });
 
-        // Render terminals
+        // Terminals
         osmData.terminals.forEach(way => {
           if (way.geometry && way.geometry.length > 2) {
             const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const terminal = L.polygon(coordinates, {
-              color: '#3b82f6', // Blue color for terminals
-              weight: 1,
-              opacity: 0.6,
-              fillOpacity: 0.2,
-              interactive: false,
-              pane: 'overlayPane'
+              color: '#3b82f6', weight: 1, opacity: 0.6, fillOpacity: 0.2, interactive: false, pane: 'overlayPane'
             });
-            terminal.addTo(mapInstance); // Add directly to map
+            layerGroupsRef.current.osm.addLayer(terminal);
           }
         });
 
-        // Render aprons
+        // Aprons
         osmData.aprons.forEach(way => {
           if (way.geometry && way.geometry.length > 2) {
             const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const apron = L.polygon(coordinates, {
-              color: '#64748b', // Gray color for aprons
-              weight: 1,
-              opacity: 0.5,
-              fillOpacity: 0.1,
-              interactive: false
+              color: '#64748b', weight: 1, opacity: 0.5, fillOpacity: 0.1, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(apron);
           }
         });
 
-        // Render hangars
+        // Hangars
         osmData.hangars.forEach(way => {
           if (way.geometry && way.geometry.length > 2) {
             const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const hangar = L.polygon(coordinates, {
-              color: '#f59e0b', // Orange color for hangars
-              weight: 1,
-              opacity: 0.7,
-              fillOpacity: 0.3,
-              interactive: false
+              color: '#f59e0b', weight: 1, opacity: 0.7, fillOpacity: 0.3, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(hangar);
           }
         });
 
-        // Render gates
+        // Gates
         osmData.gates.forEach(node => {
-          console.log('[PilotMap] Gate node:', node);
-          
-          // Handle different OSM data structures
           let lat, lon;
           if (node.lat && node.lon) {
-            // Direct lat/lon properties
-            lat = node.lat;
-            lon = node.lon;
+            lat = node.lat; lon = node.lon;
           } else if (node.geometry && node.geometry.length > 0) {
-            // Geometry array structure
             const point = node.geometry[0];
-            lat = point.lat;
-            lon = point.lon;
+            lat = point.lat; lon = point.lon;
           }
-          
-          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-            console.warn('[PilotMap] Gate node missing or invalid coordinates:', node);
-            return;
-          }
-          
-          const gate = L.circleMarker([lat, lon], {
-            radius: 3,
-            color: '#10b981', // Green color for gates
-            weight: 1,
-            opacity: 0.8,
-            fillOpacity: 0.6,
-            interactive: false
-          });
-          layerGroupsRef.current.osm.addLayer(gate);
-        });
-
-        // Render control towers
-        osmData.controlTowers.forEach(node => {
-          // Handle different OSM data structures
-          let lat, lon;
-          if (node.lat && node.lon) {
-            // Direct lat/lon properties
-            lat = node.lat;
-            lon = node.lon;
-          } else if (node.geometry && node.geometry.length > 0) {
-            // Geometry array structure
-            const point = node.geometry[0];
-            lat = point.lat;
-            lon = point.lon;
-          }
-          
-          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-            console.warn('[PilotMap] Control tower missing or invalid coordinates:', node);
-            return;
-          }
-          
-          const tower = L.circleMarker([lat, lon], {
-            radius: 4,
-            color: '#ef4444', // Red color for control towers
-            weight: 2,
-            opacity: 0.9,
-            fillOpacity: 0.7,
-            interactive: false
-          });
-          layerGroupsRef.current.osm.addLayer(tower);
-        });
-
-        // Render parking positions
-        osmData.parkingPositions.forEach(node => {
-          // Handle different OSM data structures
-          let lat, lon;
-          if (node.lat && node.lon) {
-            // Direct lat/lon properties
-            lat = node.lat;
-            lon = node.lon;
-          } else if (node.geometry && node.geometry.length > 0) {
-            // Geometry array structure
-            const point = node.geometry[0];
-            lat = point.lat;
-            lon = point.lon;
-          }
-          
-          if (!lat || !lon || isNaN(lat) || isNaN(lon)) {
-            console.warn('[PilotMap] Parking position missing or invalid coordinates:', node);
-            return;
-          }
-          
-          const parking = L.circleMarker([lat, lon], {
-            radius: 2,
-            color: '#6b7280', // Gray color for parking positions
-            weight: 1,
-            opacity: 0.6,
-            fillOpacity: 0.4,
-            interactive: false
-          });
-          layerGroupsRef.current.osm.addLayer(parking);
-        });
-
-        // Render runways with labels (following dashboard approach)
-        console.log('[PilotMap] Rendering OSM runways:', osmData.runways.length);
-        console.log('[PilotMap] OSM layer group exists:', !!layerGroupsRef.current.osm);
-        osmData.runways.forEach((way, index) => {
-          console.log(`[PilotMap] Rendering runway ${index + 1}:`, way.tags?.ref, way.geometry?.length, 'points');
-          console.log('[PilotMap] Runway way object:', way);
-          if (way.geometry && way.geometry.length > 1) {
-            console.log('[PilotMap] Runway geometry:', way.geometry);
-            const coordinates = way.geometry.map(point => {
-              console.log('[PilotMap] Geometry point:', point);
-              if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
-                console.warn('[PilotMap] Invalid geometry point:', point);
-                return null;
-              }
-              return [point.lat, point.lon] as [number, number];
-            }).filter(coord => coord !== null);
-            
-            if (coordinates.length < 2) {
-              console.warn('[PilotMap] Not enough valid coordinates for runway:', way.tags?.ref);
-              return;
-            }
-            const runway = L.polyline(coordinates, {
-              color: '#0ea5e9', // Blue color for runways
-              weight: 8, // Increased weight for better visibility
-              opacity: 1.0,
-              interactive: false,
-              pane: 'overlayPane' // Use overlay pane like dashboard
+          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+            const gate = L.circleMarker([lat, lon], {
+              radius: 3, color: '#10b981', weight: 1, opacity: 0.8, fillOpacity: 0.6, interactive: false
             });
-            console.log(`[PilotMap] Adding runway ${index + 1} directly to map`);
-            runway.addTo(mapInstance); // Add directly to map like dashboard
-
-            // Add runway labels - use enriched data if available, fallback to simple placement
-            const runwayRef = way.tags?.ref;
-            if (runwayRef && runwayRef.includes('/')) {
-              const runwayNumbers = runwayRef.split('/');
-              
-              if (way.labelPositions && way.labelPositions.length === 2) {
-                // Use backend-enriched label positions (new structure)
-                way.labelPositions.forEach(labelData => {
-                  const labelMarker = L.marker([labelData.position.lat, labelData.position.lon], {
-                    icon: L.divIcon({
-                      className: "runway-label",
-                      html: `<div style="
-                        color: #000000;
-                        font-size: 10px;
-                        font-weight: 700;
-                        text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                        background: rgba(255,255,255,0.95);
-                        padding: 1px 3px;
-                        border-radius: 2px;
-                        border: 1px solid rgba(0,0,0,0.2);
-                        white-space: nowrap;
-                        text-align: center;
-                        line-height: 1;
-                        min-width: 16px;
-                        display: inline-block;
-                        z-index: 2000;
-                        position: relative;
-                      ">${labelData.number}</div>`,
-                      iconSize: [20, 14],
-                      iconAnchor: [10, 7],
-                    }),
-                    interactive: false,
-                    pane: 'popupPane'
-                  });
-                  labelMarker.addTo(mapInstance);
-                });
-              } else if (way.processedLabels && way.processedLabels.label1 && way.processedLabels.label2) {
-                // Use old processedLabels structure (backward compatibility)
-                const label1 = way.processedLabels.label1;
-                const label2 = way.processedLabels.label2;
-                
-                // Create label 1
-                const label1Marker = L.marker([label1.position.lat, label1.position.lon], {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000;
-                      font-size: 10px;
-                      font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95);
-                      padding: 1px 3px;
-                      border-radius: 2px;
-                      border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap;
-                      text-align: center;
-                      line-height: 1;
-                      min-width: 16px;
-                      display: inline-block;
-                      z-index: 2000;
-                      position: relative;
-                    ">${label1.number}</div>`,
-                    iconSize: [20, 14],
-                    iconAnchor: [10, 14],
-                  }),
-                  interactive: false,
-                  pane: 'popupPane'
-                });
-                label1Marker.addTo(mapInstance);
-
-                // Create label 2
-                const label2Marker = L.marker([label2.position.lat, label2.position.lon], {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000;
-                      font-size: 10px;
-                      font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95);
-                      padding: 1px 3px;
-                      border-radius: 2px;
-                      border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap;
-                      text-align: center;
-                      line-height: 1;
-                      min-width: 16px;
-                      display: inline-block;
-                      z-index: 2000;
-                      position: relative;
-                    ">${label2.number}</div>`,
-                    iconSize: [20, 14],
-                    iconAnchor: [10, 14],
-                  }),
-                  interactive: false,
-                  pane: 'popupPane'
-                });
-                label2Marker.addTo(mapInstance);
-              } else {
-                // Fallback: Calculate correct placement based on magnetic heading
-                const startPoint = coordinates[0];
-                const endPoint = coordinates[coordinates.length - 1];
-                
-                // Calculate bearing from start to end point
-                const bearing = calculateBearing(startPoint[0], startPoint[1], endPoint[0], endPoint[1]);
-                
-                // Determine which runway number goes where based on magnetic heading
-                const runway1Heading = parseInt(runwayNumbers[0]) * 10; // Convert "4" to 40°
-                const runway2Heading = parseInt(runwayNumbers[1]) * 10; // Convert "22" to 220°
-                
-                // Check which end is closer to which runway heading
-                const bearingToRunway1 = Math.abs(bearing - runway1Heading);
-                const bearingToRunway2 = Math.abs(bearing - runway2Heading);
-                
-                // Normalize angles (handle 360° wraparound)
-                const normalizedBearing1 = Math.min(bearingToRunway1, 360 - bearingToRunway1);
-                const normalizedBearing2 = Math.min(bearingToRunway2, 360 - bearingToRunway2);
-                
-                let startNumber, endNumber;
-                
-                if (normalizedBearing1 < normalizedBearing2) {
-                    // Start point is closer to runway 1 heading
-                    startNumber = runwayNumbers[0];
-                    endNumber = runwayNumbers[1];
-                } else {
-                    // Start point is closer to runway 2 heading
-                    startNumber = runwayNumbers[1];
-                    endNumber = runwayNumbers[0];
-                }
-                
-                // Create start label
-                const startLabel = L.marker(startPoint, {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000;
-                      font-size: 10px;
-                      font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95);
-                      padding: 1px 3px;
-                      border-radius: 2px;
-                      border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap;
-                      text-align: center;
-                      line-height: 1;
-                      min-width: 16px;
-                      display: inline-block;
-                      z-index: 2000;
-                      position: relative;
-                    ">${startNumber}</div>`,
-                    iconSize: [20, 14],
-                    iconAnchor: [10, 14],
-                  }),
-                  interactive: false,
-                  pane: 'popupPane'
-                });
-                startLabel.addTo(mapInstance);
-
-                // Create end label
-                const endLabel = L.marker(endPoint, {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000;
-                      font-size: 10px;
-                      font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95);
-                      padding: 1px 3px;
-                      border-radius: 2px;
-                      border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap;
-                      text-align: center;
-                      line-height: 1;
-                      min-width: 16px;
-                      display: inline-block;
-                      z-index: 2000;
-                      position: relative;
-                    ">${endNumber}</div>`,
-                    iconSize: [20, 14],
-                    iconAnchor: [10, 14],
-                  }),
-                  interactive: false,
-                  pane: 'popupPane'
-                });
-                endLabel.addTo(mapInstance);
-              }
-            }
+            layerGroupsRef.current.osm.addLayer(gate);
           }
         });
 
-        // Render other features
+        // Control towers
+        osmData.controlTowers.forEach(node => {
+          let lat, lon;
+          if (node.lat && node.lon) {
+            lat = node.lat; lon = node.lon;
+          } else if (node.geometry && node.geometry.length > 0) {
+            const point = node.geometry[0];
+            lat = point.lat; lon = point.lon;
+          }
+          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+            const tower = L.circleMarker([lat, lon], {
+              radius: 4, color: '#ef4444', weight: 2, opacity: 0.9, fillOpacity: 0.7, interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(tower);
+          }
+        });
+
+        // Parking positions
+        osmData.parkingPositions.forEach(node => {
+          let lat, lon;
+          if (node.lat && node.lon) {
+            lat = node.lat; lon = node.lon;
+          } else if (node.geometry && node.geometry.length > 0) {
+            const point = node.geometry[0];
+            lat = point.lat; lon = point.lon;
+          }
+          if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+            const parking = L.circleMarker([lat, lon], {
+              radius: 2, color: '#6b7280', weight: 1, opacity: 0.6, fillOpacity: 0.4, interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(parking);
+          }
+        });
+
+        // Other features
         osmData.other.forEach(way => {
           if (way.geometry && way.geometry.length > 1) {
             const coordinates = way.geometry.map(point => [point.lat, point.lon] as [number, number]);
             const other = L.polyline(coordinates, {
-              color: '#a78bfa', // Light purple for other features
-              weight: 1,
-              opacity: 0.5,
-              interactive: false
+              color: '#a78bfa', weight: 1, opacity: 0.5, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(other);
           }
         });
       }
+
+      // 2. ALWAYS render runways LAST (so they appear on top)
+      console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
+      osmData.runways.forEach((way, index) => {
+        if (way.geometry && way.geometry.length > 1) {
+          const coordinates = way.geometry.map(point => {
+            if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
+              return null;
+            }
+            return [point.lat, point.lon] as [number, number];
+          }).filter(coord => coord !== null);
+          
+          if (coordinates.length < 2) return;
+          
+          const runway = L.polyline(coordinates, {
+            color: '#0ea5e9',
+            weight: 8,
+            opacity: 1.0,
+            interactive: false,
+            pane: 'overlayPane'
+          });
+          runway.addTo(mapInstance);
+          runway.bringToFront(); // Ensure runways are on top
+
+          // Add runway labels
+          const runwayRef = way.tags?.ref;
+          if (runwayRef && runwayRef.includes('/')) {
+            const runwayNumbers = runwayRef.split('/');
+            const startPoint = coordinates[0];
+            const endPoint = coordinates[coordinates.length - 1];
+            
+            // Simple label placement at both ends
+            const startLabel = L.marker(startPoint, {
+              icon: L.divIcon({
+                className: "runway-label",
+                html: `<div style="
+                  color: #000000; font-size: 10px; font-weight: 700;
+                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                  background: rgba(255,255,255,0.95); padding: 1px 3px;
+                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                  white-space: nowrap; text-align: center; line-height: 1;
+                  min-width: 16px; display: inline-block; z-index: 3000;
+                ">${runwayNumbers[0]}</div>`,
+                iconSize: [20, 14], iconAnchor: [10, 14]
+              }),
+              interactive: false, pane: 'popupPane'
+            });
+            startLabel.addTo(mapInstance);
+
+            const endLabel = L.marker(endPoint, {
+              icon: L.divIcon({
+                className: "runway-label",
+                html: `<div style="
+                  color: #000000; font-size: 10px; font-weight: 700;
+                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                  background: rgba(255,255,255,0.95); padding: 1px 3px;
+                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                  white-space: nowrap; text-align: center; line-height: 1;
+                  min-width: 16px; display: inline-block; z-index: 3000;
+                ">${runwayNumbers[1]}</div>`,
+                iconSize: [20, 14], iconAnchor: [10, 14]
+              }),
+              interactive: false, pane: 'popupPane'
+            });
+            endLabel.addTo(mapInstance);
+          }
+        }
+      });
     };
 
     updateOSMFeatures();
