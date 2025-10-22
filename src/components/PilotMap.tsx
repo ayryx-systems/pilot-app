@@ -921,7 +921,7 @@ export function PilotMap({
           const polyline = L.polyline(latLngs, {
             color: color,
             weight: 1.5, // Thinner than before (was 3)
-            opacity: opacity * 0.7, // More transparent (reduced by 30%)
+            opacity: opacity, // Keep the existing fade-out logic intact
             dashArray: '8, 4' // Dashed for all tracks to make them less prominent
           });
 
