@@ -95,17 +95,35 @@ export function PilotMap({
       style.id = "pilot-map-custom-styles";
       style.innerHTML = `
         .leaflet-popup-content-wrapper {
-          background-color: rgba(0, 0, 0, 0.8);
+          background-color: transparent !important;
           color: white;
           border-radius: 4px;
+          box-shadow: none !important;
+          border: none !important;
+          padding: 0 !important;
         }
         
         .leaflet-popup-tip {
-          background-color: rgba(0, 0, 0, 0.8);
+          background-color: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+          display: none !important;
         }
         
         .leaflet-popup-close-button {
           color: white;
+          background: transparent !important;
+        }
+        
+        .leaflet-popup {
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        
+        .leaflet-popup-content {
+          margin: 0 !important;
+          padding: 0 !important;
         }
         
         .runway-popup h4 {
@@ -936,8 +954,21 @@ export function PilotMap({
 
           // Add popup to clickable line showing aircraft type
           const trackPopupContent = `
-            <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
-              <p style="margin: 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
+            <div style="
+              background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(20,20,20,0.95));
+              border: 1px solid ${color};
+              border-radius: 8px;
+              padding: 8px 12px;
+              box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+              backdrop-filter: blur(4px);
+              color: #ffffff;
+              font-size: 13px;
+              font-weight: 500;
+              text-align: center;
+              min-width: 120px;
+            ">
+              <div style="color: ${color}; font-weight: 600; margin-bottom: 2px;">AIRCRAFT</div>
+              <div style="color: #e5e7eb; font-size: 12px;">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
             </div>
           `;
           
