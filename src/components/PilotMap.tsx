@@ -1372,11 +1372,12 @@ export function PilotMap({
                   html: `<div style="
                     color: #8b5cf6; font-size: 9px; font-weight: bold;
                     text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
-                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                    background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
                     border: 1px solid rgba(139,92,246,0.5); white-space: nowrap;
-                    z-index: 2000;
+                    z-index: 2000; display: flex; align-items: center; justify-content: center;
+                    min-width: 12px; min-height: 10px;
                   ">${taxiwayRef}</div>`,
-                  iconSize: [16, 14], iconAnchor: [8, 7]
+                  iconSize: [14, 12], iconAnchor: [7, 6]
                 }),
                 interactive: false,
                 pane: 'popupPane' // Use popupPane for higher z-index
