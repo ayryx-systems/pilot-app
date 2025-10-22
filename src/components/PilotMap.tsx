@@ -1499,13 +1499,17 @@ export function PilotMap({
                   html: `<div style="
                     color: #10b981; font-size: 9px; font-weight: bold;
                     text-shadow: 0px 0px 2px rgba(0,0,0,1);
-                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
-                    white-space: nowrap;
+                    background: rgba(0,0,0,0.55); padding: 0px 1px; border-radius: 1px;
+                    border: 1px solid rgba(16,185,129,0.5); white-space: nowrap;
+                    z-index: 2000; display: flex; align-items: center; justify-content: center;
+                    min-width: 12px; min-height: 10px;
                   ">${gateRef}</div>`,
-                  iconSize: [16, 12], iconAnchor: [8, 6]
+                  iconSize: [14, 12], iconAnchor: [7, 6]
                 }),
-                interactive: false
+                interactive: false,
+                pane: 'popupPane'
               });
+              gateLabel.setZIndexOffset(2000);
               layerGroupsRef.current.osm.addLayer(gateLabel);
             }
           }
