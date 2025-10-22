@@ -966,52 +966,7 @@ export function PilotMap({
             }
           }
 
-          // Add end marker (current position or landing) - simple circle marker
-          if (latLngs.length > 1 && track.coordinates && track.coordinates.length > 1) {
-            const endCoord = track.coordinates[track.coordinates.length - 1];
-            if (!endCoord || typeof endCoord.lat !== 'number' || typeof endCoord.lon !== 'number') {
-              console.warn('[PilotMap] Invalid end coordinate for track:', track.id || track.callsign);
-              return;
-            }
-            const isCompleted = track.status === 'COMPLETED';
-
-            const endIcon = L.divIcon({
-              html: `<div style="
-                width: 12px;
-                height: 12px;
-                background: ${color};
-                border: 2px solid #ffffff;
-                border-radius: 50%;
-                box-shadow: 0 1px 3px rgba(0,0,0,0.3);
-                opacity: ${opacity};
-                ${!isCompleted ? 'animation: pulse 2s infinite;' : ''}
-              "></div>
-              <style>
-                @keyframes pulse {
-                  0% { opacity: ${opacity}; transform: scale(1); }
-                  50% { opacity: ${opacity * 0.7}; transform: scale(1.1); }
-                  100% { opacity: ${opacity}; transform: scale(1); }
-                }
-              </style>`,
-              className: 'track-end-marker',
-              iconSize: [16, 16],
-              iconAnchor: [8, 8]
-            });
-
-            const endPopupContent = `
-              <div class="track-popup" style="color: white; background: rgba(0, 0, 0, 0.8); padding: 8px; border-radius: 4px;">
-                <h4 style="margin: 0 0 4px 0; color: white;"><strong>${track.callsign || 'No Callsign'}</strong></h4>
-                <p style="margin: 2px 0; font-size: 12px; color: #e5e5e5;"><strong>Aircraft:</strong> ${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</p>
-              </div>
-            `;
-
-            const endMarker = L.marker([endCoord.lat, endCoord.lon], { icon: endIcon })
-              .bindPopup(endPopupContent);
-
-            if (layerGroupsRef.current.tracks) {
-              layerGroupsRef.current.tracks.addLayer(endMarker);
-            }
-          }
+          // End markers removed to prevent accumulation on runways
         });
       }
     };
