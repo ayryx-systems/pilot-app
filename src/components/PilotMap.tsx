@@ -1353,6 +1353,29 @@ export function PilotMap({
               color: '#8b5cf6', weight: 2, opacity: 0.8, interactive: false, pane: 'overlayPane'
             });
             layerGroupsRef.current.osm.addLayer(taxiway);
+
+            // Add taxiway labels (unobtrusive)
+            const taxiwayRef = way.tags?.ref;
+            if (taxiwayRef && taxiwayRef.length === 1 && /^[A-Z]$/.test(taxiwayRef)) {
+              // Calculate midpoint for label placement
+              const midIndex = Math.floor(coordinates.length / 2);
+              const midPoint = coordinates[midIndex];
+              
+              const taxiwayLabel = L.marker([midPoint[0], midPoint[1]], {
+                icon: L.divIcon({
+                  className: "taxiway-label",
+                  html: `<div style="
+                    color: #8b5cf6; font-size: 9px; font-weight: bold;
+                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                    border: 1px solid rgba(139,92,246,0.3); white-space: nowrap;
+                  ">${taxiwayRef}</div>`,
+                  iconSize: [16, 14], iconAnchor: [8, 7]
+                }),
+                interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(taxiwayLabel);
+            }
           }
         });
 
@@ -1364,6 +1387,33 @@ export function PilotMap({
               color: '#3b82f6', weight: 1, opacity: 0.6, fillOpacity: 0.2, interactive: false, pane: 'overlayPane'
             });
             layerGroupsRef.current.osm.addLayer(terminal);
+
+            // Add terminal labels (unobtrusive)
+            const terminalName = way.tags?.name || way.tags?.ref;
+            if (terminalName) {
+              // Calculate centroid for label placement
+              let sumLat = 0, sumLon = 0;
+              coordinates.forEach(point => {
+                sumLat += point[0];
+                sumLon += point[1];
+              });
+              const centerLat = sumLat / coordinates.length;
+              const centerLon = sumLon / coordinates.length;
+
+              const terminalLabel = L.marker([centerLat, centerLon], {
+                icon: L.divIcon({
+                  className: "terminal-label",
+                  html: `<div style="
+                    color: #3b82f6; font-size: 8px; font-weight: bold;
+                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                    background: none; padding: 0; white-space: nowrap;
+                  ">${terminalName}</div>`,
+                  iconSize: [40, 16], iconAnchor: [20, 8]
+                }),
+                interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(terminalLabel);
+            }
           }
         });
 
@@ -1386,6 +1436,33 @@ export function PilotMap({
               color: '#f59e0b', weight: 1, opacity: 0.7, fillOpacity: 0.3, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(hangar);
+
+            // Add hangar labels (unobtrusive)
+            const hangarName = way.tags?.name || way.tags?.ref || way.tags?.alt_name;
+            if (hangarName) {
+              // Calculate centroid for label placement
+              let sumLat = 0, sumLon = 0;
+              coordinates.forEach(point => {
+                sumLat += point[0];
+                sumLon += point[1];
+              });
+              const centerLat = sumLat / coordinates.length;
+              const centerLon = sumLon / coordinates.length;
+
+              const hangarLabel = L.marker([centerLat, centerLon], {
+                icon: L.divIcon({
+                  className: "hangar-label",
+                  html: `<div style="
+                    color: #f59e0b; font-size: 7px; font-weight: bold;
+                    text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                    background: none; padding: 0; white-space: nowrap;
+                  ">${hangarName}</div>`,
+                  iconSize: [50, 14], iconAnchor: [25, 7]
+                }),
+                interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(hangarLabel);
+            }
           }
         });
 
@@ -1403,6 +1480,25 @@ export function PilotMap({
               radius: 3, color: '#10b981', weight: 1, opacity: 0.8, fillOpacity: 0.6, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(gate);
+
+            // Add gate labels (unobtrusive)
+            const gateRef = node.tags?.ref;
+            if (gateRef) {
+              const gateLabel = L.marker([lat, lon], {
+                icon: L.divIcon({
+                  className: "gate-label",
+                  html: `<div style="
+                    color: #10b981; font-size: 9px; font-weight: bold;
+                    text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                    white-space: nowrap;
+                  ">${gateRef}</div>`,
+                  iconSize: [16, 12], iconAnchor: [8, 6]
+                }),
+                interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(gateLabel);
+            }
           }
         });
 
@@ -1420,6 +1516,23 @@ export function PilotMap({
               radius: 4, color: '#ef4444', weight: 2, opacity: 0.9, fillOpacity: 0.7, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(tower);
+
+            // Add control tower labels (unobtrusive)
+            const towerName = node.tags?.name || node.tags?.ref || 'TWR';
+            const towerLabel = L.marker([lat, lon], {
+              icon: L.divIcon({
+                className: "tower-label",
+                html: `<div style="
+                  color: #ef4444; font-size: 8px; font-weight: bold;
+                  text-shadow: 0px 0px 2px rgba(0,0,0,1), 0px 0px 4px rgba(0,0,0,0.8);
+                  background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                  white-space: nowrap;
+                ">${towerName}</div>`,
+                iconSize: [20, 12], iconAnchor: [10, 6]
+              }),
+              interactive: false
+            });
+            layerGroupsRef.current.osm.addLayer(towerLabel);
           }
         });
 
@@ -1437,6 +1550,25 @@ export function PilotMap({
               radius: 2, color: '#6b7280', weight: 1, opacity: 0.6, fillOpacity: 0.4, interactive: false
             });
             layerGroupsRef.current.osm.addLayer(parking);
+
+            // Add parking position labels (unobtrusive)
+            const parkingRef = node.tags?.ref;
+            if (parkingRef) {
+              const parkingLabel = L.marker([lat, lon], {
+                icon: L.divIcon({
+                  className: "parking-label",
+                  html: `<div style="
+                    color: #6b7280; font-size: 7px; font-weight: bold;
+                    text-shadow: 0px 0px 2px rgba(0,0,0,1);
+                    background: rgba(0,0,0,0.6); padding: 1px 2px; border-radius: 2px;
+                    white-space: nowrap;
+                  ">${parkingRef}</div>`,
+                  iconSize: [16, 10], iconAnchor: [8, 5]
+                }),
+                interactive: false
+              });
+              layerGroupsRef.current.osm.addLayer(parkingLabel);
+            }
           }
         });
 
