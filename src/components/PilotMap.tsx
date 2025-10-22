@@ -917,12 +917,12 @@ export function PilotMap({
             opacity = 0.8 * (1 - fadeProgress); // Fade from 0.8 to 0
           }
 
-          // Create polyline with styling
+          // Create polyline with styling - thinner and dashed for subtlety
           const polyline = L.polyline(latLngs, {
             color: color,
-            weight: 3,
-            opacity: opacity,
-            dashArray: track.status === 'COMPLETED' ? '5, 5' : undefined // Dashed for completed flights
+            weight: 1.5, // Thinner than before (was 3)
+            opacity: opacity * 0.7, // More transparent (reduced by 30%)
+            dashArray: '8, 4' // Dashed for all tracks to make them less prominent
           });
 
           if (layerGroupsRef.current.tracks) {
