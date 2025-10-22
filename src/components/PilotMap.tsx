@@ -174,9 +174,15 @@ export function PilotMap({
           position: relative;
         }
         
-        /* Ensure map container doesn't interfere with overlaid controls */
-        .leaflet-container {
-          position: relative;
+        /* Ensure runway labels appear above all other map elements */
+        .runway-label {
+          z-index: 2000 !important;
+          position: relative !important;
+        }
+        
+        .runway-label div {
+          z-index: 2000 !important;
+          position: relative !important;
         }
       `;
       document.head.appendChild(style);
@@ -1479,66 +1485,169 @@ export function PilotMap({
             console.log(`[PilotMap] Adding runway ${index + 1} directly to map`);
             runway.addTo(mapInstance); // Add directly to map like dashboard
 
-            // Add runway labels at each end (following dashboard approach)
+            // Add runway labels - use enriched data if available, fallback to simple placement
             const runwayRef = way.tags?.ref;
             if (runwayRef && runwayRef.includes('/')) {
               const runwayNumbers = runwayRef.split('/');
-              const startPoint = coordinates[0];
-              const endPoint = coordinates[coordinates.length - 1];
-              const startRunwayNumber = runwayNumbers[0];
-              const endRunwayNumber = runwayNumbers[1];
+              
+              if (way.labelPositions && way.labelPositions.length === 2) {
+                // Use backend-enriched label positions (new structure)
+                way.labelPositions.forEach(labelData => {
+                  const labelMarker = L.marker([labelData.position.lat, labelData.position.lon], {
+                    icon: L.divIcon({
+                      className: "runway-label",
+                      html: `<div style="
+                        color: #000000;
+                        font-size: 10px;
+                        font-weight: 700;
+                        text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                        background: rgba(255,255,255,0.95);
+                        padding: 1px 3px;
+                        border-radius: 2px;
+                        border: 1px solid rgba(0,0,0,0.2);
+                        white-space: nowrap;
+                        text-align: center;
+                        line-height: 1;
+                        min-width: 16px;
+                        display: inline-block;
+                        z-index: 2000;
+                        position: relative;
+                      ">${labelData.number}</div>`,
+                      iconSize: [20, 14],
+                      iconAnchor: [10, 7],
+                    }),
+                    interactive: false,
+                    pane: 'popupPane'
+                  });
+                  labelMarker.addTo(mapInstance);
+                });
+              } else if (way.processedLabels && way.processedLabels.label1 && way.processedLabels.label2) {
+                // Use old processedLabels structure (backward compatibility)
+                const label1 = way.processedLabels.label1;
+                const label2 = way.processedLabels.label2;
+                
+                // Create label 1
+                const label1Marker = L.marker([label1.position.lat, label1.position.lon], {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000;
+                      font-size: 10px;
+                      font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95);
+                      padding: 1px 3px;
+                      border-radius: 2px;
+                      border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap;
+                      text-align: center;
+                      line-height: 1;
+                      min-width: 16px;
+                      display: inline-block;
+                      z-index: 2000;
+                      position: relative;
+                    ">${label1.number}</div>`,
+                    iconSize: [20, 14],
+                    iconAnchor: [10, 7],
+                  }),
+                  interactive: false,
+                  pane: 'popupPane'
+                });
+                label1Marker.addTo(mapInstance);
 
-              // Start label
-              const startLabel = L.marker(startPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000;
-                    font-size: 10px;
-                    font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95);
-                    padding: 1px 3px;
-                    border-radius: 2px;
-                    border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap;
-                    text-align: center;
-                    line-height: 1;
-                    min-width: 16px;
-                    display: inline-block;
-                  ">${startRunwayNumber}</div>`,
-                  iconSize: [20, 14],
-                  iconAnchor: [10, 7],
-                }),
-                interactive: false,
-              });
-              startLabel.addTo(mapInstance); // Add directly to map
+                // Create label 2
+                const label2Marker = L.marker([label2.position.lat, label2.position.lon], {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000;
+                      font-size: 10px;
+                      font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95);
+                      padding: 1px 3px;
+                      border-radius: 2px;
+                      border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap;
+                      text-align: center;
+                      line-height: 1;
+                      min-width: 16px;
+                      display: inline-block;
+                      z-index: 2000;
+                      position: relative;
+                    ">${label2.number}</div>`,
+                    iconSize: [20, 14],
+                    iconAnchor: [10, 7],
+                  }),
+                  interactive: false,
+                  pane: 'popupPane'
+                });
+                label2Marker.addTo(mapInstance);
+              } else {
+                // Fallback: Simple geometric placement (first number at start, second at end)
+                const startPoint = coordinates[0];
+                const endPoint = coordinates[coordinates.length - 1];
+                const startNumber = runwayNumbers[0];
+                const endNumber = runwayNumbers[1];
+                
+                // Create start label
+                const startLabel = L.marker(startPoint, {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000;
+                      font-size: 10px;
+                      font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95);
+                      padding: 1px 3px;
+                      border-radius: 2px;
+                      border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap;
+                      text-align: center;
+                      line-height: 1;
+                      min-width: 16px;
+                      display: inline-block;
+                      z-index: 2000;
+                      position: relative;
+                    ">${startNumber}</div>`,
+                    iconSize: [20, 14],
+                    iconAnchor: [10, 7],
+                  }),
+                  interactive: false,
+                  pane: 'popupPane'
+                });
+                startLabel.addTo(mapInstance);
 
-              // End label
-              const endLabel = L.marker(endPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000;
-                    font-size: 10px;
-                    font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95);
-                    padding: 1px 3px;
-                    border-radius: 2px;
-                    border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap;
-                    text-align: center;
-                    line-height: 1;
-                    min-width: 16px;
-                    display: inline-block;
-                  ">${endRunwayNumber}</div>`,
-                  iconSize: [20, 14],
-                  iconAnchor: [10, 7],
-                }),
-                interactive: false,
-              });
-              endLabel.addTo(mapInstance); // Add directly to map
+                // Create end label
+                const endLabel = L.marker(endPoint, {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000;
+                      font-size: 10px;
+                      font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95);
+                      padding: 1px 3px;
+                      border-radius: 2px;
+                      border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap;
+                      text-align: center;
+                      line-height: 1;
+                      min-width: 16px;
+                      display: inline-block;
+                      z-index: 2000;
+                      position: relative;
+                    ">${endNumber}</div>`,
+                    iconSize: [20, 14],
+                    iconAnchor: [10, 7],
+                  }),
+                  interactive: false,
+                  pane: 'popupPane'
+                });
+                endLabel.addTo(mapInstance);
+              }
             }
           }
         });

@@ -11,8 +11,7 @@
     "dev": "next dev --turbopack -p 3006",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
-    "sync-airports": "node scripts/sync-airports.js"
+    "lint": "eslint"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

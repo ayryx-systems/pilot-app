@@ -1,12 +1,31 @@
 /**
- * OSM Service for Pilot App
- * =========================
+ * Unified OSM Service for Pilot App
+ * ==================================
  * 
- * This service fetches OSM data from the backend API for display on the pilot map.
- * It provides the same airport infrastructure data that the dashboard uses.
+ * Simplified OSM service that fetches data from the backend API.
+ * Uses the same unified API endpoint as the dashboard.
  */
 
-import { OSMResponse, AirportOSMFeatures } from '@/types';
+import { AirportOSMFeatures } from '@/types';
+
+interface OSMResponse {
+  airportId: string;
+  osm: {
+    taxiways: any[];
+    terminals: any[];
+    gates: any[];
+    aprons: any[];
+    hangars: any[];
+    controlTowers: any[];
+    parkingPositions: any[];
+    runways: any[];
+    other: any[];
+    featureCount: number;
+  };
+  timestamp: string;
+  cacheMaxAge: number;
+  source: string;
+}
 
 class PilotOSMService {
   private cache = new Map<string, { data: AirportOSMFeatures; timestamp: number }>();
@@ -31,7 +50,7 @@ class PilotOSMService {
     try {
       console.log(`[PilotOSMService] Fetching OSM data for ${airportId} from backend API`);
       
-      const response = await fetch(`${this.BACKEND_API_URL}/api/pilot/${airportId}/osm`, {
+      const response = await fetch(`${this.BACKEND_API_URL}/api/airports/${airportId}/osm`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
