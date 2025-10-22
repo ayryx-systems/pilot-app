@@ -116,19 +116,18 @@ export function PilotMap({
       style.id = "pilot-map-custom-styles";
       style.innerHTML = `
         .leaflet-popup-content-wrapper {
-          background-color: transparent !important;
+          background-color: rgba(0, 0, 0, 0.85) !important;
           color: white;
-          border-radius: 4px;
-          box-shadow: none !important;
-          border: none !important;
-          padding: 0 !important;
+          border-radius: 8px;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.6) !important;
+          border: 1px solid rgba(255,255,255,0.2) !important;
+          padding: 8px !important;
         }
         
         .leaflet-popup-tip {
-          background-color: transparent !important;
-          border: none !important;
-          box-shadow: none !important;
-          display: none !important;
+          background-color: rgba(0, 0, 0, 0.85) !important;
+          border: 1px solid rgba(255,255,255,0.2) !important;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.4) !important;
         }
         
         .leaflet-popup-close-button {
@@ -910,15 +909,15 @@ export function PilotMap({
               <div style="margin-bottom: 8px;">
                 <h4 style="margin: 0; color: ${color};"><strong>PIREP</strong></h4>
               </div>
-              <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">
+              <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
                 ${pirep.timestamp ? new Date(pirep.timestamp).toLocaleString() : 'Unknown time'}<br/>
                 ${pirep.aircraft || 'Unknown aircraft'} at ${pirep.altitude?.toLocaleString() || 'Unknown'} ft
               </p>
-              ${pirep.message ? `<p style="margin: 8px 0; font-size: 13px;"><strong>Message:</strong> ${pirep.message}</p>` : ''}
-              <ul style="margin: 8px 0; padding-left: 16px; font-size: 13px;">
+              ${pirep.message ? `<p style="margin: 8px 0; font-size: 13px; color: #f3f4f6;"><strong>Message:</strong> ${pirep.message}</p>` : ''}
+              <ul style="margin: 8px 0; padding-left: 16px; font-size: 13px; color: #f3f4f6;">
                 ${conditionsHtml}
               </ul>
-              ${pirep.remarks ? `<p style="margin: 8px 0; font-size: 12px; font-style: italic;">${pirep.remarks}</p>` : ''}
+              ${pirep.remarks ? `<p style="margin: 8px 0; font-size: 12px; font-style: italic; color: #d1d5db;">${pirep.remarks}</p>` : ''}
             </div>
           `;
 
