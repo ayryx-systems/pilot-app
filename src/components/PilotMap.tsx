@@ -328,6 +328,8 @@ export function PilotMap({
 
       // Initialize layer groups - weather group needs higher z-index
       const weatherGroup = L.layerGroup().addTo(map);
+      const tracksGroup = L.layerGroup().addTo(map);
+      const pirepsGroup = L.layerGroup().addTo(map);
 
       layerGroupsRef.current = {
         // runways: DISABLED - now using OSM data
@@ -335,18 +337,27 @@ export function PilotMap({
         waypoints: L.layerGroup().addTo(map),
         // approachRoutes: DISABLED - now using OSM data  
         // extendedCenterlines: DISABLED - now using OSM data
-        pireps: L.layerGroup().addTo(map),
-        tracks: L.layerGroup().addTo(map),
+        pireps: pirepsGroup,
+        tracks: tracksGroup,
         osm: L.layerGroup().addTo(map),
         weather: weatherGroup,
       };
 
-      // Set weather layer group to render above base tiles
+      // Set layer group z-indexes to ensure proper layering
       const weatherGroupElement = weatherGroup.getPane ? weatherGroup.getPane() : null;
+      const tracksGroupElement = tracksGroup.getPane ? tracksGroup.getPane() : null;
+      const pirepsGroupElement = pirepsGroup.getPane ? pirepsGroup.getPane() : null;
+      
       if (weatherGroupElement) {
         weatherGroupElement.style.zIndex = '1000';
       }
-      console.log('[PilotMap] Weather layer group initialized with high z-index');
+      if (tracksGroupElement) {
+        tracksGroupElement.style.zIndex = '500';
+      }
+      if (pirepsGroupElement) {
+        pirepsGroupElement.style.zIndex = '1500'; // Higher than tracks
+      }
+      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=1000, tracks=500, pireps=1500');
 
       // Add scale control (similar to ATC dashboard)
       L.control
@@ -895,7 +906,13 @@ export function PilotMap({
             iconAnchor: [15, 15]
           });
 
-          const marker = L.marker([pirep.location.lat, pirep.location.lon], { icon: pirepIcon });
+          const marker = L.marker([pirep.location.lat, pirep.location.lon], { 
+            icon: pirepIcon,
+            pane: 'popupPane' // Use popup pane for highest z-index
+          });
+
+          // Set high z-index for PIREP marker to ensure it's above tracks
+          marker.setZIndexOffset(2000);
 
           // Create popup content
           const conditionsHtml = (pirep.conditions && Array.isArray(pirep.conditions))
@@ -1014,7 +1031,8 @@ export function PilotMap({
             color: 'transparent',
             weight: 8, // Thick invisible line for easy clicking
             opacity: 0,
-            interactive: true
+            interactive: true,
+            pane: 'overlayPane' // Use overlay pane with lower z-index
           });
 
           // Create visible thin dashed line for display
@@ -1023,7 +1041,8 @@ export function PilotMap({
             weight: 1.5, // Thin visual line
             opacity: opacity, // Keep the existing fade-out logic intact
             dashArray: '8, 4', // Dashed for all tracks to make them less prominent
-            interactive: false // Not clickable, just visual
+            interactive: false, // Not clickable, just visual
+            pane: 'overlayPane' // Use overlay pane with lower z-index
           });
 
           // Add popup to clickable line showing aircraft type
@@ -1059,7 +1078,8 @@ export function PilotMap({
               weight: 4, // Thicker than the original 1.5
               opacity: 1.0, // Full opacity
               dashArray: undefined, // Continuous line (no dashes)
-              interactive: false
+              interactive: false,
+              pane: 'overlayPane' // Use overlay pane with lower z-index
             });
 
             // Add highlight overlay to tracks layer
