@@ -1413,8 +1413,8 @@ export function PilotMap({
             const popupContent = `
               <div style="min-width: 200px;">
                 <div style="color: ${color}; font-weight: 700; margin-bottom: 4px;">${sigmet.type}</div>
-                <div style="margin-bottom: 4px;"><strong>Event:</strong> ${sigmet.event}</div>
-                <div style="margin-bottom: 4px;"><strong>Severity:</strong> ${sigmet.severity}</div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Event:</span> <span style="color: #f3f4f6;">${sigmet.event}</span></div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Severity:</span> <span style="color: ${color};">${sigmet.severity}</span></div>
                 <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${sigmet.description}</div>
                 <div style="font-size: 11px; color: #6b7280;">
                   <div>Valid: ${new Date(sigmet.validTimeFrom).toLocaleTimeString()}</div>
