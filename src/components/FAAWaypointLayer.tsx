@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from "react";
 import { waypointService } from "@/services/waypointService";
 import { FormattedWaypoint } from "@/types/waypoints";
+import { Z_INDEX_LAYERS } from "@/types/zIndexLayers";
 
 interface FAAWaypointLayerProps {
   map: any; // Use any to avoid Leaflet import issues
@@ -95,6 +96,7 @@ export function FAAWaypointLayer({
             iconAnchor: [4, 4],
           }),
           interactive: true,
+          zIndexOffset: Z_INDEX_LAYERS.WAYPOINTS,
         });
 
         // Add waypoint information popup
@@ -118,6 +120,7 @@ export function FAAWaypointLayer({
               iconAnchor: [20, -6], // Place the label above the marker
             }),
             interactive: false,
+            zIndexOffset: Z_INDEX_LAYERS.WAYPOINT_LABELS,
           });
 
           // Add to layer group

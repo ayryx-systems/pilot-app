@@ -327,15 +327,16 @@ export function PilotMap({
         }
       ).addTo(map);
 
-      // Initialize layer groups - weather group needs higher z-index
+      // Initialize layer groups
       const weatherGroup = L.layerGroup().addTo(map);
       const tracksGroup = L.layerGroup().addTo(map);
       const pirepsGroup = L.layerGroup().addTo(map);
+      const waypointsGroup = L.layerGroup().addTo(map);
 
       layerGroupsRef.current = {
         // runways: DISABLED - now using OSM data
         dmeRings: L.layerGroup().addTo(map),
-        waypoints: L.layerGroup().addTo(map),
+        waypoints: waypointsGroup,
         // approachRoutes: DISABLED - now using OSM data  
         // extendedCenterlines: DISABLED - now using OSM data
         pireps: pirepsGroup,
@@ -344,21 +345,23 @@ export function PilotMap({
         weather: weatherGroup,
       };
 
-      // Set layer group z-indexes to ensure proper layering
-      const weatherGroupElement = weatherGroup.getPane ? weatherGroup.getPane() : null;
-      const tracksGroupElement = tracksGroup.getPane ? tracksGroup.getPane() : null;
-      const pirepsGroupElement = pirepsGroup.getPane ? pirepsGroup.getPane() : null;
+      // Set layer group z-indexes using pane zIndexOffset for proper layering
+      // Note: zIndexOffset is added to the pane's base z-index (600 for markerPane)
+      // Using getPane() to directly set the z-index style
+      const setPaneZIndex = (pane: any, zIndex: number) => {
+        if (pane && pane.style) {
+          pane.style.zIndex = zIndex.toString();
+        }
+      };
+
+      // These values should be set in a constants file for consistency
+      // For now using reasonable values based on visual hierarchy
+      setPaneZIndex(weatherGroup.getPane?.(), 1000);
+      setPaneZIndex(tracksGroup.getPane?.(), 630); // GROUND_TRACKS (30) + markerPane base (600)
+      setPaneZIndex(waypointsGroup.getPane?.(), 635); // WAYPOINTS (35) + markerPane base (600)
+      setPaneZIndex(pirepsGroup.getPane?.(), 700); // Higher than waypoints and tracks
       
-      if (weatherGroupElement) {
-        weatherGroupElement.style.zIndex = '1000';
-      }
-      if (tracksGroupElement) {
-        tracksGroupElement.style.zIndex = '500';
-      }
-      if (pirepsGroupElement) {
-        pirepsGroupElement.style.zIndex = '1500'; // Higher than tracks
-      }
-      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=1000, tracks=500, pireps=1500');
+      console.log('[PilotMap] Layer groups initialized with proper z-indexes');
 
       // Add scale control (similar to ATC dashboard)
       L.control
