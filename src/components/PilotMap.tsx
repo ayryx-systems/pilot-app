@@ -8,6 +8,7 @@ import { weatherService } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
+import { Z_INDEX_LAYERS } from '@/types/zIndexLayers';
 
 // Helper function to calculate bearing between two points
 function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -345,23 +346,29 @@ export function PilotMap({
         weather: weatherGroup,
       };
 
-      // Set layer group z-indexes using pane zIndexOffset for proper layering
-      // Note: zIndexOffset is added to the pane's base z-index (600 for markerPane)
-      // Using getPane() to directly set the z-index style
-      const setPaneZIndex = (pane: any, zIndex: number) => {
-        if (pane && pane.style) {
-          pane.style.zIndex = zIndex.toString();
-        }
-      };
-
-      // These values should be set in a constants file for consistency
-      // For now using reasonable values based on visual hierarchy
-      setPaneZIndex(weatherGroup.getPane?.(), 1000);
-      setPaneZIndex(tracksGroup.getPane?.(), 630); // GROUND_TRACKS (30) + markerPane base (600)
-      setPaneZIndex(waypointsGroup.getPane?.(), 635); // WAYPOINTS (35) + markerPane base (600)
-      setPaneZIndex(pirepsGroup.getPane?.(), 700); // Higher than waypoints and tracks
+      // Set layer group z-indexes to ensure proper layering
+      // Using pane zIndex style for layer groups
+      // Values match Z_INDEX_LAYERS constants (which get added to markerPane base of 600)
+      const tracksPane = tracksGroup.getPane?.();
+      const waypointsPane = waypointsGroup.getPane?.();
+      const weatherPane = weatherGroup.getPane?.();
+      const pirepsPane = pirepsGroup.getPane?.();
       
-      console.log('[PilotMap] Layer groups initialized with proper z-indexes');
+      // GROUND_TRACKS: 30, waypoints go above at 35
+      if (tracksPane && tracksPane.style) {
+        tracksPane.style.zIndex = '630'; // GROUND_TRACKS (30) + markerPane base (600)
+      }
+      if (waypointsPane && waypointsPane.style) {
+        waypointsPane.style.zIndex = '635'; // WAYPOINTS (35) + markerPane base (600)
+      }
+      if (weatherPane && weatherPane.style) {
+        weatherPane.style.zIndex = '1000';
+      }
+      if (pirepsPane && pirepsPane.style) {
+        pirepsPane.style.zIndex = '700'; // PIREPs above waypoints and tracks
+      }
+      
+      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=1000, tracks=630, waypoints=635, pireps=700');
 
       // Add scale control (similar to ATC dashboard)
       L.control
@@ -994,7 +1001,8 @@ export function PilotMap({
             weight: 8, // Thick invisible line for easy clicking
             opacity: 0,
             interactive: true,
-            pane: 'overlayPane' // Use overlay pane with lower z-index
+            pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
+            zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
           });
 
           // Create visible thin dashed line for display
@@ -1004,7 +1012,8 @@ export function PilotMap({
             opacity: opacity, // Keep the existing fade-out logic intact
             dashArray: '8, 4', // Dashed for all tracks to make them less prominent
             interactive: false, // Not clickable, just visual
-            pane: 'overlayPane' // Use overlay pane with lower z-index
+            pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
+            zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
           });
 
           // Add popup to clickable line showing aircraft type
@@ -1041,7 +1050,8 @@ export function PilotMap({
               opacity: 1.0, // Full opacity
               dashArray: undefined, // Continuous line (no dashes)
               interactive: false,
-              pane: 'overlayPane' // Use overlay pane with lower z-index
+              pane: 'markerPane', // Use markerPane to stay consistent
+              zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
             });
 
             // Add highlight overlay to tracks layer
