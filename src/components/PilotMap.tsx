@@ -1417,6 +1417,38 @@ export function PilotMap({
               return `${hours}${minutes}Z`;
             };
 
+            // Format relative time (e.g., "2h 10min ago" or "in 1h 50min")
+            const formatRelativeTime = (dateString: string) => {
+              const date = new Date(dateString);
+              const now = new Date();
+              const diffMs = date.getTime() - now.getTime();
+              const diffMinutes = Math.floor(diffMs / 60000);
+              const absMinutes = Math.abs(diffMinutes);
+              
+              const hours = Math.floor(absMinutes / 60);
+              const minutes = absMinutes % 60;
+              
+              if (diffMinutes < 0) {
+                // Past time
+                if (absMinutes < 60) {
+                  return `${absMinutes}min ago`;
+                } else if (minutes === 0) {
+                  return `${hours}h ago`;
+                } else {
+                  return `${hours}h ${minutes}min ago`;
+                }
+              } else {
+                // Future time
+                if (absMinutes < 60) {
+                  return `in ${absMinutes}min`;
+                } else if (minutes === 0) {
+                  return `in ${hours}h`;
+                } else {
+                  return `in ${hours}h ${minutes}min`;
+                }
+              }
+            };
+
             // Create popup content
             const popupContent = `
               <div style="min-width: 200px;">
@@ -1425,8 +1457,8 @@ export function PilotMap({
                 <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Severity:</span> <span style="color: ${color};">${sigmet.severity}</span></div>
                 <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${sigmet.description}</div>
                 <div style="font-size: 11px; color: #6b7280;">
-                  <div>Valid: ${formatZulu(sigmet.validTimeFrom)}</div>
-                  <div>Expires: ${formatZulu(sigmet.validTimeTo)}</div>
+                  <div>Valid: ${formatZulu(sigmet.validTimeFrom)} (${formatRelativeTime(sigmet.validTimeFrom)})</div>
+                  <div>Expires: ${formatZulu(sigmet.validTimeTo)} (${formatRelativeTime(sigmet.validTimeTo)})</div>
                 </div>
               </div>
             `;
