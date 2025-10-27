@@ -263,11 +263,6 @@ export function PilotDashboard() {
             isDemo={selectedAirport === 'KDEN'}
             loading={loading}
             selectedAirport={selectedAirport}
-            onWeatherRefresh={() => {
-              if ((window as any).refreshWeatherLayer) {
-                (window as any).refreshWeatherLayer();
-              }
-            }}
           />
 
           {/* Map Controls - Top Right of Map Area */}
@@ -277,11 +272,6 @@ export function PilotDashboard() {
                 displayOptions={mapDisplayOptions}
                 onOptionsChange={setMapDisplayOptions}
                 isDemo={selectedAirport === 'KDEN'}
-                onWeatherRefresh={() => {
-                  if ((window as any).refreshWeatherLayer) {
-                    (window as any).refreshWeatherLayer();
-                  }
-                }}
               />
             </div>
           )}

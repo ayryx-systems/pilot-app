@@ -34,7 +34,6 @@ interface PilotMapProps {
   displayOptions: MapDisplayOptions;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   isDemo?: boolean;
-  onWeatherRefresh?: () => void;
   loading?: boolean;
   selectedAirport?: string | null;
 }
@@ -47,7 +46,6 @@ export function PilotMap({
   displayOptions,
   onFullscreenChange,
   isDemo,
-  onWeatherRefresh,
   loading,
   selectedAirport
 }: PilotMapProps) {
@@ -90,17 +88,6 @@ export function PilotMap({
     }
   };
 
-  // Expose refresh function to parent
-  useEffect(() => {
-    if (onWeatherRefresh) {
-      (window as any).refreshWeatherLayer = refreshWeatherLayer;
-    }
-    return () => {
-      if ((window as any).refreshWeatherLayer) {
-        delete (window as any).refreshWeatherLayer;
-      }
-    };
-  }, [onWeatherRefresh, activeWeatherLayers, mapInstance]);
 
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
@@ -1213,6 +1200,50 @@ export function PilotMap({
 
     updateWeatherRadar();
   }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
+
+  // Auto-refresh weather overlay when cache bucket expires (checks every 2 minutes)
+  useEffect(() => {
+    if (!mapInstance || !displayOptions.showWeatherRadar) return;
+    if (!activeWeatherLayers.has('radar')) return;
+
+    const radarLayer = activeWeatherLayers.get('radar');
+    if (!radarLayer) return;
+
+    // Store the current cache bucket to detect when it changes
+    let currentCacheBucket = Math.floor(Date.now() / (10 * 60 * 1000));
+
+    // Check every 2 minutes if the cache bucket has changed
+    const checkInterval = setInterval(() => {
+      const newCacheBucket = Math.floor(Date.now() / (10 * 60 * 1000));
+      
+      // Only update if the cache bucket has changed (meaning 10+ minutes have passed)
+      if (newCacheBucket !== currentCacheBucket) {
+        currentCacheBucket = newCacheBucket;
+        
+        const imageOverlay = radarLayer as any;
+        if (imageOverlay && imageOverlay._url && imageOverlay.setUrl) {
+          console.log('[🌦️ WEATHER API] 🔄 Auto-refresh triggered - 10min cache bucket expired');
+          
+          // Get the base URL and radar layer info
+          const urlMatch = imageOverlay._url.match(/^([^?]+)\?/);
+          if (urlMatch) {
+            const baseUrl = urlMatch[1];
+            const staticWeatherUrl = `${baseUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=nexrad-n0r&BBOX=-130,20,-60,50&WIDTH=1024&HEIGHT=512&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${Date.now()}`;
+            
+            console.log('[🌦️ WEATHER API] 📡 Updating weather image URL with new timestamp');
+            imageOverlay.setUrl(staticWeatherUrl);
+          }
+        }
+      }
+    }, 2 * 60 * 1000); // Check every 2 minutes
+
+    console.log('[🌦️ WEATHER API] ⏰ Auto-refresh started - will update when 10min cache expires');
+
+    return () => {
+      clearInterval(checkInterval);
+      console.log('[🌦️ WEATHER API] ⏰ Auto-refresh stopped');
+    };
+  }, [mapInstance, displayOptions.showWeatherRadar, activeWeatherLayers]);
 
   // Update weather alerts display - TEMPORARILY DISABLED
   useEffect(() => {
