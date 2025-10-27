@@ -217,10 +217,10 @@ class WeatherService {
   }
 
   /**
-   * Get SIGMETs and AIRMETs for aviation weather hazards from the backend API
+   * Get all SIGMETs and AIRMETs from the backend API (no bounds - shows all active advisories)
    */
-  async getSigmetAirmet(bounds: { north: number; south: number; east: number; west: number }): Promise<SigmetAirmet[]> {
-    const cacheKey = `sigmet_airmet_${bounds.north}_${bounds.south}_${bounds.east}_${bounds.west}`;
+  async getSigmetAirmet(): Promise<SigmetAirmet[]> {
+    const cacheKey = 'sigmet_airmet_all';
     const cached = this.getCachedData(cacheKey, 15); // Cache for 15 minutes (SIGMETs update less frequently)
 
     if (cached) {
@@ -228,9 +228,9 @@ class WeatherService {
     }
 
     try {
-      // Call backend API which handles caching and rate limiting
+      // Call backend API which returns ALL active SIGMETs/AIRMETs (no bounds)
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-      const url = `${apiBaseUrl}/api/pilot/sigmet-airmet?north=${bounds.north}&south=${bounds.south}&east=${bounds.east}&west=${bounds.west}`;
+      const url = `${apiBaseUrl}/api/pilot/sigmet-airmet`;
       
       const response = await fetch(url, {
         headers: {
@@ -244,11 +244,11 @@ class WeatherService {
 
       const data = await response.json();
 
-      // Backend already filters and formats the data
+      // Backend returns all active SIGMETs/AIRMETs
       const sigmetAirmets: SigmetAirmet[] = data.sigmetAirmets || [];
 
       this.setCachedData(cacheKey, sigmetAirmets, 15);
-      console.log('[WeatherService] Retrieved', sigmetAirmets.length, 'SIGMETs/AIRMETs from backend');
+      console.log('[WeatherService] Retrieved', sigmetAirmets.length, 'SIGMETs/AIRMETs from backend (all active)');
       return sigmetAirmets;
 
     } catch (error) {

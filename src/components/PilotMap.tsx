@@ -1360,21 +1360,12 @@ export function PilotMap({
         }
       });
 
-      if (displayOptions.showSigmetAirmet && mapInstance) {
+      if (displayOptions.showSigmetAirmet) {
         try {
-          // Get map bounds
-          const bounds = mapInstance.getBounds();
-          const fetchBounds = {
-            north: bounds.getNorth(),
-            south: bounds.getSouth(),
-            east: bounds.getEast(),
-            west: bounds.getWest()
-          };
-
-          // Fetch SIGMETs/AIRMETs data
-          const sigmetAirmets = await weatherService.getSigmetAirmet(fetchBounds);
+          // Fetch ALL SIGMETs/AIRMETs (no bounds filtering - show all active advisories)
+          const sigmetAirmets = await weatherService.getSigmetAirmet();
           
-          console.log('[PilotMap] Loaded', sigmetAirmets.length, 'SIGMETs/AIRMETs');
+          console.log('[PilotMap] Loaded', sigmetAirmets.length, 'SIGMETs/AIRMETs (all active)');
           
           // Render each SIGMET/AIRMET as a polygon
           sigmetAirmets.forEach(sigmet => {
