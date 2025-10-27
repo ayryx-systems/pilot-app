@@ -1,13 +1,12 @@
 import { useEffect, useRef, useCallback, useState } from "react";
-import L from "leaflet";
 import { waypointService } from "@/services/waypointService";
 import { FormattedWaypoint } from "@/types/waypoints";
 
 interface FAAWaypointLayerProps {
-  map: L.Map;
+  map: any; // Use any to avoid Leaflet import issues
   airportCode: string;
   showWaypoints: boolean;
-  layerGroup: L.LayerGroup;
+  layerGroup: any; // Use any to avoid Leaflet import issues
 }
 
 export function FAAWaypointLayer({
@@ -42,10 +41,13 @@ export function FAAWaypointLayer({
   }, [airportCode]);
 
   // Draw waypoints on the map
-  const drawWaypoints = useCallback(() => {
+  const drawWaypoints = useCallback(async () => {
     if (!map || !showWaypoints || waypoints.length === 0 || !layerGroup) {
       return;
     }
+
+    // Dynamically import Leaflet to avoid SSR issues
+    const L = await import('leaflet');
 
     console.log(`[FAAWaypointLayer] Drawing ${waypoints.length} FAA waypoints for ${airportCode}`);
 
@@ -131,7 +133,7 @@ export function FAAWaypointLayer({
 
     // Draw new waypoints if they should be shown
     if (showWaypoints && waypoints.length > 0) {
-      drawWaypoints();
+      drawWaypoints().catch(console.error);
     }
   }, [map, showWaypoints, waypoints, drawWaypoints, layerGroup]);
 
