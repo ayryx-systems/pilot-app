@@ -350,13 +350,13 @@ export function PilotMap({
         waypointsPane.style.zIndex = '635'; // WAYPOINTS (35) + markerPane base (600)
       }
       if (weatherPane && weatherPane.style) {
-        weatherPane.style.zIndex = '1000';
+        weatherPane.style.zIndex = '620'; // Weather (radar, SIGMETs) - below interactive elements
       }
       if (pirepsPane && pirepsPane.style) {
         pirepsPane.style.zIndex = '700'; // PIREPs above waypoints and tracks
       }
       
-      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=1000, tracks=630, waypoints=635, pireps=700');
+      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=620, tracks=630, waypoints=635, pireps=700');
 
       // Add scale control (similar to ATC dashboard)
       L.control
@@ -1374,28 +1374,36 @@ export function PilotMap({
             // Convert geometry to Leaflet coordinate format
             const coordinates = sigmet.geometry.map(coord => [coord.lat, coord.lon] as [number, number]);
 
-            // Choose color based on severity
+            // Choose color and styling based on severity - stroke-focused with minimal fill
             let color = '#fbbf24'; // Default amber
-            let opacity = 0.4;
-            let weight = 2;
+            let strokeWidth = 2.5;
+            let fillOpacity = 0.08; // Very minimal - just enough to hint at "inside"
+            let strokeOpacity = 0.85;
             
             if (sigmet.severity === 'SEVERE' || sigmet.severity === 'EXTREME') {
               color = '#ef4444'; // Red
-              opacity = 0.6;
-              weight = 3;
+              strokeWidth = 3.5;
+              fillOpacity = 0.1;
+              strokeOpacity = 0.95;
             } else if (sigmet.severity === 'MODERATE') {
               color = '#f59e0b'; // Orange
-              opacity = 0.5;
+              strokeWidth = 3;
+              fillOpacity = 0.08;
+              strokeOpacity = 0.9;
             }
 
-            // Create polygon
+            // Create polygon: prominent stroke + minimal fill
+            // Fill at 8-10% is barely noticeable but shows "which side is affected"
             const polygon = L.polygon(coordinates, {
               color: color,
-              weight: weight,
-              opacity: 1.0,
-              fillOpacity: opacity,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              fillColor: color,
+              fillOpacity: fillOpacity,
               interactive: true,
-              pane: 'overlayPane'
+              pane: 'overlayPane',
+              // Make the fill area less clickable by using higher click tolerance
+              bubblingMouseEvents: false
             });
 
             // Store ID for cleanup
