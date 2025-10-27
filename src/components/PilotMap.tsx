@@ -7,6 +7,7 @@ import { AIRPORTS } from '@/constants/airports';
 import { weatherService } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
+import { FAAWaypointLayer } from './FAAWaypointLayer';
 
 // Helper function to calculate bearing between two points
 function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -610,50 +611,8 @@ export function PilotMap({
     if (!mapInstance || !layerGroupsRef.current.waypoints) return;
 
     const updateWaypoints = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
-
-      // Clear existing waypoints
+      // Clear existing waypoints - FAAWaypointLayer will handle drawing
       layerGroupsRef.current.waypoints.clearLayers();
-
-      if (displayOptions.showWaypoints && airportConfig?.waypoints) {
-        airportConfig.waypoints.forEach((waypoint: any) => {
-          // Draw waypoint marker - using smaller, less prominent purple dot
-          const waypointMarker = L.marker([waypoint.lat, waypoint.lon], {
-            icon: L.divIcon({
-              className: "waypoint-marker",
-              html: `<div style="width: 6px; height: 6px; background-color: #8b5cf6; border-radius: 50%; border: 1px solid #fff;"></div>`,
-              iconSize: [8, 8],
-              iconAnchor: [4, 4],
-            }),
-            interactive: true,
-          });
-
-          // Add waypoint information tooltip
-          waypointMarker.bindTooltip(
-            `${waypoint.name}: ${waypoint.description || "Waypoint"}`,
-            {
-              permanent: false,
-              direction: "top",
-              className: "distance-tooltip",
-            }
-          );
-
-          // Add waypoint label - smaller and less prominent
-          const waypointLabel = L.marker([waypoint.lat, waypoint.lon], {
-            icon: L.divIcon({
-              className: "waypoint-label",
-              html: `<div style="color: #8b5cf6; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
-              iconSize: [40, 20],
-              iconAnchor: [20, -6], // Place the label above the marker
-            }),
-            interactive: false,
-          });
-
-          layerGroupsRef.current.waypoints.addLayer(waypointMarker);
-          layerGroupsRef.current.waypoints.addLayer(waypointLabel);
-        });
-      }
     };
 
     updateWaypoints();
@@ -2212,6 +2171,16 @@ export function PilotMap({
         ref={mapRef}
         className="w-full h-full"
       />
+      
+      {/* FAA Waypoint Layer */}
+      {mapReady && mapInstance && (
+        <FAAWaypointLayer
+          map={mapInstance}
+          airportCode={airport.code}
+          showWaypoints={displayOptions.showWaypoints}
+          layerGroup={layerGroupsRef.current.waypoints}
+        />
+      )}
     </div>
   );
 }
