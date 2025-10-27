@@ -480,6 +480,9 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
+      // Get current zoom level
+      const currentZoom = mapInstance.getZoom();
+
       // Clear existing DME rings
       layerGroupsRef.current.dmeRings.clearLayers();
 
@@ -536,72 +539,86 @@ export function PilotMap({
             };
           };
 
-          // Add DME distance labels at lower left and top right of each circle
-          const lowerLeftBearing = 225; // Lower left (SW)
-          const topRightBearing = 45;   // Top right (NE)
+          // Only add labels if zoom level is 9 or higher
+          if (currentZoom >= 9) {
+            // Add DME distance labels at lower left and top right of each circle
+            const lowerLeftBearing = 225; // Lower left (SW)
+            const topRightBearing = 45;   // Top right (NE)
 
-          // Lower left label
-          const lowerLeftPoint = getPointAtDistanceAndBearing(
-            dmeCenter[0],
-            dmeCenter[1],
-            distance,
-            lowerLeftBearing
-          );
+            // Lower left label
+            const lowerLeftPoint = getPointAtDistanceAndBearing(
+              dmeCenter[0],
+              dmeCenter[1],
+              distance,
+              lowerLeftBearing
+            );
 
-          const lowerLeftLabel = L.marker([lowerLeftPoint.lat, lowerLeftPoint.lng], {
-            icon: L.divIcon({
-              className: "dme-label",
-              html: `<div style="
-                color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
-                font-size: 11px;
-                font-weight: 600;
-                text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
-                background: none;
-                padding: 0;
-                transform: rotate(45deg);
-                opacity: 0.8;
-              ">${distance} NM</div>`,
-              iconSize: [50, 20],
-              iconAnchor: [25, 10],
-            }),
-            interactive: false,
-          });
+            const lowerLeftLabel = L.marker([lowerLeftPoint.lat, lowerLeftPoint.lng], {
+              icon: L.divIcon({
+                className: "dme-label",
+                html: `<div style="
+                  color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
+                  background: none;
+                  padding: 0;
+                  transform: rotate(45deg);
+                  opacity: 0.8;
+                ">${distance} NM</div>`,
+                iconSize: [50, 20],
+                iconAnchor: [25, 10],
+              }),
+              interactive: false,
+            });
 
-          layerGroupsRef.current.dmeRings.addLayer(lowerLeftLabel);
+            layerGroupsRef.current.dmeRings.addLayer(lowerLeftLabel);
 
-          // Top right label
-          const topRightPoint = getPointAtDistanceAndBearing(
-            dmeCenter[0],
-            dmeCenter[1],
-            distance,
-            topRightBearing
-          );
+            // Top right label
+            const topRightPoint = getPointAtDistanceAndBearing(
+              dmeCenter[0],
+              dmeCenter[1],
+              distance,
+              topRightBearing
+            );
 
-          const topRightLabel = L.marker([topRightPoint.lat, topRightPoint.lng], {
-            icon: L.divIcon({
-              className: "dme-label",
-              html: `<div style="
-                color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
-                font-size: 11px;
-                font-weight: 600;
-                text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
-                background: none;
-                padding: 0;
-                transform: rotate(45deg);
-                opacity: 0.8;
-              ">${distance} NM</div>`,
-              iconSize: [50, 20],
-              iconAnchor: [25, 10],
-            }),
-            interactive: false,
-          });
+            const topRightLabel = L.marker([topRightPoint.lat, topRightPoint.lng], {
+              icon: L.divIcon({
+                className: "dme-label",
+                html: `<div style="
+                  color: ${distance % 10 === 0 ? "#3b82f6" : "#94a3b8"};
+                  font-size: 11px;
+                  font-weight: 600;
+                  text-shadow: 0px 0px 3px rgba(0,0,0,0.9);
+                  background: none;
+                  padding: 0;
+                  transform: rotate(45deg);
+                  opacity: 0.8;
+                ">${distance} NM</div>`,
+                iconSize: [50, 20],
+                iconAnchor: [25, 10],
+              }),
+              interactive: false,
+            });
 
-          layerGroupsRef.current.dmeRings.addLayer(topRightLabel);
+            layerGroupsRef.current.dmeRings.addLayer(topRightLabel);
+          }
         });
       }
     };
 
     updateDmeRings();
+
+    // Add zoom change handler to update labels
+    const handleZoomEnd = () => {
+      updateDmeRings();
+    };
+
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    return () => {
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
   }, [mapInstance, displayOptions.showDmeRings, airportConfig]);
 
   // Update waypoints display
@@ -1960,6 +1977,14 @@ export function PilotMap({
 
       // 2. ALWAYS render runways LAST (so they appear on top)
       console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
+      
+      // Clear all existing runway labels from the map first
+      mapInstance.eachLayer((layer: any) => {
+        if (layer._runwayLabel) {
+          mapInstance.removeLayer(layer);
+        }
+      });
+      
       osmData.runways.forEach((way, index) => {
         if (way.geometry && way.geometry.length > 1) {
           const coordinates = way.geometry.map(point => {
@@ -1981,47 +2006,51 @@ export function PilotMap({
           runway.addTo(mapInstance);
           runway.bringToFront(); // Ensure runways are on top
 
-          // Add runway labels
-          const runwayRef = way.tags?.ref;
-          if (runwayRef && runwayRef.includes('/')) {
-            const runwayNumbers = runwayRef.split('/');
-            const startPoint = coordinates[0];
-            const endPoint = coordinates[coordinates.length - 1];
-            
-            // Simple label placement at both ends
-            const startLabel = L.marker(startPoint, {
-              icon: L.divIcon({
-                className: "runway-label",
-                html: `<div style="
-                  color: #000000; font-size: 10px; font-weight: 700;
-                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                  background: rgba(255,255,255,0.95); padding: 1px 3px;
-                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                  white-space: nowrap; text-align: center; line-height: 1;
-                  min-width: 16px; display: inline-block; z-index: 3000;
-                ">${runwayNumbers[0]}</div>`,
-                iconSize: [20, 14], iconAnchor: [10, 14]
-              }),
-              interactive: false, pane: 'popupPane'
-            });
-            startLabel.addTo(mapInstance);
+          // Only add runway labels if zoom level is 11 or higher
+          if (currentZoom >= 11) {
+            const runwayRef = way.tags?.ref;
+            if (runwayRef && runwayRef.includes('/')) {
+              const runwayNumbers = runwayRef.split('/');
+              const startPoint = coordinates[0];
+              const endPoint = coordinates[coordinates.length - 1];
+              
+              // Simple label placement at both ends
+              const startLabel = L.marker(startPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000; font-size: 10px; font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95); padding: 1px 3px;
+                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap; text-align: center; line-height: 1;
+                    min-width: 16px; display: inline-block; z-index: 3000;
+                  ">${runwayNumbers[0]}</div>`,
+                  iconSize: [20, 14], iconAnchor: [10, 14]
+                }),
+                interactive: false, pane: 'popupPane'
+              });
+              startLabel.addTo(mapInstance);
+              (startLabel as any)._runwayLabel = true; // Mark as runway label
 
-            const endLabel = L.marker(endPoint, {
-              icon: L.divIcon({
-                className: "runway-label",
-                html: `<div style="
-                  color: #000000; font-size: 10px; font-weight: 700;
-                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                  background: rgba(255,255,255,0.95); padding: 1px 3px;
-                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                  white-space: nowrap; text-align: center; line-height: 1;
-                  min-width: 16px; display: inline-block; z-index: 3000;
-                ">${runwayNumbers[1]}</div>`,
-                iconSize: [20, 14], iconAnchor: [10, 14]
-              }),
-              interactive: false, pane: 'popupPane'
-            });
-            endLabel.addTo(mapInstance);
+              const endLabel = L.marker(endPoint, {
+                icon: L.divIcon({
+                  className: "runway-label",
+                  html: `<div style="
+                    color: #000000; font-size: 10px; font-weight: 700;
+                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                    background: rgba(255,255,255,0.95); padding: 1px 3px;
+                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                    white-space: nowrap; text-align: center; line-height: 1;
+                    min-width: 16px; display: inline-block; z-index: 3000;
+                  ">${runwayNumbers[1]}</div>`,
+                  iconSize: [20, 14], iconAnchor: [10, 14]
+                }),
+                interactive: false, pane: 'popupPane'
+              });
+              endLabel.addTo(mapInstance);
+              (endLabel as any)._runwayLabel = true; // Mark as runway label
+            }
           }
         }
       });
@@ -2320,6 +2349,14 @@ export function PilotMap({
         }
 
         // 2. ALWAYS render runways LAST (so they appear on top)
+        
+        // Clear all existing runway labels from the map first
+        mapInstance.eachLayer((layer: any) => {
+          if (layer._runwayLabel) {
+            mapInstance.removeLayer(layer);
+          }
+        });
+        
         osmData.runways.forEach((way, index) => {
           if (way.geometry && way.geometry.length > 1) {
             const coordinates = way.geometry.map(point => {
@@ -2341,47 +2378,51 @@ export function PilotMap({
             runway.addTo(mapInstance);
             runway.bringToFront(); // Ensure runways are on top
 
-            // Add runway labels
-            const runwayRef = way.tags?.ref;
-            if (runwayRef && runwayRef.includes('/')) {
-              const runwayNumbers = runwayRef.split('/');
-              const startPoint = coordinates[0];
-              const endPoint = coordinates[coordinates.length - 1];
-              
-              // Simple label placement at both ends
-              const startLabel = L.marker(startPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000; font-size: 10px; font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95); padding: 1px 3px;
-                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap; text-align: center; line-height: 1;
-                    min-width: 16px; display: inline-block; z-index: 3000;
-                  ">${runwayNumbers[0]}</div>`,
-                  iconSize: [20, 14], iconAnchor: [10, 14]
-                }),
-                interactive: false, pane: 'popupPane'
-              });
-              startLabel.addTo(mapInstance);
+            // Only add runway labels if zoom level is 11 or higher
+            if (currentZoom >= 10) {
+              const runwayRef = way.tags?.ref;
+              if (runwayRef && runwayRef.includes('/')) {
+                const runwayNumbers = runwayRef.split('/');
+                const startPoint = coordinates[0];
+                const endPoint = coordinates[coordinates.length - 1];
+                
+                // Simple label placement at both ends
+                const startLabel = L.marker(startPoint, {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000; font-size: 10px; font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95); padding: 1px 3px;
+                      border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap; text-align: center; line-height: 1;
+                      min-width: 16px; display: inline-block; z-index: 3000;
+                    ">${runwayNumbers[0]}</div>`,
+                    iconSize: [20, 14], iconAnchor: [10, 14]
+                  }),
+                  interactive: false, pane: 'popupPane'
+                });
+                startLabel.addTo(mapInstance);
+                (startLabel as any)._runwayLabel = true; // Mark as runway label
 
-              const endLabel = L.marker(endPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000; font-size: 10px; font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95); padding: 1px 3px;
-                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap; text-align: center; line-height: 1;
-                    min-width: 16px; display: inline-block; z-index: 3000;
-                  ">${runwayNumbers[1]}</div>`,
-                  iconSize: [20, 14], iconAnchor: [10, 14]
-                }),
-                interactive: false, pane: 'popupPane'
-              });
-              endLabel.addTo(mapInstance);
+                const endLabel = L.marker(endPoint, {
+                  icon: L.divIcon({
+                    className: "runway-label",
+                    html: `<div style="
+                      color: #000000; font-size: 10px; font-weight: 700;
+                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                      background: rgba(255,255,255,0.95); padding: 1px 3px;
+                      border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                      white-space: nowrap; text-align: center; line-height: 1;
+                      min-width: 16px; display: inline-block; z-index: 3000;
+                    ">${runwayNumbers[1]}</div>`,
+                    iconSize: [20, 14], iconAnchor: [10, 14]
+                  }),
+                  interactive: false, pane: 'popupPane'
+                });
+                endLabel.addTo(mapInstance);
+                (endLabel as any)._runwayLabel = true; // Mark as runway label
+              }
             }
           }
         });
