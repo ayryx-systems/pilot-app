@@ -221,6 +221,10 @@ export interface MapDisplayOptions {
   showWeatherAlerts: boolean;
   showVisibility: boolean;
   showOSMFeatures: boolean;
+  showSigmetAirmet: boolean;
+  showWindsAloft: boolean;
+  showIcing: boolean;
+  showTurbulence: boolean;
 }
 
 // Weather-related types

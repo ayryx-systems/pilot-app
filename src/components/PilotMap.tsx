@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import type * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
-import { weatherService } from '@/services/weatherService';
+import { weatherService, type SigmetAirmet } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
@@ -63,6 +63,7 @@ export function PilotMap({
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
+  const [sigmetAirmetData, setSigmetAirmetData] = useState<any[]>([]);
 
   // OSM data state
   const [osmData, setOsmData] = useState<AirportOSMFeatures | null>(null);
@@ -1342,6 +1343,99 @@ export function PilotMap({
 
     updateVisibility();
   }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
+
+  // Update SIGMETs/AIRMETs display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateSigmetAirmet = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing SIGMETs/AIRMETs layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._sigmetAirmetId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showSigmetAirmet && mapInstance) {
+        try {
+          // Get map bounds
+          const bounds = mapInstance.getBounds();
+          const fetchBounds = {
+            north: bounds.getNorth(),
+            south: bounds.getSouth(),
+            east: bounds.getEast(),
+            west: bounds.getWest()
+          };
+
+          // Fetch SIGMETs/AIRMETs data
+          const sigmetAirmets = await weatherService.getSigmetAirmet(fetchBounds);
+          
+          console.log('[PilotMap] Loaded', sigmetAirmets.length, 'SIGMETs/AIRMETs');
+          
+          // Render each SIGMET/AIRMET as a polygon
+          sigmetAirmets.forEach(sigmet => {
+            if (!sigmet.geometry || sigmet.geometry.length < 3) return; // Need at least 3 points for a polygon
+
+            // Convert geometry to Leaflet coordinate format
+            const coordinates = sigmet.geometry.map(coord => [coord.lat, coord.lon] as [number, number]);
+
+            // Choose color based on severity
+            let color = '#fbbf24'; // Default amber
+            let opacity = 0.4;
+            let weight = 2;
+            
+            if (sigmet.severity === 'SEVERE' || sigmet.severity === 'EXTREME') {
+              color = '#ef4444'; // Red
+              opacity = 0.6;
+              weight = 3;
+            } else if (sigmet.severity === 'MODERATE') {
+              color = '#f59e0b'; // Orange
+              opacity = 0.5;
+            }
+
+            // Create polygon
+            const polygon = L.polygon(coordinates, {
+              color: color,
+              weight: weight,
+              opacity: 1.0,
+              fillOpacity: opacity,
+              interactive: true,
+              pane: 'overlayPane'
+            });
+
+            // Store ID for cleanup
+            (polygon as any)._sigmetAirmetId = sigmet.id;
+
+            // Create popup content
+            const popupContent = `
+              <div style="min-width: 200px;">
+                <div style="color: ${color}; font-weight: 700; margin-bottom: 4px;">${sigmet.type}</div>
+                <div style="margin-bottom: 4px;"><strong>Event:</strong> ${sigmet.event}</div>
+                <div style="margin-bottom: 4px;"><strong>Severity:</strong> ${sigmet.severity}</div>
+                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${sigmet.description}</div>
+                <div style="font-size: 11px; color: #6b7280;">
+                  <div>Valid: ${new Date(sigmet.validTimeFrom).toLocaleTimeString()}</div>
+                  <div>Expires: ${new Date(sigmet.validTimeTo).toLocaleTimeString()}</div>
+                </div>
+              </div>
+            `;
+
+            polygon.bindPopup(popupContent);
+            layerGroupsRef.current.weather.addLayer(polygon);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load SIGMETs/AIRMETs:', error);
+        }
+      }
+    };
+
+    updateSigmetAirmet();
+  }, [mapInstance, displayOptions.showSigmetAirmet]);
 
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {

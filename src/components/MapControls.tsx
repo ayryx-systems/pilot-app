@@ -47,6 +47,10 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
     { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
     { key: 'showOSMFeatures' as const, label: 'Airport Features (Runways, Taxiways, etc.)', icon: '🏢' },
     { key: 'showWeatherRadar' as const, label: 'Weather Radar', icon: '🌦️' },
+    { key: 'showSigmetAirmet' as const, label: 'SIGMETs/AIRMETs', icon: '📋' },
+    { key: 'showWindsAloft' as const, label: 'Winds Aloft', icon: '💨' },
+    { key: 'showIcing' as const, label: 'Icing Forecast', icon: '🧊' },
+    { key: 'showTurbulence' as const, label: 'Turbulence Forecast', icon: '🌊' },
   ];
 
   return (

@@ -4,6 +4,17 @@
 
 import { WeatherLayer, WeatherAlert } from '@/types';
 
+export interface SigmetAirmet {
+  id: string;
+  type: 'SIGMET' | 'AIRMET';
+  event: string;
+  severity: 'LIGHT' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+  validTimeFrom: string;
+  validTimeTo: string;
+  geometry: Array<{ lat: number; lon: number }>; // Polygon coordinates
+  description: string;
+}
+
 class WeatherApiError extends Error {
   constructor(message: string, public status?: number, public response?: unknown) {
     super(message);
@@ -203,6 +214,47 @@ class WeatherService {
     });
 
     return `${layer.url}?${params.toString()}`;
+  }
+
+  /**
+   * Get SIGMETs and AIRMETs for aviation weather hazards from the backend API
+   */
+  async getSigmetAirmet(bounds: { north: number; south: number; east: number; west: number }): Promise<SigmetAirmet[]> {
+    const cacheKey = `sigmet_airmet_${bounds.north}_${bounds.south}_${bounds.east}_${bounds.west}`;
+    const cached = this.getCachedData(cacheKey, 15); // Cache for 15 minutes (SIGMETs update less frequently)
+
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      // Call backend API which handles caching and rate limiting
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const url = `${apiBaseUrl}/api/pilot/sigmet-airmet?north=${bounds.north}&south=${bounds.south}&east=${bounds.east}&west=${bounds.west}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new WeatherApiError(`SIGMET/AIRMET API error: ${response.status} ${response.statusText}`, response.status);
+      }
+
+      const data = await response.json();
+
+      // Backend already filters and formats the data
+      const sigmetAirmets: SigmetAirmet[] = data.sigmetAirmets || [];
+
+      this.setCachedData(cacheKey, sigmetAirmets, 15);
+      console.log('[WeatherService] Retrieved', sigmetAirmets.length, 'SIGMETs/AIRMETs from backend');
+      return sigmetAirmets;
+
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch SIGMETs/AIRMETs:', error);
+      return [];
+    }
   }
 
   /**

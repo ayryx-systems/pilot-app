@@ -72,6 +72,10 @@ export function PilotDashboard() {
       showWeatherRadar: true,
       showWeatherAlerts: false,
       showVisibility: false,
+      showSigmetAirmet: false,
+      showWindsAloft: false,
+      showIcing: false,
+      showTurbulence: false,
     };
   });
 
