@@ -1409,6 +1409,14 @@ export function PilotMap({
             // Store ID for cleanup
             (polygon as any)._sigmetAirmetId = sigmet.id;
 
+            // Format time in Zulu (UTC)
+            const formatZulu = (dateString: string) => {
+              const date = new Date(dateString);
+              const hours = date.getUTCHours().toString().padStart(2, '0');
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              return `${hours}${minutes}Z`;
+            };
+
             // Create popup content
             const popupContent = `
               <div style="min-width: 200px;">
@@ -1417,8 +1425,8 @@ export function PilotMap({
                 <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Severity:</span> <span style="color: ${color};">${sigmet.severity}</span></div>
                 <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${sigmet.description}</div>
                 <div style="font-size: 11px; color: #6b7280;">
-                  <div>Valid: ${new Date(sigmet.validTimeFrom).toLocaleTimeString()}</div>
-                  <div>Expires: ${new Date(sigmet.validTimeTo).toLocaleTimeString()}</div>
+                  <div>Valid: ${formatZulu(sigmet.validTimeFrom)}</div>
+                  <div>Expires: ${formatZulu(sigmet.validTimeTo)}</div>
                 </div>
               </div>
             `;

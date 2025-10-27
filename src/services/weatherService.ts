@@ -221,7 +221,7 @@ class WeatherService {
    */
   async getSigmetAirmet(): Promise<SigmetAirmet[]> {
     const cacheKey = 'sigmet_airmet_all';
-    const cached = this.getCachedData(cacheKey, 15); // Cache for 15 minutes (SIGMETs update less frequently)
+    const cached = this.getCachedData(cacheKey, 2); // Cache for 2 minutes (matches backend refresh)
 
     if (cached) {
       return cached;
@@ -247,7 +247,7 @@ class WeatherService {
       // Backend returns all active SIGMETs/AIRMETs
       const sigmetAirmets: SigmetAirmet[] = data.sigmetAirmets || [];
 
-      this.setCachedData(cacheKey, sigmetAirmets, 15);
+      this.setCachedData(cacheKey, sigmetAirmets, 2);
       console.log('[WeatherService] Retrieved', sigmetAirmets.length, 'SIGMETs/AIRMETs from backend (all active)');
       return sigmetAirmets;
 
