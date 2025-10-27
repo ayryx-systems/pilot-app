@@ -51,7 +51,7 @@ export function FAAWaypointLayer({
     const currentZoom = map.getZoom();
 
     // Only show waypoints at zoom 12+ to prevent clutter
-    if (currentZoom < 8) {
+    if (currentZoom < 10) {
       console.log(`[FAAWaypointLayer] Zoom level ${currentZoom} too low, hiding waypoints`);
       return;
     }
