@@ -40,16 +40,25 @@ export function FAAWaypointLayer({
     }
   }, [airportCode]);
 
-  // Draw waypoints on the map
+  // Draw waypoints on the map with zoom-based visibility
   const drawWaypoints = useCallback(async () => {
     if (!map || !showWaypoints || waypoints.length === 0 || !layerGroup) {
+      return;
+    }
+
+    // Get current zoom level
+    const currentZoom = map.getZoom();
+
+    // Only show waypoints at zoom 12+ to prevent clutter
+    if (currentZoom < 8) {
+      console.log(`[FAAWaypointLayer] Zoom level ${currentZoom} too low, hiding waypoints`);
       return;
     }
 
     // Dynamically import Leaflet to avoid SSR issues
     const L = await import('leaflet');
 
-    console.log(`[FAAWaypointLayer] Drawing ${waypoints.length} FAA waypoints for ${airportCode}`);
+    console.log(`[FAAWaypointLayer] Drawing ${waypoints.length} FAA waypoints for ${airportCode} at zoom ${currentZoom}`);
 
     waypoints.forEach((waypoint) => {
       try {
@@ -99,20 +108,24 @@ export function FAAWaypointLayer({
           }
         );
 
-        // Add waypoint label
-        const waypointLabel = L.marker(position, {
-          icon: L.divIcon({
-            className: "faa-waypoint-label",
-            html: `<div style="color: ${color}; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
-            iconSize: [40, 20],
-            iconAnchor: [20, -6], // Place the label above the marker
-          }),
-          interactive: false,
-        });
+        // Show labels only at higher zoom levels (14+)
+        if (currentZoom >= 11) {
+          const waypointLabel = L.marker(position, {
+            icon: L.divIcon({
+              className: "faa-waypoint-label",
+              html: `<div style="color: ${color}; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
+              iconSize: [40, 20],
+              iconAnchor: [20, -6], // Place the label above the marker
+            }),
+            interactive: false,
+          });
+
+          // Add to layer group
+          layerGroup.addLayer(waypointLabel);
+        }
 
         // Add to layer group
         layerGroup.addLayer(waypointMarker);
-        layerGroup.addLayer(waypointLabel);
       } catch (error) {
         console.error("Error drawing FAA waypoint:", error, waypoint);
       }
@@ -128,13 +141,32 @@ export function FAAWaypointLayer({
   useEffect(() => {
     if (!map || !layerGroup) return;
 
-    // Clear existing waypoints from layer group
-    layerGroup.clearLayers();
+    const handleWaypoints = async () => {
+      // Clear existing waypoints from layer group
+      layerGroup.clearLayers();
 
-    // Draw new waypoints if they should be shown
-    if (showWaypoints && waypoints.length > 0) {
-      drawWaypoints().catch(console.error);
-    }
+      // Draw new waypoints if they should be shown
+      if (showWaypoints && waypoints.length > 0) {
+        await drawWaypoints();
+      }
+    };
+
+    handleWaypoints().catch(console.error);
+
+    // Listen for zoom changes to redraw waypoints
+    const handleZoomEnd = async () => {
+      layerGroup.clearLayers();
+      if (showWaypoints && waypoints.length > 0) {
+        await drawWaypoints();
+      }
+    };
+
+    map.on('zoomend', handleZoomEnd);
+
+    // Cleanup function
+    return () => {
+      map.off('zoomend', handleZoomEnd);
+    };
   }, [map, showWaypoints, waypoints, drawWaypoints, layerGroup]);
 
   // Debug info
