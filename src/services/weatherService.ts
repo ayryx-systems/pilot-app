@@ -15,6 +15,21 @@ export interface SigmetAirmet {
   description: string;
 }
 
+export interface WeatherForecast {
+  id: string;
+  type: string;
+  hazard: string;
+  severity: 'LIGHT' | 'MODERATE' | 'SEVERE' | 'EXTREME';
+  validTimeFrom: string;
+  validTimeTo: string;
+  geometry: Array<{ lat: number; lon: number }>;
+  description: string;
+  altitudeLow1?: number;
+  altitudeHi1?: number;
+  altitudeLow2?: number;
+  altitudeHi2?: number;
+}
+
 class WeatherApiError extends Error {
   constructor(message: string, public status?: number, public response?: unknown) {
     super(message);
@@ -253,6 +268,57 @@ class WeatherService {
 
     } catch (error) {
       console.error('[WeatherService] Failed to fetch SIGMETs/AIRMETs:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get Winds Aloft data from backend
+   */
+  async getWindsAloft() {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/pilot/winds-aloft`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch winds aloft:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get Icing Forecast data from backend
+   */
+  async getIcing(): Promise<WeatherForecast[]> {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/pilot/icing`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch icing:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get Turbulence Forecast data from backend
+   */
+  async getTurbulence(): Promise<WeatherForecast[]> {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/pilot/turbulence`;
+    
+    try {
+      const response = await fetch(url);
+      const data = await response.json();
+      return data.data || [];
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch turbulence:', error);
       return [];
     }
   }

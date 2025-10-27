@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import type * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
-import { weatherService, type SigmetAirmet } from '@/services/weatherService';
+import { weatherService, type SigmetAirmet, type WeatherForecast } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
@@ -1475,6 +1475,196 @@ export function PilotMap({
 
     updateSigmetAirmet();
   }, [mapInstance, displayOptions.showSigmetAirmet]);
+
+  // Update Winds Aloft display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateWindsAloft = async () => {
+      // TODO: Implement when data source is available
+      console.log('[PilotMap] Winds Aloft layer toggle:', displayOptions.showWindsAloft);
+    };
+
+    updateWindsAloft();
+  }, [mapInstance, displayOptions.showWindsAloft]);
+
+  // Update Icing Forecast display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateIcing = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing Icing layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._icingId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showIcing) {
+        try {
+          const icingForecasts = await weatherService.getIcing();
+          console.log('[PilotMap] Loaded', icingForecasts.length, 'Icing forecasts');
+          
+          icingForecasts.forEach((icing) => {
+            if (!icing.geometry || icing.geometry.length < 3) return;
+
+            const coordinates = icing.geometry.map((coord: { lat: number; lon: number }) => [coord.lat, coord.lon] as [number, number]);
+
+            // Icing-specific colors (blue tones)
+            let color = '#60a5fa'; // Light blue for moderate
+            let strokeWidth = 2.5;
+            let fillOpacity = 0.08;
+            let strokeOpacity = 0.85;
+            
+            if (icing.severity === 'SEVERE' || icing.severity === 'EXTREME') {
+              color = '#3b82f6'; // Blue
+              strokeWidth = 3.5;
+              fillOpacity = 0.1;
+              strokeOpacity = 0.95;
+            } else if (icing.severity === 'MODERATE') {
+              color = '#60a5fa'; // Lighter blue
+              strokeWidth = 3;
+              fillOpacity = 0.08;
+              strokeOpacity = 0.9;
+            }
+
+            const polygon = L.polygon(coordinates, {
+              color: color,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              fillColor: color,
+              fillOpacity: fillOpacity,
+              interactive: true,
+              pane: 'overlayPane',
+              bubblingMouseEvents: false
+            });
+
+            (polygon as any)._icingId = icing.id;
+
+            const formatZulu = (dateString: string) => {
+              const date = new Date(dateString);
+              const hours = date.getUTCHours().toString().padStart(2, '0');
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              return `${hours}${minutes}Z`;
+            };
+
+            const popupContent = `
+              <div style="min-width: 200px;">
+                <div style="color: ${color}; font-weight: 700; margin-bottom: 4px;">ICING FORECAST</div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Severity:</span> <span style="color: ${color};">${icing.severity}</span></div>
+                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${icing.description}</div>
+                <div style="font-size: 11px; color: #6b7280;">
+                  <div>Valid: ${formatZulu(icing.validTimeFrom)} - ${formatZulu(icing.validTimeTo)}</div>
+                  ${icing.altitudeLow1 ? `<div>Altitude: ${icing.altitudeLow1}ft - ${icing.altitudeHi1}ft</div>` : ''}
+                </div>
+              </div>
+            `;
+
+            polygon.bindPopup(popupContent);
+            layerGroupsRef.current.weather.addLayer(polygon);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load Icing:', error);
+        }
+      }
+    };
+
+    updateIcing();
+  }, [mapInstance, displayOptions.showIcing]);
+
+  // Update Turbulence Forecast display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateTurbulence = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing Turbulence layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._turbulenceId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showTurbulence) {
+        try {
+          const turbulenceForecasts = await weatherService.getTurbulence();
+          console.log('[PilotMap] Loaded', turbulenceForecasts.length, 'Turbulence forecasts');
+          
+          turbulenceForecasts.forEach((turbulence) => {
+            if (!turbulence.geometry || turbulence.geometry.length < 3) return;
+
+            const coordinates = turbulence.geometry.map((coord: { lat: number; lon: number }) => [coord.lat, coord.lon] as [number, number]);
+
+            // Turbulence-specific colors (purple tones)
+            let color = '#a78bfa'; // Light purple for moderate
+            let strokeWidth = 2.5;
+            let fillOpacity = 0.08;
+            let strokeOpacity = 0.85;
+            
+            if (turbulence.severity === 'SEVERE' || turbulence.severity === 'EXTREME') {
+              color = '#8b5cf6'; // Purple
+              strokeWidth = 3.5;
+              fillOpacity = 0.1;
+              strokeOpacity = 0.95;
+            } else if (turbulence.severity === 'MODERATE') {
+              color = '#a78bfa'; // Lighter purple
+              strokeWidth = 3;
+              fillOpacity = 0.08;
+              strokeOpacity = 0.9;
+            }
+
+            const polygon = L.polygon(coordinates, {
+              color: color,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              fillColor: color,
+              fillOpacity: fillOpacity,
+              interactive: true,
+              pane: 'overlayPane',
+              bubblingMouseEvents: false
+            });
+
+            (polygon as any)._turbulenceId = turbulence.id;
+
+            const formatZulu = (dateString: string) => {
+              const date = new Date(dateString);
+              const hours = date.getUTCHours().toString().padStart(2, '0');
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              return `${hours}${minutes}Z`;
+            };
+
+            const popupContent = `
+              <div style="min-width: 200px;">
+                <div style="color: ${color}; font-weight: 700; margin-bottom: 4px;">TURBULENCE FORECAST</div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Severity:</span> <span style="color: ${color};">${turbulence.severity}</span></div>
+                <div style="font-size: 12px; color: #9ca3af; margin-bottom: 4px;">${turbulence.description}</div>
+                <div style="font-size: 11px; color: #6b7280;">
+                  <div>Valid: ${formatZulu(turbulence.validTimeFrom)} - ${formatZulu(turbulence.validTimeTo)}</div>
+                  ${turbulence.altitudeLow1 ? `<div>Altitude: ${turbulence.altitudeLow1}ft - ${turbulence.altitudeHi1}ft</div>` : ''}
+                </div>
+              </div>
+            `;
+
+            polygon.bindPopup(popupContent);
+            layerGroupsRef.current.weather.addLayer(polygon);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load Turbulence:', error);
+        }
+      }
+    };
+
+    updateTurbulence();
+  }, [mapInstance, displayOptions.showTurbulence]);
 
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {
