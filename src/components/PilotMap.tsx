@@ -1592,6 +1592,15 @@ export function PilotMap({
       });
 
       if (displayOptions.showWindsAloft) {
+        // Get current zoom level for visibility decisions
+        const currentZoom = mapInstance.getZoom();
+        
+        // Only show winds aloft at zoom level 8 or higher
+        if (currentZoom < 8) {
+          console.log('[PilotMap] Winds Aloft hidden - zoom level too low:', currentZoom);
+          return;
+        }
+        
         try {
           // For now, get all wind data without airport filtering
           const windsData = await weatherService.getWindsAloft();
@@ -1680,6 +1689,132 @@ export function PilotMap({
 
     updateWindsAloft();
   }, [mapInstance, displayOptions.showWindsAloft]);
+
+  // Update winds aloft visibility on zoom changes
+  useEffect(() => {
+    if (!mapInstance) return;
+
+    const handleZoomEnd = () => {
+      // Trigger winds aloft update on zoom change
+      const updateWindsAloft = async () => {
+        const leafletModule = await import('leaflet');
+        const L = leafletModule.default;
+
+        // Remove existing wind layers
+        const existingLayers = layerGroupsRef.current.weather.getLayers();
+        existingLayers.forEach((layer: any) => {
+          if (layer._windStationId) {
+            layerGroupsRef.current.weather.removeLayer(layer);
+          }
+        });
+
+        if (displayOptions.showWindsAloft) {
+          // Get current zoom level for visibility decisions
+          const currentZoom = mapInstance.getZoom();
+          
+          // Only show winds aloft at zoom level 8 or higher
+          if (currentZoom < 8) {
+            console.log('[PilotMap] Winds Aloft hidden on zoom change - zoom level too low:', currentZoom);
+            return;
+          }
+          
+          try {
+            // For now, get all wind data without airport filtering
+            const windsData = await weatherService.getWindsAloft();
+            console.log('[PilotMap] Redrawing winds aloft on zoom change:', windsData.length, 'stations');
+            
+            // Group winds by station to avoid superimposition
+            const stationGroups = new Map();
+            windsData.forEach((wind: any) => {
+              if (!wind.lat || !wind.lon || !wind.windDir || !wind.windSpeed) return;
+              
+              const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
+              if (!stationGroups.has(stationKey)) {
+                stationGroups.set(stationKey, []);
+              }
+              stationGroups.get(stationKey).push(wind);
+            });
+
+            // Only show one wind barb per station (prefer lower altitude)
+            stationGroups.forEach((stationWinds) => {
+              // Sort by altitude and take the lowest one
+              stationWinds.sort((a, b) => a.level - b.level);
+              const wind = stationWinds[0];
+
+              // Calculate offset away from airport to avoid masking airport info
+              let offsetLat = wind.lat;
+              let offsetLon = wind.lon;
+              
+              if (airport?.position) {
+                // Calculate direction from airport to wind station
+                const airportLat = airport.position.lat;
+                const airportLon = airport.position.lon;
+                
+                // Calculate bearing from airport to wind station
+                const bearing = calculateBearing(airportLat, airportLon, wind.lat, wind.lon);
+                
+                // Offset the wind barb further away from the airport
+                const offsetDistance = 0.05; // ~3nm offset
+                const bearingRad = (bearing * Math.PI) / 180;
+                
+                offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
+                offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
+              } else {
+                // If no airport, add small random offset
+                offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
+                offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
+              }
+
+              // Create wind barb icon
+              const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
+              
+              const windMarker = L.marker([offsetLat, offsetLon], {
+                icon: windBarb,
+                interactive: true,
+                pane: 'overlayPane'
+              });
+
+              (windMarker as any)._windStationId = wind.id;
+
+              // Create popup content showing all altitude levels for this station
+              const allLevelsHTML = stationWinds.map(w => 
+                `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
+                  <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
+                  ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
+                </div>`
+              ).join('');
+
+              const popupContent = `
+                <div style="min-width: 200px;">
+                  <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
+                  <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
+                  <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">All Levels:</span></div>
+                  ${allLevelsHTML}
+                  <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
+                </div>
+              `;
+
+              windMarker.bindPopup(popupContent);
+              layerGroupsRef.current.weather.addLayer(windMarker);
+            });
+
+          } catch (error) {
+            console.error('[PilotMap] Failed to load Winds Aloft on zoom change:', error);
+          }
+        }
+      };
+
+      updateWindsAloft();
+    };
+
+    // Listen for zoom changes
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    // Cleanup function
+    return () => {
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
+  }, [mapInstance, displayOptions.showWindsAloft, airport]);
 
   // Update Icing Forecast display
   useEffect(() => {
