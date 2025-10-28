@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useRef, useEffect, useState } from 'react';
-import type * as L from 'leaflet';
+import * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
 import { weatherService, type SigmetAirmet, type WeatherForecast } from '@/services/weatherService';
@@ -24,6 +24,83 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
     
     let bearing = toDegrees(Math.atan2(y, x));
     return (bearing + 360) % 360; // Normalize to 0-360
+}
+
+// Helper function to create wind barb icon
+function createWindBarb(windDir: number, windSpeed: number, altitude: number): L.DivIcon {
+  // Calculate wind barb components
+  const speed = Math.round(windSpeed);
+  const direction = Math.round(windDir);
+  
+  // Wind barb calculation (simplified)
+  let barbHTML = '';
+  let remainingSpeed = speed;
+  
+  // 50 knot barbs (long lines)
+  const fifties = Math.floor(remainingSpeed / 50);
+  remainingSpeed -= fifties * 50;
+  
+  // 10 knot barbs (short lines)
+  const tens = Math.floor(remainingSpeed / 10);
+  remainingSpeed -= tens * 10;
+  
+  // 5 knot barbs (triangles)
+  const fives = Math.floor(remainingSpeed / 5);
+  
+  // Build barb HTML
+  for (let i = 0; i < fifties; i++) {
+    barbHTML += '<div style="width: 20px; height: 2px; background: #60a5fa; margin: 1px 0;"></div>';
+  }
+  for (let i = 0; i < tens; i++) {
+    barbHTML += '<div style="width: 12px; height: 1px; background: #60a5fa; margin: 1px 0;"></div>';
+  }
+  for (let i = 0; i < fives; i++) {
+    barbHTML += '<div style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 6px solid #60a5fa; margin: 1px 0;"></div>';
+  }
+  
+  // Color based on altitude
+  let color = '#60a5fa'; // Default blue
+  if (altitude >= 18000) color = '#ef4444'; // Red for high altitude
+  else if (altitude >= 12000) color = '#f59e0b'; // Orange for medium-high altitude
+  else if (altitude >= 6000) color = '#10b981'; // Green for medium altitude
+  
+  const windBarbHTML = `
+    <div style="
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      background: rgba(0,0,0,0.7);
+      border-radius: 50%;
+      border: 2px solid ${color};
+    ">
+      <div style="
+        width: 2px;
+        height: 20px;
+        background: ${color};
+        position: relative;
+        transform: rotate(${direction}deg);
+        transform-origin: bottom center;
+      ">
+        ${barbHTML}
+      </div>
+      <div style="
+        font-size: 8px;
+        color: ${color};
+        font-weight: bold;
+        margin-top: 2px;
+      ">${altitude/1000}k</div>
+    </div>
+  `;
+  
+  return L.divIcon({
+    html: windBarbHTML,
+    className: 'wind-barb',
+    iconSize: [30, 30],
+    iconAnchor: [15, 15]
+  });
 }
 
 interface PilotMapProps {
@@ -1498,8 +1575,56 @@ export function PilotMap({
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
     const updateWindsAloft = async () => {
-      // TODO: Implement when data source is available
-      console.log('[PilotMap] Winds Aloft layer toggle:', displayOptions.showWindsAloft);
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing wind layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._windStationId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showWindsAloft) {
+        try {
+          const windsData = await weatherService.getWindsAloft();
+          console.log('[PilotMap] Loaded', windsData.length, 'wind stations');
+          
+          windsData.forEach((wind: any) => {
+            if (!wind.lat || !wind.lon || !wind.windDir || !wind.windSpeed) return;
+
+            // Create wind barb icon
+            const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
+            
+            const windMarker = L.marker([wind.lat, wind.lon], {
+              icon: windBarb,
+              interactive: true,
+              pane: 'overlayPane'
+            });
+
+            (windMarker as any)._windStationId = wind.id;
+
+            // Create popup content
+            const popupContent = `
+              <div style="min-width: 150px;">
+                <div style="color: #60a5fa; font-weight: 700; margin-bottom: 4px;">WINDS ALOFT</div>
+                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
+                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Level:</span> ${wind.level} ft</div>
+                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Wind:</span> ${wind.windDir}° at ${wind.windSpeed} kt</div>
+                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Temp:</span> ${wind.temperature}°C</div>
+                <div style="font-size: 10px; color: #6b7280;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
+              </div>
+            `;
+
+            windMarker.bindPopup(popupContent);
+            layerGroupsRef.current.weather.addLayer(windMarker);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load Winds Aloft:', error);
+        }
+      }
     };
 
     updateWindsAloft();
