@@ -41,7 +41,6 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
   const controls = [
     { key: 'showDmeRings' as const, label: 'DME Rings', icon: '⭕' },
     { key: 'showWaypoints' as const, label: 'Waypoints', icon: '📍' },
-    { key: 'showApproachRoutes' as const, label: 'Approach Routes', icon: '🛩️' },
     { key: 'showExtendedCenterlines' as const, label: 'Extended Centerlines', icon: '➖' },
     { key: 'showPireps' as const, label: 'PIREPs', icon: '⚠️' },
     { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },

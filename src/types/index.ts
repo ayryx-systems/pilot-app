@@ -213,7 +213,6 @@ export interface MapDisplayOptions {
   showRunways: boolean;
   showDmeRings: boolean;
   showWaypoints: boolean;
-  showApproachRoutes: boolean;
   showExtendedCenterlines: boolean;
   showPireps: boolean;
   showGroundTracks: boolean;

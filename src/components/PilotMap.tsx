@@ -408,7 +408,6 @@ export function PilotMap({
         // runways: DISABLED - now using OSM data
         dmeRings: L.layerGroup().addTo(map),
         waypoints: waypointsGroup,
-        // approachRoutes: DISABLED - now using OSM data  
         // extendedCenterlines: DISABLED - now using OSM data
         pireps: pirepsGroup,
         tracks: tracksGroup,
@@ -714,106 +713,6 @@ export function PilotMap({
 
     updateWaypoints();
   }, [mapInstance, displayOptions.showWaypoints, airportConfig]);
-
-  // Update approach routes display
-  useEffect(() => {
-    if (!mapInstance) return;
-    // Approach routes are now handled by OSM data, no need to process FAA data
-    return;
-
-    const updateApproachRoutes = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
-
-      // Clear existing approach routes
-      layerGroupsRef.current.approachRoutes.clearLayers();
-
-      if (displayOptions.showApproachRoutes) {
-        // DISABLED: Using OSM data instead of FAA runway calculations
-        // Approach routes will be handled by OSM features
-        return; // Early return to skip FAA approach route rendering
-        
-        // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
-        const runways = airportConfig?.runways || airportData?.runways || [];
-        runways.forEach((runway: any) => {
-          if (runway.approaches) {
-            runway.approaches.forEach((approach: any) => {
-              // Calculate waypoint positions along approach path
-              const approachWaypoints: [number, number][] = [];
-              const runwayHeading = runway.heading;
-              const threshold = runway.threshold;
-
-              approach.waypoints.forEach((waypoint: any) => {
-                if (waypoint.position) {
-                  approachWaypoints.push(waypoint.position);
-                } else {
-                  // Calculate position based on distance and heading
-                  const distanceNm = waypoint.distanceFromThreshold;
-                  const distanceMeters = distanceNm * 1852;
-
-                  // Convert runway heading to approach heading (opposite direction)
-                  const approachHeading = (runwayHeading + 180) % 360;
-                  const headingRad = (approachHeading * Math.PI) / 180;
-
-                  // Calculate position
-                  const lat = threshold.lat + (distanceMeters / 111320) * Math.cos(headingRad);
-                  const lon = threshold.lon + (distanceMeters / (111320 * Math.cos(threshold.lat * Math.PI / 180))) * Math.sin(headingRad);
-
-                  approachWaypoints.push([lat, lon]);
-                }
-              });
-
-              if (approachWaypoints.length > 1) {
-                // Skip adding approach path line - only show waypoints
-
-                // Add approach waypoint markers - using similar style to regular waypoints
-                approach.waypoints.forEach((waypoint: any, index: number) => {
-                  if (index < approachWaypoints.length) {
-                    // Draw approach waypoint marker with a different color
-                    const waypointMarker = L.marker(approachWaypoints[index], {
-                      icon: L.divIcon({
-                        className: "approach-waypoint-marker",
-                        html: `<div style="width: 6px; height: 6px; background-color: #14b8a6; border-radius: 50%; border: 1px solid #fff;"></div>`,
-                        iconSize: [8, 8],
-                        iconAnchor: [4, 4],
-                      }),
-                      interactive: true,
-                    });
-
-                    // Add waypoint information tooltip
-                    waypointMarker.bindTooltip(
-                      `${waypoint.name}: ${approach.name} approach waypoint for RWY ${runway.name} (${waypoint.distanceFromThreshold}nm from threshold)`,
-                      {
-                        permanent: false,
-                        direction: "top",
-                        className: "distance-tooltip",
-                      }
-                    );
-
-                    // Add waypoint label - use teal color
-                    const waypointLabel = L.marker(approachWaypoints[index], {
-                      icon: L.divIcon({
-                        className: "approach-waypoint-label",
-                        html: `<div style="color: #14b8a6; font-size: 10px; font-weight: bold; text-shadow: 0px 0px 2px rgba(0,0,0,1)">${waypoint.name}</div>`,
-                        iconSize: [40, 20],
-                        iconAnchor: [20, -6], // Place the label above the marker
-                      }),
-                      interactive: false,
-                    });
-
-                    layerGroupsRef.current.approachRoutes.addLayer(waypointMarker);
-                    layerGroupsRef.current.approachRoutes.addLayer(waypointLabel);
-                  }
-                });
-              }
-            });
-          }
-        });
-      }
-    };
-
-    updateApproachRoutes();
-  }, [mapInstance, displayOptions.showApproachRoutes, airportConfig, airportData]);
 
   // Update extended centerlines display
   useEffect(() => {
