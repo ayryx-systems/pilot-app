@@ -1582,9 +1582,29 @@ export function PilotMap({
             stationWinds.sort((a, b) => a.level - b.level);
             const wind = stationWinds[0];
 
-            // Add small random offset to prevent exact overlap
-            const offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
-            const offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
+            // Calculate offset away from airport to avoid masking airport info
+            let offsetLat = wind.lat;
+            let offsetLon = wind.lon;
+            
+            if (airport?.position) {
+              // Calculate direction from airport to wind station
+              const airportLat = airport.position.lat;
+              const airportLon = airport.position.lon;
+              
+              // Calculate bearing from airport to wind station
+              const bearing = calculateBearing(airportLat, airportLon, wind.lat, wind.lon);
+              
+              // Offset the wind barb further away from the airport
+              const offsetDistance = 0.05; // ~3nm offset
+              const bearingRad = (bearing * Math.PI) / 180;
+              
+              offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
+              offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
+            } else {
+              // If no airport, add small random offset
+              offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
+              offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
+            }
 
             // Create wind barb icon
             const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
