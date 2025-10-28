@@ -31,47 +31,111 @@ function createWindBarb(windDir: number, windSpeed: number, altitude: number): L
   const speed = Math.round(windSpeed);
   const direction = Math.round(windDir);
   
-  // Simplified wind barb - just show speed as a number for now
+  // Professional wind indicator with clear direction
   const windBarbHTML = `
     <div style="
       position: relative;
-      width: 60px;
-      height: 60px;
+      width: 80px;
+      height: 75px;
       display: flex;
+      flex-direction: column;
       align-items: center;
-      justify-content: center;
-      background: rgba(0,0,0,0.8);
-      border-radius: 8px;
-      border: 2px solid #ffffff;
+      justify-content: space-between;
+      background: linear-gradient(135deg, rgba(0,50,100,0.9), rgba(0,30,70,0.9));
+      border-radius: 6px;
+      border: 2px solid #4a9eff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+      padding: 4px;
     ">
-      <!-- Main shaft -->
+      <!-- Title -->
       <div style="
-        position: absolute;
-        width: 4px;
-        height: 40px;
-        background: #ffffff;
-        transform: rotate(${direction}deg);
-        transform-origin: center center;
-      "></div>
-      <!-- Speed text -->
-      <div style="
-        position: absolute;
-        color: #ffffff;
-        font-size: 12px;
+        color: #4a9eff;
+        font-size: 8px;
         font-weight: bold;
-        text-shadow: 0 0 3px rgba(0,0,0,0.8);
-        transform: rotate(${direction}deg);
-        transform-origin: center center;
-        margin-top: 25px;
-      ">${speed}</div>
+        letter-spacing: 0.5px;
+        text-align: center;
+        line-height: 1;
+      ">WINDS ALOFT</div>
+      
+      <!-- Wind direction - proper arrow with tail -->
+      <div style="
+        position: relative;
+        width: 24px;
+        height: 24px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <!-- Arrow tail (wind source) -->
+        <div style="
+          position: absolute;
+          width: 8px;
+          height: 2px;
+          background: #ffffff;
+          transform: rotate(${direction}deg);
+          transform-origin: center center;
+          margin-left: -4px;
+        "></div>
+        <!-- Arrow shaft -->
+        <div style="
+          position: absolute;
+          width: 2px;
+          height: 12px;
+          background: #ffffff;
+          transform: rotate(${direction}deg);
+          transform-origin: center center;
+        "></div>
+        <!-- Arrow head (wind direction) -->
+        <div style="
+          position: absolute;
+          width: 0;
+          height: 0;
+          border-left: 3px solid transparent;
+          border-right: 3px solid transparent;
+          border-bottom: 8px solid #ffffff;
+          transform: rotate(${direction}deg);
+          transform-origin: center center;
+          margin-top: 4px;
+        "></div>
+      </div>
+      
+      <!-- Altitude -->
+      <div style="
+        color: #4a9eff;
+        font-size: 10px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 1;
+      ">${altitude.toLocaleString()} FT</div>
+      
+      <!-- Wind speed -->
+      <div style="
+        color: #ffffff;
+        font-size: 16px;
+        font-weight: bold;
+        text-shadow: 0 0 4px rgba(0,0,0,0.8);
+        font-family: 'Courier New', monospace;
+        text-align: center;
+        line-height: 1;
+      ">${speed} KT</div>
+      
+      <!-- Click indicator -->
+      <div style="
+        color: #4a9eff;
+        font-size: 7px;
+        font-weight: bold;
+        text-align: center;
+        line-height: 1;
+        opacity: 0.8;
+      ">CLICK FOR MORE</div>
     </div>
   `;
   
   return L.divIcon({
     html: windBarbHTML,
     className: 'wind-barb',
-    iconSize: [60, 60],
-    iconAnchor: [30, 30]
+    iconSize: [80, 75],
+    iconAnchor: [40, 37]
   });
 }
 
