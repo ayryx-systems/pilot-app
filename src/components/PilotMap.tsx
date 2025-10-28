@@ -1390,22 +1390,30 @@ export function PilotMap({
               strokeOpacity = 0.9;
             }
 
-            // Create polygon: prominent stroke + minimal fill
-            // Fill at 8-10% is barely noticeable but shows "which side is affected"
+            // Create polygon: non-interactive fill + clickable border
             const polygon = L.polygon(coordinates, {
               color: color,
               weight: strokeWidth,
               opacity: strokeOpacity,
               fillColor: color,
               fillOpacity: fillOpacity,
-              interactive: true,
+              interactive: false, // Make fill non-interactive
               pane: 'overlayPane',
-              // Make the fill area less clickable by using higher click tolerance
               bubblingMouseEvents: false
             });
 
-            // Store ID for cleanup
+            // Create clickable border (polyline with same coordinates)
+            const border = L.polyline(coordinates, {
+              color: color,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              interactive: true, // Make border clickable
+              pane: 'overlayPane'
+            });
+
+            // Store ID for cleanup on both elements
             (polygon as any)._sigmetAirmetId = sigmet.id;
+            (border as any)._sigmetAirmetId = sigmet.id;
 
             // Format time in Zulu (UTC)
             const formatZulu = (dateString: string) => {
@@ -1461,8 +1469,12 @@ export function PilotMap({
               </div>
             `;
 
-            polygon.bindPopup(popupContent);
+            // Bind popup to the clickable border
+            border.bindPopup(popupContent);
+            
+            // Add both polygon (fill) and border to the map
             layerGroupsRef.current.weather.addLayer(polygon);
+            layerGroupsRef.current.weather.addLayer(border);
           });
 
         } catch (error) {
@@ -1759,18 +1771,30 @@ export function PilotMap({
               strokeOpacity = 0.9;
             }
 
+            // Create polygon: non-interactive fill + clickable border
             const polygon = L.polygon(coordinates, {
               color: color,
               weight: strokeWidth,
               opacity: strokeOpacity,
               fillColor: color,
               fillOpacity: fillOpacity,
-              interactive: true,
+              interactive: false, // Make fill non-interactive
               pane: 'overlayPane',
               bubblingMouseEvents: false
             });
 
+            // Create clickable border (polyline with same coordinates)
+            const border = L.polyline(coordinates, {
+              color: color,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              interactive: true, // Make border clickable
+              pane: 'overlayPane'
+            });
+
+            // Store ID for cleanup on both elements
             (polygon as any)._icingId = icing.id;
+            (border as any)._icingId = icing.id;
 
             const formatZulu = (dateString: string) => {
               const date = new Date(dateString);
@@ -1791,8 +1815,12 @@ export function PilotMap({
               </div>
             `;
 
-            polygon.bindPopup(popupContent);
+            // Bind popup to the clickable border
+            border.bindPopup(popupContent);
+            
+            // Add both polygon (fill) and border to the map
             layerGroupsRef.current.weather.addLayer(polygon);
+            layerGroupsRef.current.weather.addLayer(border);
           });
 
         } catch (error) {
@@ -1848,18 +1876,30 @@ export function PilotMap({
               strokeOpacity = 0.9;
             }
 
+            // Create polygon: non-interactive fill + clickable border
             const polygon = L.polygon(coordinates, {
               color: color,
               weight: strokeWidth,
               opacity: strokeOpacity,
               fillColor: color,
               fillOpacity: fillOpacity,
-              interactive: true,
+              interactive: false, // Make fill non-interactive
               pane: 'overlayPane',
               bubblingMouseEvents: false
             });
 
+            // Create clickable border (polyline with same coordinates)
+            const border = L.polyline(coordinates, {
+              color: color,
+              weight: strokeWidth,
+              opacity: strokeOpacity,
+              interactive: true, // Make border clickable
+              pane: 'overlayPane'
+            });
+
+            // Store ID for cleanup on both elements
             (polygon as any)._turbulenceId = turbulence.id;
+            (border as any)._turbulenceId = turbulence.id;
 
             const formatZulu = (dateString: string) => {
               const date = new Date(dateString);
@@ -1880,8 +1920,12 @@ export function PilotMap({
               </div>
             `;
 
-            polygon.bindPopup(popupContent);
+            // Bind popup to the clickable border
+            border.bindPopup(popupContent);
+            
+            // Add both polygon (fill) and border to the map
             layerGroupsRef.current.weather.addLayer(polygon);
+            layerGroupsRef.current.weather.addLayer(border);
           });
 
         } catch (error) {
