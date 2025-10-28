@@ -28,78 +28,50 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
 
 // Helper function to create wind barb icon
 function createWindBarb(windDir: number, windSpeed: number, altitude: number): L.DivIcon {
-  // Calculate wind barb components
   const speed = Math.round(windSpeed);
   const direction = Math.round(windDir);
   
-  // Wind barb calculation (simplified)
-  let barbHTML = '';
-  let remainingSpeed = speed;
-  
-  // 50 knot barbs (long lines)
-  const fifties = Math.floor(remainingSpeed / 50);
-  remainingSpeed -= fifties * 50;
-  
-  // 10 knot barbs (short lines)
-  const tens = Math.floor(remainingSpeed / 10);
-  remainingSpeed -= tens * 10;
-  
-  // 5 knot barbs (triangles)
-  const fives = Math.floor(remainingSpeed / 5);
-  
-  // Build barb HTML
-  for (let i = 0; i < fifties; i++) {
-    barbHTML += '<div style="width: 20px; height: 2px; background: #60a5fa; margin: 1px 0;"></div>';
-  }
-  for (let i = 0; i < tens; i++) {
-    barbHTML += '<div style="width: 12px; height: 1px; background: #60a5fa; margin: 1px 0;"></div>';
-  }
-  for (let i = 0; i < fives; i++) {
-    barbHTML += '<div style="width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-bottom: 6px solid #60a5fa; margin: 1px 0;"></div>';
-  }
-  
-  // Color based on altitude
-  let color = '#60a5fa'; // Default blue
-  if (altitude >= 18000) color = '#ef4444'; // Red for high altitude
-  else if (altitude >= 12000) color = '#f59e0b'; // Orange for medium-high altitude
-  else if (altitude >= 6000) color = '#10b981'; // Green for medium altitude
-  
+  // Simplified wind barb - just show speed as a number for now
   const windBarbHTML = `
     <div style="
+      position: relative;
+      width: 60px;
+      height: 60px;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 30px;
-      height: 30px;
-      background: rgba(0,0,0,0.7);
-      border-radius: 50%;
-      border: 2px solid ${color};
+      background: rgba(0,0,0,0.8);
+      border-radius: 8px;
+      border: 2px solid #ffffff;
     ">
+      <!-- Main shaft -->
       <div style="
-        width: 2px;
-        height: 20px;
-        background: ${color};
-        position: relative;
+        position: absolute;
+        width: 4px;
+        height: 40px;
+        background: #ffffff;
         transform: rotate(${direction}deg);
-        transform-origin: bottom center;
-      ">
-        ${barbHTML}
-      </div>
+        transform-origin: center center;
+      "></div>
+      <!-- Speed text -->
       <div style="
-        font-size: 8px;
-        color: ${color};
+        position: absolute;
+        color: #ffffff;
+        font-size: 12px;
         font-weight: bold;
-        margin-top: 2px;
-      ">${altitude/1000}k</div>
+        text-shadow: 0 0 3px rgba(0,0,0,0.8);
+        transform: rotate(${direction}deg);
+        transform-origin: center center;
+        margin-top: 25px;
+      ">${speed}</div>
     </div>
   `;
   
   return L.divIcon({
     html: windBarbHTML,
     className: 'wind-barb',
-    iconSize: [30, 30],
-    iconAnchor: [15, 15]
+    iconSize: [60, 60],
+    iconAnchor: [30, 30]
   });
 }
 
@@ -1588,16 +1560,36 @@ export function PilotMap({
 
       if (displayOptions.showWindsAloft) {
         try {
+          // For now, get all wind data without airport filtering
           const windsData = await weatherService.getWindsAloft();
-          console.log('[PilotMap] Loaded', windsData.length, 'wind stations');
+          console.log('[PilotMap] Loaded', windsData.length, 'wind stations for', airport?.code || 'all airports');
           
+          // Group winds by station to avoid superimposition
+          const stationGroups = new Map();
           windsData.forEach((wind: any) => {
             if (!wind.lat || !wind.lon || !wind.windDir || !wind.windSpeed) return;
+            
+            const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
+            if (!stationGroups.has(stationKey)) {
+              stationGroups.set(stationKey, []);
+            }
+            stationGroups.get(stationKey).push(wind);
+          });
+
+          // Only show one wind barb per station (prefer lower altitude)
+          stationGroups.forEach((stationWinds) => {
+            // Sort by altitude and take the lowest one
+            stationWinds.sort((a, b) => a.level - b.level);
+            const wind = stationWinds[0];
+
+            // Add small random offset to prevent exact overlap
+            const offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
+            const offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
 
             // Create wind barb icon
             const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
             
-            const windMarker = L.marker([wind.lat, wind.lon], {
+            const windMarker = L.marker([offsetLat, offsetLon], {
               icon: windBarb,
               interactive: true,
               pane: 'overlayPane'
@@ -1605,15 +1597,21 @@ export function PilotMap({
 
             (windMarker as any)._windStationId = wind.id;
 
-            // Create popup content
+            // Create popup content showing all altitude levels for this station
+            const allLevelsHTML = stationWinds.map(w => 
+              `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
+                <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
+                ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
+              </div>`
+            ).join('');
+
             const popupContent = `
-              <div style="min-width: 150px;">
-                <div style="color: #60a5fa; font-weight: 700; margin-bottom: 4px;">WINDS ALOFT</div>
-                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
-                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Level:</span> ${wind.level} ft</div>
-                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Wind:</span> ${wind.windDir}° at ${wind.windSpeed} kt</div>
-                <div style="margin-bottom: 2px; color: #e5e7eb;"><span style="font-weight: 600;">Temp:</span> ${wind.temperature}°C</div>
-                <div style="font-size: 10px; color: #6b7280;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
+              <div style="min-width: 200px;">
+                <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
+                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">All Levels:</span></div>
+                ${allLevelsHTML}
+                <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
               </div>
             `;
 

@@ -275,9 +275,11 @@ class WeatherService {
   /**
    * Get Winds Aloft data from backend
    */
-  async getWindsAloft() {
+  async getWindsAloft(airportCode?: string) {
     const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-    const url = `${apiBaseUrl}/api/pilot/winds-aloft`;
+    const url = airportCode 
+      ? `${apiBaseUrl}/api/pilot/winds-aloft?airport=${airportCode}`
+      : `${apiBaseUrl}/api/pilot/winds-aloft`;
     
     try {
       const response = await fetch(url);
