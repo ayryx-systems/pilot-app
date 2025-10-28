@@ -57,47 +57,16 @@ function createWindBarb(windDir: number, windSpeed: number, altitude: number): L
         line-height: 1;
       ">WINDS ALOFT</div>
       
-      <!-- Wind direction - proper arrow with tail -->
+      <!-- Wind direction - clear arrow pointing FROM wind source -->
       <div style="
-        position: relative;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <!-- Arrow tail (wind source) -->
-        <div style="
-          position: absolute;
-          width: 8px;
-          height: 2px;
-          background: #ffffff;
-          transform: rotate(${direction}deg);
-          transform-origin: center center;
-          margin-left: -4px;
-        "></div>
-        <!-- Arrow shaft -->
-        <div style="
-          position: absolute;
-          width: 2px;
-          height: 12px;
-          background: #ffffff;
-          transform: rotate(${direction}deg);
-          transform-origin: center center;
-        "></div>
-        <!-- Arrow head (wind direction) -->
-        <div style="
-          position: absolute;
-          width: 0;
-          height: 0;
-          border-left: 3px solid transparent;
-          border-right: 3px solid transparent;
-          border-bottom: 8px solid #ffffff;
-          transform: rotate(${direction}deg);
-          transform-origin: center center;
-          margin-top: 4px;
-        "></div>
-      </div>
+        width: 0;
+        height: 0;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 16px solid #ffffff;
+        transform: rotate(${direction}deg);
+        transform-origin: center center;
+      "></div>
       
       <!-- Altitude -->
       <div style="
