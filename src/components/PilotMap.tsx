@@ -2017,18 +2017,56 @@ export function PilotMap({
 
             marker.setZIndexOffset(2000); // High z-index offset to match ATC PIREPs
 
+            // Helper functions to format time in UTC (Zulu)
+            const formatZulu = (date: Date) => {
+              if (isNaN(date.getTime())) return 'Unknown time';
+              const hours = date.getUTCHours().toString().padStart(2, '0');
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              const day = date.getUTCDate().toString().padStart(2, '0');
+              const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+              const year = date.getUTCFullYear();
+              return `${year}-${month}-${day} ${hours}${minutes}Z`;
+            };
+
+            const formatRelativeTime = (date: Date) => {
+              if (isNaN(date.getTime())) return 'Unknown';
+              
+              const now = new Date();
+              const diffMs = now.getTime() - date.getTime();
+              const diffMinutes = Math.floor(diffMs / 60000);
+              
+              if (diffMinutes < 0) {
+                // Future time (shouldn't happen for PIREPs, but handle it)
+                return 'Future';
+              }
+              
+              // Format as "X min ago" or "X hours Y min ago"
+              if (diffMinutes < 60) {
+                return `${diffMinutes} min ago`;
+              } else {
+                const hours = Math.floor(diffMinutes / 60);
+                const minutes = diffMinutes % 60;
+                if (minutes === 0) {
+                  return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+                } else {
+                  return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
+                }
+              }
+            };
+
+            // Get the observation time (prefer obsTime, fallback to receiptTime)
+            const obsTime = pirep.obsTime 
+              ? new Date(pirep.obsTime)
+              : pirep.receiptTime
+              ? new Date(pirep.receiptTime)
+              : null;
+            
             // Create popup content
             const altitudeStr = pirep.fltLvlFt 
               ? `${pirep.fltLvlFt.toLocaleString()} ft`
               : pirep.fltLvl 
               ? `FL${pirep.fltLvl}`
               : 'Unknown altitude';
-
-            const timeStr = pirep.obsTime 
-              ? new Date(pirep.obsTime).toLocaleString()
-              : pirep.receiptTime
-              ? new Date(pirep.receiptTime).toLocaleString()
-              : 'Unknown time';
 
             const conditions = [];
             if (pirep.tbInt1 && pirep.tbType1) {
@@ -2051,30 +2089,37 @@ export function PilotMap({
                 </ul>`
               : '<p style="margin: 4px 0; font-size: 12px; color: #9ca3af;">No specific conditions reported</p>';
 
-            const popupContent = `
-              <div style="min-width: 200px;">
-                <div style="margin-bottom: 8px;">
-                  <h4 style="margin: 0; color: ${color};"><strong>WEATHER PIREP</strong></h4>
+            // Create a function to generate popup content with current relative time
+            const createPopupContent = () => {
+              // Recalculate relative time to keep it current
+              const zuluTimeStr = obsTime ? formatZulu(obsTime) : 'Unknown time';
+              const currentRelativeTime = obsTime ? formatRelativeTime(obsTime) : 'Unknown';
+              
+              return `
+                <div style="min-width: 200px;">
+                  <div style="margin-bottom: 8px;">
+                    <h4 style="margin: 0; color: ${color};"><strong>WEATHER PIREP</strong></h4>
+                  </div>
+                  <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
+                    ${zuluTimeStr} (${currentRelativeTime})<br/>
+                    ${pirep.acType || 'Unknown aircraft'} at ${altitudeStr}
+                    ${pirep.icaoId ? `<br/>Location: ${pirep.icaoId}` : ''}
+                  </p>
+                  ${conditionsHtml}
+                  ${pirep.rawOb ? `<p style="margin: 8px 0; font-size: 11px; font-style: italic; color: #d1d5db; font-family: monospace;">${pirep.rawOb}</p>` : ''}
                 </div>
-                <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
-                  ${timeStr}<br/>
-                  ${pirep.acType || 'Unknown aircraft'} at ${altitudeStr}
-                  ${pirep.icaoId ? `<br/>Location: ${pirep.icaoId}` : ''}
-                </p>
-                ${conditionsHtml}
-                ${pirep.rawOb ? `<p style="margin: 8px 0; font-size: 11px; font-style: italic; color: #d1d5db; font-family: monospace;">${pirep.rawOb}</p>` : ''}
-              </div>
-            `;
+              `;
+            };
 
             // Bind popup with options to ensure it appears on top
-            marker.bindPopup(popupContent, {
+            marker.bindPopup(createPopupContent(), {
               className: 'weather-pirep-popup', // Add specific class for styling
               maxWidth: 300,
               autoPan: true,
               keepInView: true
             });
             
-            // Ensure popup appears on top when opened
+            // Ensure popup appears on top when opened and update relative time
             marker.on('popupopen', () => {
               const popup = marker.getPopup();
               if (popup && popup.getElement()) {
@@ -2088,6 +2133,25 @@ export function PilotMap({
                   }
                 }
               }
+              
+              // Update popup content to refresh relative time
+              if (popup && obsTime) {
+                popup.setContent(createPopupContent());
+              }
+              
+              // Set up interval to update relative time every 30 seconds while popup is open
+              const updateInterval = setInterval(() => {
+                if (popup && popup.isOpen() && obsTime) {
+                  popup.setContent(createPopupContent());
+                } else {
+                  clearInterval(updateInterval);
+                }
+              }, 30000); // Update every 30 seconds
+              
+              // Clean up interval when popup closes
+              marker.once('popupclose', () => {
+                clearInterval(updateInterval);
+              });
             });
             
             (marker as any)._weatherPirepId = pirep.id;
