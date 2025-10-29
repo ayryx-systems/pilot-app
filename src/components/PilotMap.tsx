@@ -2186,6 +2186,203 @@ export function PilotMap({
     };
   }, [mapInstance, displayOptions.showWeatherPireps]);
 
+  // Update METAR stations display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateMetars = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Get current zoom level for visibility decisions
+      const currentZoom = mapInstance.getZoom();
+
+      // Remove existing METAR layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._metarId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showMetars) {
+        // Only show METARs at zoom level 8 or higher to prevent clutter
+        if (currentZoom < 8) {
+          console.log('[PilotMap] METARs hidden - zoom level too low:', currentZoom);
+          return;
+        }
+
+        try {
+          const metars = await weatherService.getMetars();
+          console.log('[PilotMap] Loaded', metars.length, 'METAR stations');
+          
+          metars.forEach((metar: any) => {
+            if (!metar.lat || !metar.lon || isNaN(metar.lat) || isNaN(metar.lon)) return;
+
+            // Determine color based on flight category
+            let color = '#6b7280'; // Gray for unknown
+            let borderColor = '#ffffff';
+            
+            switch (metar.flightCategory) {
+              case 'LIFR':
+                color = '#7c2d12'; // Dark red/brown
+                break;
+              case 'IFR':
+                color = '#dc2626'; // Red
+                break;
+              case 'MVFR':
+                color = '#f59e0b'; // Amber
+                break;
+              case 'VFR':
+                color = '#10b981'; // Green
+                break;
+              default:
+                color = '#6b7280'; // Gray for unknown
+            }
+
+            // Format time helpers
+            const formatZulu = (dateString: string) => {
+              const date = new Date(dateString);
+              if (isNaN(date.getTime())) return 'Unknown';
+              const hours = date.getUTCHours().toString().padStart(2, '0');
+              const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+              const day = date.getUTCDate().toString().padStart(2, '0');
+              const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+              const year = date.getUTCFullYear();
+              return `${year}-${month}-${day} ${hours}${minutes}Z`;
+            };
+
+            const formatRelativeTime = (dateString: string) => {
+              const date = new Date(dateString);
+              if (isNaN(date.getTime())) return 'Unknown';
+              
+              const now = new Date();
+              const diffMs = now.getTime() - date.getTime();
+              const diffMinutes = Math.floor(diffMs / 60000);
+              
+              if (diffMinutes < 0) return 'Future';
+              if (diffMinutes < 60) return `${diffMinutes} min ago`;
+              
+              const hours = Math.floor(diffMinutes / 60);
+              const minutes = diffMinutes % 60;
+              if (minutes === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+              return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
+            };
+
+            // Create METAR station icon (square with station ID)
+            const metarIcon = L.divIcon({
+              html: `<div style="
+                width: 24px;
+                height: 24px;
+                background: ${color};
+                border: 2px solid ${borderColor};
+                border-radius: 3px;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 9px;
+                font-weight: bold;
+                color: white;
+                line-height: 1;
+                text-align: center;
+              ">${(metar.icaoId || metar.stationId || '?').substring(0, 4)}</div>`,
+              className: 'custom-metar-marker',
+              iconSize: [28, 28],
+              iconAnchor: [14, 14]
+            });
+
+            const marker = L.marker([metar.lat, metar.lon], {
+              icon: metarIcon,
+              pane: 'markerPane'
+            });
+
+            marker.setZIndexOffset(1900); // Below PIREPs but above other weather
+
+            // Build popup content
+            const obsTime = metar.observationTime;
+            const zuluTime = obsTime ? formatZulu(obsTime) : 'Unknown';
+            const relativeTime = obsTime ? formatRelativeTime(obsTime) : 'Unknown';
+
+            const windStr = metar.windDir !== null && metar.windSpeed !== null
+              ? `${metar.windDir}° at ${metar.windSpeed}${metar.windGust ? `G${metar.windGust}` : ''}kt`
+              : 'Calm';
+
+            const tempStr = metar.temperature !== null
+              ? `${metar.temperature}°C${metar.dewpoint !== null ? `/${metar.dewpoint}°C` : ''}`
+              : 'N/A';
+
+            const visStr = metar.visibility !== null
+              ? `${metar.visibility} SM`
+              : 'N/A';
+
+            const altStr = metar.altimeter !== null
+              ? `${metar.altimeter.toFixed(2)} inHg`
+              : 'N/A';
+
+            const cloudsStr = metar.clouds && Array.isArray(metar.clouds) && metar.clouds.length > 0
+              ? metar.clouds.map((c: any) => {
+                  if (c.cover === 'CLR' || c.cover === 'SKC') return 'Clear';
+                  if (c.cover === 'FEW') return `Few ${c.base ? c.base + 'ft' : ''}`;
+                  if (c.cover === 'SCT') return `Scattered ${c.base ? c.base + 'ft' : ''}`;
+                  if (c.cover === 'BKN') return `Broken ${c.base ? c.base + 'ft' : ''}`;
+                  if (c.cover === 'OVC') return `Overcast ${c.base ? c.base + 'ft' : ''}`;
+                  return `${c.cover} ${c.base ? c.base + 'ft' : ''}`;
+                }).join(', ')
+              : 'Clear';
+
+            const popupContent = `
+              <div style="min-width: 250px;">
+                <div style="margin-bottom: 8px;">
+                  <h4 style="margin: 0; color: ${color};"><strong>METAR - ${metar.icaoId || metar.stationId}</strong></h4>
+                  <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Flight Category: <strong style="color: ${color};">${metar.flightCategory || 'UNKNOWN'}</strong></div>
+                </div>
+                <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
+                  ${zuluTime} (${relativeTime})
+                </p>
+                <div style="margin: 8px 0; font-size: 12px; color: #f3f4f6;">
+                  <div><strong>Wind:</strong> ${windStr}</div>
+                  <div><strong>Temp/Dewpoint:</strong> ${tempStr}</div>
+                  <div><strong>Visibility:</strong> ${visStr}</div>
+                  <div><strong>Altimeter:</strong> ${altStr}</div>
+                  <div><strong>Clouds:</strong> ${cloudsStr}</div>
+                  ${metar.wxString ? `<div><strong>Weather:</strong> ${metar.wxString}</div>` : ''}
+                </div>
+                ${metar.rawOb ? `<p style="margin: 8px 0; font-size: 10px; font-style: italic; color: #d1d5db; font-family: monospace; word-break: break-all;">${metar.rawOb}</p>` : ''}
+              </div>
+            `;
+
+            marker.bindPopup(popupContent, {
+              className: 'metar-popup',
+              maxWidth: 280,
+              autoPan: true,
+              keepInView: true
+            });
+            
+            (marker as any)._metarId = metar.id;
+            layerGroupsRef.current.weather.addLayer(marker);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load METARs:', error);
+        }
+      }
+    };
+
+    updateMetars();
+
+    // Listen for zoom changes to update METAR visibility
+    const handleZoomEnd = () => {
+      updateMetars();
+    };
+
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    return () => {
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
+  }, [mapInstance, displayOptions.showMetars]);
+
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {
     if (!mapInstance || !osmData) return;

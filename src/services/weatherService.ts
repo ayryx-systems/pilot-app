@@ -358,6 +358,38 @@ class WeatherService {
   }
 
   /**
+   * Get METAR stations (weather observations) from backend
+   */
+  async getMetars() {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/pilot/metars`;
+    
+    const cacheKey = 'metars';
+    const cached = this.getCachedData(cacheKey, 15); // Cache for 15 minutes (matches backend refresh)
+    
+    if (cached) {
+      return cached;
+    }
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new WeatherApiError(`METAR API error: ${response.status} ${response.statusText}`, response.status);
+      }
+      
+      const data = await response.json();
+      const metars = data.data || [];
+      
+      this.setCachedData(cacheKey, metars, 15);
+      console.log('[WeatherService] Retrieved', metars.length, 'METARs from backend');
+      return metars;
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch METARs:', error);
+      return [];
+    }
+  }
+
+  /**
    * Clear weather data cache
    */
   clearCache(): void {

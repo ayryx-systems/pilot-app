@@ -67,6 +67,7 @@ export function PilotDashboard() {
       showExtendedCenterlines: true,
       showPireps: true,
       showWeatherPireps: false, // Default to off - separate from ATC PIREPs
+      showMetars: false, // Default to off - METAR stations
       showGroundTracks: true,
       showOSMFeatures: true, // This includes runways from OSM
       showWeatherRadar: true,

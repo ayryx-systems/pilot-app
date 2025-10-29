@@ -44,6 +44,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
     { key: 'showExtendedCenterlines' as const, label: 'Extended Centerlines', icon: '➖' },
     { key: 'showPireps' as const, label: 'PIREPs (ATC)', icon: '⚠️' },
     { key: 'showWeatherPireps' as const, label: 'PIREPs (Weather)', icon: '📢' },
+    { key: 'showMetars' as const, label: 'METAR Stations', icon: '🌡️' },
     { key: 'showGroundTracks' as const, label: 'Ground Tracks', icon: '🛤️' },
     { key: 'showOSMFeatures' as const, label: 'Airport Features (Runways, Taxiways, etc.)', icon: '🏢' },
     { key: 'showWeatherRadar' as const, label: 'Weather Radar', icon: '🌦️' },
