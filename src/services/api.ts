@@ -136,13 +136,14 @@ class PilotApiService {
     }
 
     try {
+      // Backend now responds within 2-3 seconds max, but use 8 seconds timeout for safety
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview?t=${Date.now()}`, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
-      });
+      }, 8000); // 8 second timeout (backend responds within 2-3 seconds)
       return await this.handleResponse<AirportOverview>(response);
     } catch (error) {
       console.error(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
