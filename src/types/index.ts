@@ -215,6 +215,7 @@ export interface MapDisplayOptions {
   showWaypoints: boolean;
   showExtendedCenterlines: boolean;
   showPireps: boolean;
+  showWeatherPireps: boolean;
   showGroundTracks: boolean;
   showWeatherRadar: boolean;
   showWeatherAlerts: boolean;

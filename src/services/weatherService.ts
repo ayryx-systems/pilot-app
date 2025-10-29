@@ -326,6 +326,38 @@ class WeatherService {
   }
 
   /**
+   * Get PIREPs (Pilot Reports) from Aviation Weather API via backend
+   */
+  async getWeatherPireps() {
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const url = `${apiBaseUrl}/api/pilot/pireps-weather`;
+    
+    const cacheKey = 'weather_pireps';
+    const cached = this.getCachedData(cacheKey, 5); // Cache for 5 minutes (matches backend refresh)
+    
+    if (cached) {
+      return cached;
+    }
+    
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new WeatherApiError(`PIREP API error: ${response.status} ${response.statusText}`, response.status);
+      }
+      
+      const data = await response.json();
+      const pireps = data.data || [];
+      
+      this.setCachedData(cacheKey, pireps, 5);
+      console.log('[WeatherService] Retrieved', pireps.length, 'weather PIREPs from backend');
+      return pireps;
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch weather PIREPs:', error);
+      return [];
+    }
+  }
+
+  /**
    * Clear weather data cache
    */
   clearCache(): void {

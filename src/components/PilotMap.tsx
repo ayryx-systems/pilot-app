@@ -1937,6 +1937,138 @@ export function PilotMap({
     updateTurbulence();
   }, [mapInstance, displayOptions.showTurbulence]);
 
+  // Update Weather PIREPs display
+  useEffect(() => {
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+
+    const updateWeatherPireps = async () => {
+      const leafletModule = await import('leaflet');
+      const L = leafletModule.default;
+
+      // Remove existing weather PIREP layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      existingLayers.forEach((layer: any) => {
+        if (layer._weatherPirepId) {
+          layerGroupsRef.current.weather.removeLayer(layer);
+        }
+      });
+
+      if (displayOptions.showWeatherPireps) {
+        try {
+          const weatherPireps = await weatherService.getWeatherPireps();
+          console.log('[PilotMap] Loaded', weatherPireps.length, 'weather PIREPs');
+          
+          weatherPireps.forEach((pirep: any) => {
+            if (!pirep.lat || !pirep.lon || isNaN(pirep.lat) || isNaN(pirep.lon)) return;
+
+            // Determine priority styling based on conditions
+            const isUrgent = (pirep.tbInt1 && ['SEV', 'SEV-EXTM', 'EXTM'].includes(pirep.tbInt1)) ||
+                           (pirep.icgInt1 && ['SEV'].includes(pirep.icgInt1)) ||
+                           pirep.pirepType?.includes('Urgent') || false;
+
+            const hasModerate = (pirep.tbInt1 && ['MOD', 'MOD-SEV'].includes(pirep.tbInt1)) ||
+                              (pirep.icgInt1 && ['MOD', 'MOD-SEV'].includes(pirep.icgInt1)) || false;
+
+            // Choose color based on priority
+            let color = '#10b981'; // Green for light/normal conditions
+            if (isUrgent) {
+              color = '#ef4444'; // Red for urgent
+            } else if (hasModerate) {
+              color = '#f59e0b'; // Amber for moderate
+            }
+
+            // Create custom PIREP icon
+            const pirepIcon = L.divIcon({
+              html: `<div style="
+                width: 22px;
+                height: 22px;
+                background: ${color};
+                border: 2px solid #ffffff;
+                border-radius: 50%;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 12px;
+                font-weight: bold;
+                color: white;
+              ">W</div>`,
+              className: 'custom-weather-pirep-marker',
+              iconSize: [26, 26],
+              iconAnchor: [13, 13]
+            });
+
+            const marker = L.marker([pirep.lat, pirep.lon], { 
+              icon: pirepIcon,
+              pane: 'popupPane'
+            });
+
+            marker.setZIndexOffset(1800);
+
+            // Create popup content
+            const altitudeStr = pirep.fltLvlFt 
+              ? `${pirep.fltLvlFt.toLocaleString()} ft`
+              : pirep.fltLvl 
+              ? `FL${pirep.fltLvl}`
+              : 'Unknown altitude';
+
+            const timeStr = pirep.obsTime 
+              ? new Date(pirep.obsTime).toLocaleString()
+              : pirep.receiptTime
+              ? new Date(pirep.receiptTime).toLocaleString()
+              : 'Unknown time';
+
+            const conditions = [];
+            if (pirep.tbInt1 && pirep.tbType1) {
+              conditions.push(`Turbulence: ${pirep.tbInt1} ${pirep.tbType1}${pirep.tbBas1 ? ` ${pirep.tbBas1}-${pirep.tbTop1}ft` : ''}`);
+            }
+            if (pirep.icgInt1 && pirep.icgType1) {
+              conditions.push(`Icing: ${pirep.icgInt1} ${pirep.icgType1}${pirep.icgBas1 ? ` ${pirep.icgBas1}-${pirep.icgTop1}ft` : ''}`);
+            }
+            if (pirep.wxString) {
+              conditions.push(`Weather: ${pirep.wxString}`);
+            }
+            if (pirep.clouds && Array.isArray(pirep.clouds) && pirep.clouds.length > 0) {
+              const cloudDesc = pirep.clouds.map((c: any) => `${c.cover}${c.base ? ` ${c.base}ft` : ''}`).join(', ');
+              conditions.push(`Clouds: ${cloudDesc}`);
+            }
+
+            const conditionsHtml = conditions.length > 0
+              ? `<ul style="margin: 8px 0; padding-left: 16px; font-size: 12px; color: #f3f4f6;">
+                  ${conditions.map(c => `<li>${c}</li>`).join('')}
+                </ul>`
+              : '<p style="margin: 4px 0; font-size: 12px; color: #9ca3af;">No specific conditions reported</p>';
+
+            const popupContent = `
+              <div style="min-width: 200px;">
+                <div style="margin-bottom: 8px;">
+                  <h4 style="margin: 0; color: ${color};"><strong>WEATHER PIREP</strong></h4>
+                </div>
+                <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
+                  ${timeStr}<br/>
+                  ${pirep.acType || 'Unknown aircraft'} at ${altitudeStr}
+                  ${pirep.icaoId ? `<br/>Location: ${pirep.icaoId}` : ''}
+                </p>
+                ${conditionsHtml}
+                ${pirep.rawOb ? `<p style="margin: 8px 0; font-size: 11px; font-style: italic; color: #d1d5db; font-family: monospace;">${pirep.rawOb}</p>` : ''}
+              </div>
+            `;
+
+            marker.bindPopup(popupContent);
+            
+            (marker as any)._weatherPirepId = pirep.id;
+            layerGroupsRef.current.weather.addLayer(marker);
+          });
+
+        } catch (error) {
+          console.error('[PilotMap] Failed to load weather PIREPs:', error);
+        }
+      }
+    };
+
+    updateWeatherPireps();
+  }, [mapInstance, displayOptions.showWeatherPireps]);
+
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {
     if (!mapInstance || !osmData) return;
