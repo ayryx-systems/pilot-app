@@ -1,6 +1,10 @@
 'use client';
 
-import { PilotDashboard } from '@/components/PilotDashboard';
+import dynamic from 'next/dynamic';
+
+const PilotDashboard = dynamic(() => import('@/components/PilotDashboard').then(mod => ({ default: mod.PilotDashboard })), {
+  ssr: false,
+});
 
 export default function Home() {
   return (
