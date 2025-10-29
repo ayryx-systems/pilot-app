@@ -239,11 +239,17 @@ export function PilotMap({
         
         /* Ensure PIREP popups render above all map elements */
         .leaflet-popup-pane {
-          z-index: 2000 !important;
+          z-index: 3500 !important;
         }
         
         .leaflet-popup {
-          z-index: 2000 !important;
+          z-index: 3500 !important;
+        }
+        
+        /* Ensure weather PIREP popups are above everything */
+        .leaflet-popup-content-wrapper {
+          z-index: 3501 !important;
+          position: relative;
         }
         
         .track-popup h4 {
@@ -397,6 +403,12 @@ export function PilotMap({
           attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
         }
       ).addTo(map);
+
+      // Ensure popupPane has highest z-index so all popups appear on top
+      const popupPane = map.getPane('popupPane');
+      if (popupPane && popupPane.style) {
+        popupPane.style.zIndex = '3500';
+      }
 
       // Initialize layer groups
       const weatherGroup = L.layerGroup().addTo(map);
@@ -2000,10 +2012,10 @@ export function PilotMap({
 
             const marker = L.marker([pirep.lat, pirep.lon], { 
               icon: pirepIcon,
-              pane: 'popupPane'
+              pane: 'markerPane' // Use markerPane for the marker itself
             });
 
-            marker.setZIndexOffset(1800);
+            marker.setZIndexOffset(2000); // High z-index offset to match ATC PIREPs
 
             // Create popup content
             const altitudeStr = pirep.fltLvlFt 
@@ -2054,7 +2066,29 @@ export function PilotMap({
               </div>
             `;
 
-            marker.bindPopup(popupContent);
+            // Bind popup with options to ensure it appears on top
+            marker.bindPopup(popupContent, {
+              className: 'weather-pirep-popup', // Add specific class for styling
+              maxWidth: 300,
+              autoPan: true,
+              keepInView: true
+            });
+            
+            // Ensure popup appears on top when opened
+            marker.on('popupopen', () => {
+              const popup = marker.getPopup();
+              if (popup && popup.getElement()) {
+                const popupElement = popup.getElement();
+                if (popupElement) {
+                  popupElement.style.zIndex = '3501';
+                  // Also ensure the popupPane itself is on top
+                  const popupPane = mapInstance.getPane('popupPane');
+                  if (popupPane) {
+                    popupPane.style.zIndex = '3500';
+                  }
+                }
+              }
+            });
             
             (marker as any)._weatherPirepId = pirep.id;
             layerGroupsRef.current.weather.addLayer(marker);
