@@ -1957,6 +1957,9 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
+      // Get current zoom level for visibility decisions
+      const currentZoom = mapInstance.getZoom();
+
       // Remove existing weather PIREP layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
       existingLayers.forEach((layer: any) => {
@@ -1966,6 +1969,11 @@ export function PilotMap({
       });
 
       if (displayOptions.showWeatherPireps) {
+        // Only show weather PIREPs at zoom level 10 or higher (same as waypoints)
+        if (currentZoom < 7) {
+          console.log('[PilotMap] Weather PIREPs hidden - zoom level too low:', currentZoom);
+          return;
+        }
         try {
           const weatherPireps = await weatherService.getWeatherPireps();
           console.log('[PilotMap] Loaded', weatherPireps.length, 'weather PIREPs');
@@ -2165,6 +2173,17 @@ export function PilotMap({
     };
 
     updateWeatherPireps();
+
+    // Listen for zoom changes to update weather PIREPs visibility
+    const handleZoomEnd = () => {
+      updateWeatherPireps();
+    };
+
+    mapInstance.on('zoomend', handleZoomEnd);
+
+    return () => {
+      mapInstance.off('zoomend', handleZoomEnd);
+    };
   }, [mapInstance, displayOptions.showWeatherPireps]);
 
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
