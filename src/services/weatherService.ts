@@ -198,7 +198,7 @@ class WeatherService {
         }
       });
 
-      const isValid = response.ok && response.headers.get('content-type')?.includes('xml');
+      const isValid = response.ok && (response.headers.get('content-type')?.includes('xml') ?? false);
 
       this.setCachedData(cacheKey, isValid, 60);
       return isValid;
@@ -244,7 +244,7 @@ class WeatherService {
 
     try {
       // Call backend API which returns ALL active SIGMETs/AIRMETs (no bounds)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
       const url = `${apiBaseUrl}/api/pilot/sigmet-airmet`;
       
       const response = await fetch(url, {
@@ -276,7 +276,7 @@ class WeatherService {
    * Get Winds Aloft data from backend
    */
   async getWindsAloft(airportCode?: string) {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     const url = airportCode 
       ? `${apiBaseUrl}/api/pilot/winds-aloft?airport=${airportCode}`
       : `${apiBaseUrl}/api/pilot/winds-aloft`;
@@ -295,7 +295,7 @@ class WeatherService {
    * Get Icing Forecast data from backend
    */
   async getIcing(): Promise<WeatherForecast[]> {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     const url = `${apiBaseUrl}/api/pilot/icing`;
     
     try {
@@ -312,7 +312,7 @@ class WeatherService {
    * Get Turbulence Forecast data from backend
    */
   async getTurbulence(): Promise<WeatherForecast[]> {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
     const url = `${apiBaseUrl}/api/pilot/turbulence`;
     
     try {

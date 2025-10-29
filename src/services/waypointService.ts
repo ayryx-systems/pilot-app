@@ -7,7 +7,7 @@
 
 import { WaypointAPIResponse, WaypointAirportsResponse, FormattedWaypoint } from '@/types/waypoints';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
 export class WaypointService {
   private cache = new Map<string, { data: WaypointAPIResponse; timestamp: number }>();
