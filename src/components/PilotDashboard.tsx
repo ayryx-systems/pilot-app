@@ -29,6 +29,8 @@ export function PilotDashboard() {
     pireps,
     tracks,
     summary,
+    baseline,
+    baselineLoading,
     connectionStatus,
     loading,
     error,
@@ -251,6 +253,8 @@ export function PilotDashboard() {
               connectionStatus={connectionStatus}
               airportCode={selectedAirport || undefined}
               summaryMetadata={summaryMetadata}
+              baseline={baseline}
+              baselineLoading={baselineLoading}
               isDemo={selectedAirport === 'KDEN'}
             />
           </div>

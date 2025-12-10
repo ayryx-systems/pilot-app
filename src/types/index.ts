@@ -123,6 +123,7 @@ export interface GroundTrack {
   runway?: string;
   status: 'ACTIVE' | 'COMPLETED' | 'EMERGENCY';
   startTime: string;
+  createdAt?: string; // Landing time (when the track was created)
   endTime?: string;
 }
 
@@ -206,6 +207,8 @@ export interface PilotAppState {
     active: boolean;
     generated: boolean;
   };
+  baseline?: BaselineData | null;
+  baselineLoading?: boolean;
 }
 
 // Map display options
@@ -340,6 +343,35 @@ export interface AirportOSMFeatures {
 export interface OSMResponse {
   airportId: string;
   osm: AirportOSMFeatures & { featureCount: number };
+  timestamp: string;
+  cacheMaxAge: number;
+  source: string;
+}
+
+export interface BaselineTimeSlot {
+  averageCount?: number;
+  medianTimeFrom50nm?: number;
+  sampleSize?: {
+    days: number;
+  };
+}
+
+export interface BaselineSeason {
+  seasonalTimeSlots?: Record<string, BaselineTimeSlot>;
+  dayOfWeekTimeSlots?: Record<string, Record<string, BaselineTimeSlot>>;
+}
+
+export interface BaselineData {
+  airport: string;
+  yearRange?: string;
+  summer: BaselineSeason;
+  winter: BaselineSeason;
+  dstDatesByYear?: Record<string, { start: string; end: string }>;
+}
+
+export interface BaselineResponse {
+  airportId: string;
+  baseline: BaselineData;
   timestamp: string;
   cacheMaxAge: number;
   source: string;

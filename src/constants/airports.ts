@@ -670,5 +670,194 @@ export const AIRPORTS: Record<string, AirportData> = {
       { dir: "NW", bearing: 315, distance: 0.15 },
     ]
   },
+  // Chicago O'Hare International Airport (KORD) data based on FAA ADIP Report
+  KORD: {
+    name: "Chicago O'Hare International Airport",
+    code: "KORD",
+    position: [41.976940, -87.908149], // Airport reference point (41° 58' 36.985" N, 87° 54' 29.339" W)
+    runways: [
+      {
+        name: "04L",
+        heading: 39, // True heading from FAA data: 39°
+        oppositeHeading: 219,
+        length: 7500, // Length in feet: 7500 ft. x 150 ft.
+        threshold: {
+          lat: 41.981656, // 41° 58' 53.9601" N
+          lon: -87.913918 // 87° 54' 50.1039" W
+        },
+        oppositeEnd: {
+          name: "22R",
+          lat: 41.997537, // 41° 59' 51.1336" N
+          lon: -87.896371 // 87° 53' 46.9364" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "04R",
+        heading: 42, // True heading from FAA data: 42°
+        oppositeHeading: 222,
+        length: 8075, // Length in feet: 8075 ft. x 150 ft.
+        threshold: {
+          lat: 41.953327, // 41° 57' 11.9778" N
+          lon: -87.899419 // 87° 53' 57.9066" W
+        },
+        oppositeEnd: {
+          name: "22L",
+          lat: 41.969922, // 41° 58' 11.718" N
+          lon: -87.879743 // 87° 52' 47.0759" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "09L",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 7500, // Length in feet: 7500 ft. x 150 ft.
+        threshold: {
+          lat: 42.002832, // 42° 0' 10.1954" N
+          lon: -87.926676 // 87° 55' 36.0339" W
+        },
+        oppositeEnd: {
+          name: "27R",
+          lat: 42.002831, // 42° 0' 10.1909" N
+          lon: -87.899083 // 87° 53' 56.6997" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "09C",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 11245, // Length in feet: 11245 ft. x 200 ft.
+        threshold: {
+          lat: 41.988303, // 41° 59' 17.8916" N
+          lon: -87.931571 // 87° 55' 53.6564" W
+        },
+        oppositeEnd: {
+          name: "27C",
+          lat: 41.988310, // 41° 59' 17.9172" N
+          lon: -87.890210 // 87° 53' 24.7562" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "09R",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 11260, // Length in feet: 11260 ft. x 150 ft.
+        threshold: {
+          lat: 41.967227, // 41° 59' 2.0172" N
+          lon: -87.931569 // 87° 55' 53.6484" W
+        },
+        oppositeEnd: {
+          name: "27L",
+          lat: 41.967227, // 41° 59' 2.0172" N
+          lon: -87.890210 // 87° 53' 24.7562" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "10L",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 13000, // Length in feet: 13000 ft. x 150 ft.
+        threshold: {
+          lat: 42.002832, // 42° 0' 10.1954" N
+          lon: -87.926676 // 87° 55' 36.0339" W
+        },
+        oppositeEnd: {
+          name: "28R",
+          lat: 42.002831, // 42° 0' 10.1909" N
+          lon: -87.899083 // 87° 53' 56.6997" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "10C",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 10801, // Length in feet: 10801 ft. x 200 ft.
+        threshold: {
+          lat: 41.988303, // 41° 59' 17.8916" N
+          lon: -87.931571 // 87° 55' 53.6564" W
+        },
+        oppositeEnd: {
+          name: "28C",
+          lat: 41.988310, // 41° 59' 17.9172" N
+          lon: -87.890210 // 87° 53' 24.7562" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "10R",
+        heading: 90, // True heading from FAA data: 90°
+        oppositeHeading: 270,
+        length: 7500, // Length in feet: 7500 ft. x 150 ft.
+        threshold: {
+          lat: 41.967227, // 41° 59' 2.0172" N
+          lon: -87.931569 // 87° 55' 53.6484" W
+        },
+        oppositeEnd: {
+          name: "28L",
+          lat: 41.967227, // 41° 59' 2.0172" N
+          lon: -87.890210 // 87° 53' 24.7562" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "14L",
+        heading: 140, // True heading from FAA data: 140°
+        oppositeHeading: 320,
+        length: 10005, // Length in feet: 10005 ft. x 150 ft.
+        threshold: {
+          lat: 42.002832, // 42° 0' 10.1954" N
+          lon: -87.926676 // 87° 55' 36.0339" W
+        },
+        oppositeEnd: {
+          name: "32R",
+          lat: 42.002831, // 42° 0' 10.1909" N
+          lon: -87.899083 // 87° 53' 56.6997" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      },
+      {
+        name: "15",
+        heading: 150, // True heading from FAA data: 150°
+        oppositeHeading: 330,
+        length: 9686, // Length in feet: 9686 ft. x 200 ft.
+        threshold: {
+          lat: 42.002832, // 42° 0' 10.1954" N
+          lon: -87.926676 // 87° 55' 36.0339" W
+        },
+        oppositeEnd: {
+          name: "33",
+          lat: 42.002831, // 42° 0' 10.1909" N
+          lon: -87.899083 // 87° 53' 56.6997" W
+        },
+        rightHandPattern: false, // Standard traffic pattern
+        approaches: []
+      }
+    ],
+    dmeRings: [5, 10, 15, 20, 25, 30],
+    cardinalDirections: [
+      { dir: "N", bearing: 0, distance: 0.4 },
+      { dir: "NE", bearing: 45, distance: 0.3 },
+      { dir: "E", bearing: 90, distance: 0.4 },
+      { dir: "SE", bearing: 135, distance: 0.3 },
+      { dir: "S", bearing: 180, distance: 0.4 },
+      { dir: "SW", bearing: 225, distance: 0.3 },
+      { dir: "W", bearing: 270, distance: 0.4 },
+      { dir: "NW", bearing: 315, distance: 0.3 },
+    ]
+  },
 };
 

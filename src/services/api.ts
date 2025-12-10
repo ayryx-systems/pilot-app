@@ -7,7 +7,8 @@ import {
   AirportOverview,
   PirepsResponse,
   TracksResponse,
-  SummaryResponse
+  SummaryResponse,
+  BaselineResponse
 } from '@/types';
 import { demoService } from './demoService';
 
@@ -247,6 +248,30 @@ class PilotApiService {
   }
 
 
+
+  /**
+   * Get baseline traffic data for an airport
+   */
+  async getBaseline(airportId: string): Promise<BaselineResponse> {
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/baseline?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      return await this.handleResponse<BaselineResponse>(response);
+    } catch (error) {
+      console.error(`Failed to fetch baseline for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - baseline data unavailable while offline', 0);
+      }
+
+      throw error;
+    }
+  }
 
   /**
    * Health check

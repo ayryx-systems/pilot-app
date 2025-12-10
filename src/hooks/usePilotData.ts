@@ -9,7 +9,9 @@ import {
   GroundTrack,
   SituationSummary,
   ConnectionStatus,
-  PilotAppState
+  PilotAppState,
+  BaselineData,
+  BaselineResponse
 } from '@/types';
 
 export function usePilotData() {
@@ -35,6 +37,8 @@ export function usePilotData() {
       pirepsMetadata: undefined,
       tracksMetadata: undefined,
       summaryMetadata: undefined,
+      baseline: null,
+      baselineLoading: false,
     };
   });
 
@@ -112,15 +116,16 @@ export function usePilotData() {
     if (!airportId) return;
 
     console.log(`[usePilotData] Loading data for airport: ${airportId}`);
-    setState(prev => ({ ...prev, loading: true, error: null }));
+    setState(prev => ({ ...prev, loading: true, baselineLoading: true, error: null }));
 
     try {
       // Load all data in parallel
-      const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse] = await Promise.allSettled([
+      const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse, baselineResponse] = await Promise.allSettled([
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
         pilotApi.getGroundTracks(airportId),
         pilotApi.getSituationSummary(airportId),
+        pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected', reason: new Error('Baseline not available') })),
       ]);
 
       const updates: Partial<PilotAppState> = { loading: false };
@@ -182,6 +187,15 @@ export function usePilotData() {
         };
       }
 
+      if (baselineResponse.status === 'fulfilled') {
+        updates.baseline = baselineResponse.value.baseline;
+        updates.baselineLoading = false;
+      } else {
+        console.warn('Baseline data not available:', baselineResponse.reason);
+        updates.baseline = null;
+        updates.baselineLoading = false;
+      }
+
       // Set error message based on failed requests
       const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
         .filter(response => response.status === 'rejected');
@@ -227,7 +241,7 @@ export function usePilotData() {
     }
   }, []);
 
-  // Set selected airport
+      // Set selected airport
   const setSelectedAirport = useCallback((airportId: string | null) => {
     // Save to localStorage
     if (typeof window !== 'undefined') {
@@ -249,6 +263,8 @@ export function usePilotData() {
       pirepsMetadata: undefined,
       tracksMetadata: undefined,
       summaryMetadata: undefined,
+      baseline: null,
+      baselineLoading: false,
     }));
   }, []);
 
@@ -293,6 +309,8 @@ export function usePilotData() {
     pireps: state.pireps,
     tracks: state.tracks,
     summary: state.summary,
+    baseline: state.baseline,
+    baselineLoading: state.baselineLoading,
     connectionStatus: state.connectionStatus,
     loading: state.loading,
     error: state.error,

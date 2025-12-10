@@ -1014,27 +1014,71 @@ export function PilotMap({
             zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
           });
 
-          // Add popup to clickable line showing aircraft type
-          const trackPopupContent = `
-            <div style="
-              background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(20,20,20,0.95));
-              border: 1px solid ${color};
-              border-radius: 8px;
-              padding: 8px 12px;
-              box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
-              backdrop-filter: blur(4px);
-              color: #ffffff;
-              font-size: 13px;
-              font-weight: 500;
-              text-align: center;
-              min-width: 120px;
-            ">
-              <div style="color: ${color}; font-weight: 600; margin-bottom: 2px;">AIRCRAFT</div>
-              <div style="color: #e5e7eb; font-size: 12px;">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
-            </div>
-          `;
+          // Helper functions to format landing time
+          const formatZulu = (dateString: string) => {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Unknown time';
+            const hours = date.getUTCHours().toString().padStart(2, '0');
+            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+            const day = date.getUTCDate().toString().padStart(2, '0');
+            const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+            const year = date.getUTCFullYear();
+            return `${year}-${month}-${day} ${hours}${minutes}Z`;
+          };
+
+          const formatRelativeTime = (dateString: string) => {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Unknown';
+            
+            const now = new Date();
+            const diffMs = now.getTime() - date.getTime();
+            const diffMinutes = Math.floor(diffMs / 60000);
+            
+            if (diffMinutes < 0) return 'Future';
+            if (diffMinutes < 60) return `${diffMinutes} min ago`;
+            
+            const hours = Math.floor(diffMinutes / 60);
+            const minutes = diffMinutes % 60;
+            if (minutes === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+            return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
+          };
+
+          // Get landing time (prefer createdAt, fallback to startTime)
+          const landingTime = track.createdAt || track.startTime;
           
-          clickableLine.bindPopup(trackPopupContent, {
+          // Create a function to generate popup content with current relative time
+          const createTrackPopupContent = () => {
+            const zuluTimeStr = landingTime ? formatZulu(landingTime) : 'Unknown time';
+            const currentRelativeTime = landingTime ? formatRelativeTime(landingTime) : 'Unknown';
+            
+            return `
+              <div style="
+                background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(20,20,20,0.95));
+                border: 1px solid ${color};
+                border-radius: 8px;
+                padding: 8px 12px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+                backdrop-filter: blur(4px);
+                color: #ffffff;
+                font-size: 13px;
+                font-weight: 500;
+                text-align: center;
+                min-width: 150px;
+              ">
+                <div style="color: ${color}; font-weight: 600; margin-bottom: 4px;">AIRCRAFT</div>
+                <div style="color: #e5e7eb; font-size: 12px; margin-bottom: 4px;">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
+                ${landingTime ? `
+                  <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+                    <div style="color: #e5e7eb; font-weight: 500;">Landed: ${zuluTimeStr}</div>
+                    <div style="color: #9ca3af; font-size: 10px;">${currentRelativeTime}</div>
+                  </div>
+                ` : ''}
+              </div>
+            `;
+          };
+          
+          clickableLine.bindPopup(createTrackPopupContent(), {
+            className: 'track-popup',
             autoClose: true,
             closeOnClick: true,
             autoPan: false
@@ -1074,6 +1118,26 @@ export function PilotMap({
 
           // Auto-dismiss popup and create highlight overlay after 3 seconds
           clickableLine.on('popupopen', () => {
+            const popup = clickableLine.getPopup();
+            if (popup && landingTime) {
+              // Update popup content to refresh relative time
+              popup.setContent(createTrackPopupContent());
+              
+              // Set up interval to update relative time every 30 seconds while popup is open
+              const updateInterval = setInterval(() => {
+                if (popup && popup.isOpen() && landingTime) {
+                  popup.setContent(createTrackPopupContent());
+                } else {
+                  clearInterval(updateInterval);
+                }
+              }, 30000); // Update every 30 seconds
+              
+              // Clean up interval when popup closes
+              clickableLine.once('popupclose', () => {
+                clearInterval(updateInterval);
+              });
+            }
+            
             // Create the highlight overlay immediately when popup opens
             createHighlightOverlay();
             
