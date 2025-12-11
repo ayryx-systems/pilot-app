@@ -7,6 +7,8 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { SituationOverview } from './SituationOverview';
 import { PirepsList } from './PirepsList';
 import { MapControls } from './MapControls';
+import { TimeSlider } from './TimeSlider';
+import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { MapDisplayOptions } from '@/types';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
@@ -16,6 +18,7 @@ import { DebugTimestamp } from './DebugTimestamp';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
+  const [selectedTime, setSelectedTime] = useState<Date>(() => new Date());
 
   // Ensure component is only fully rendered after hydration
   useEffect(() => {
@@ -241,27 +244,21 @@ export function PilotDashboard() {
         </div>
       )}
 
-      {/* Main Content: Responsive Layout */}
-      <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
-        {/* Situation Overview Panel - Top on mobile, right side on desktop */}
-        {!mapFullscreen && (
-          <div className="lg:order-2 lg:w-96 lg:min-w-96 bg-slate-800/95 backdrop-blur-sm border-b lg:border-b-0 lg:border-l border-slate-700/50 p-2 lg:p-4 flex-shrink-0 lg:overflow-y-auto" style={{ zIndex: 1000 }}>
-            <SituationOverview
-              summary={summary}
-              weather={airportOverview?.weather}
-              loading={loading}
-              connectionStatus={connectionStatus}
-              airportCode={selectedAirport || undefined}
-              summaryMetadata={summaryMetadata}
-              baseline={baseline}
-              baselineLoading={baselineLoading}
-              isDemo={selectedAirport === 'KDEN'}
-            />
-          </div>
-        )}
+      {/* Time Slider - Always visible when airport selected */}
+      {selectedAirport && (
+        <TimeSlider
+          currentTime={new Date()}
+          selectedTime={selectedTime}
+          onTimeChange={setSelectedTime}
+          minHoursAhead={0}
+          maxHoursAhead={24}
+        />
+      )}
 
-        {/* Map Section - Below situation overview on mobile, left side on desktop */}
-        <div className="flex-1 lg:order-1 relative" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
+      {/* Main Content: Split Screen Layout for Landscape */}
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
+        {/* Map Section - Left Side (full width on mobile, flexible on desktop) */}
+        <div className="flex-1 relative min-w-0" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -285,6 +282,38 @@ export function PilotDashboard() {
             </div>
           )}
         </div>
+
+        {/* Right Panel - Graphs and Info (hidden on mobile when fullscreen, visible on tablet/desktop) */}
+        {!mapFullscreen && (
+          <div className="hidden md:flex md:w-[40%] md:min-w-[380px] md:max-w-[500px] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
+            {/* Scrollable Content Area */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+              {/* Time-Based Graphs */}
+              {selectedAirport && baseline && (
+                <TimeBasedGraphs
+                  baseline={baseline}
+                  airportCode={selectedAirport}
+                  selectedTime={selectedTime}
+                  loading={baselineLoading || loading}
+                  onTimeClick={setSelectedTime}
+                />
+              )}
+
+              {/* Situation Overview */}
+              <SituationOverview
+                summary={summary}
+                weather={airportOverview?.weather}
+                loading={loading}
+                connectionStatus={connectionStatus}
+                airportCode={selectedAirport || undefined}
+                summaryMetadata={summaryMetadata}
+                baseline={baseline}
+                baselineLoading={baselineLoading}
+                isDemo={selectedAirport === 'KDEN'}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* PIREP Panel Backdrop - Click outside to close */}
@@ -371,9 +400,9 @@ export function PilotDashboard() {
       )}
 
 
-      {/* Bottom Status Bar - Airport Info */}
-      {airportOverview && (
-        <div className="absolute left-0 right-0 lg:right-96 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
+      {/* Bottom Status Bar - Airport Info (only on map side) */}
+      {airportOverview && !mapFullscreen && (
+        <div className="absolute left-0 md:right-[40%] right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
           <div className="flex justify-between items-center text-xs">
             <div className="flex items-center space-x-4">
               <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>

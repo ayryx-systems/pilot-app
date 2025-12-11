@@ -5,7 +5,6 @@ import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
 import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Radio, Zap, MapPin, Navigation, Car } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
-import { TrafficTimeline } from './TrafficTimeline';
 
 interface WeatherData {
   metar: string;
@@ -133,18 +132,6 @@ export function SituationOverview({
         </div>
       )}
 
-      {/* Traffic Timeline */}
-      {airportCode && (
-        <div className="mb-3">
-          <TrafficTimeline
-            baseline={baseline}
-            airportCode={airportCode}
-            date={new Date()}
-            currentTime={new Date()}
-            loading={baselineLoading || loading}
-          />
-        </div>
-      )}
 
       {/* Main Condition Grid - Always Visible */}
       {summary?.conditions ? (
