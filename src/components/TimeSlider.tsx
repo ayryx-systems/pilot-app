@@ -127,8 +127,8 @@ export function TimeSlider({
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer time-slider"
             style={{
               background: `linear-gradient(to right, 
-                #3b82f6 0%, 
-                #3b82f6 ${sliderValue}%, 
+                ${isNow ? '#60a5fa' : '#475569'} 0%, 
+                ${isNow ? '#60a5fa' : '#475569'} ${sliderValue}%, 
                 #475569 ${sliderValue}%, 
                 #475569 100%)`
             }}
@@ -140,19 +140,19 @@ export function TimeSlider({
                 width: 20px;
                 height: 20px;
                 border-radius: 50%;
-                background: ${isNow ? '#ef4444' : '#3b82f6'};
+                background: ${isNow ? '#ffffff' : '#60a5fa'};
                 cursor: pointer;
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                border: 2px solid white;
+                border: ${isNow ? '3px solid #60a5fa' : '2px solid white'};
               }
               .time-slider::-moz-range-thumb {
                 width: 20px;
                 height: 20px;
                 border-radius: 50%;
-                background: ${isNow ? '#ef4444' : '#3b82f6'};
+                background: ${isNow ? '#ffffff' : '#60a5fa'};
                 cursor: pointer;
                 box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-                border: 2px solid white;
+                border: ${isNow ? '3px solid #60a5fa' : '2px solid white'};
               }
             `
           }} />
@@ -160,7 +160,7 @@ export function TimeSlider({
 
         <div className="flex items-center gap-3 min-w-[200px]">
           <div className="text-right">
-            <div className={`text-lg font-bold ${isNow ? 'text-red-400' : 'text-blue-400'}`}>
+            <div className={`text-lg font-bold ${isNow ? 'text-blue-300' : 'text-slate-300'}`}>
               {formatTime(selectedTime)}
             </div>
             <div className="text-xs text-gray-400">
@@ -169,7 +169,7 @@ export function TimeSlider({
           </div>
           
           {isNow && (
-            <div className="px-2 py-1 bg-red-500/20 border border-red-500/50 rounded text-xs font-medium text-red-300">
+            <div className="px-2 py-1 bg-blue-500/20 border border-blue-400/50 rounded text-xs font-medium text-blue-300">
               NOW
             </div>
           )}

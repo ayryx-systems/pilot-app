@@ -180,15 +180,15 @@ export function TimeBasedGraphs({
           tension: 0.4,
           pointRadius: (ctx: any) => {
             if (alignedDayCounts[ctx.dataIndex] === null) return 0;
-            return ctx.dataIndex === currentTimeSlotIndex ? 6 : 2;
+            return ctx.dataIndex === currentTimeSlotIndex ? 8 : 2;
           },
           pointBackgroundColor: (ctx: any) => {
             if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-            return ctx.dataIndex === currentTimeSlotIndex ? '#ef4444' : '#3b82f6';
+            return ctx.dataIndex === currentTimeSlotIndex ? '#ffffff' : '#3b82f6';
           },
           pointBorderColor: (ctx: any) => {
             if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-            return ctx.dataIndex === currentTimeSlotIndex ? '#dc2626' : '#3b82f6';
+            return ctx.dataIndex === currentTimeSlotIndex ? '#60a5fa' : '#3b82f6';
           },
           pointBorderWidth: (ctx: any) => {
             if (alignedDayCounts[ctx.dataIndex] === null) return 0;
