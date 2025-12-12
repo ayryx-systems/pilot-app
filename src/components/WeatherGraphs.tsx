@@ -30,6 +30,7 @@ ChartJS.register(
 interface WeatherGraphsProps {
   weather?: {
     metar: string;
+    metarFriendly?: string;
     visibility?: string;
     wind?: {
       direction: number;
@@ -37,6 +38,8 @@ interface WeatherGraphsProps {
       gust?: number;
     };
     taf?: {
+      rawTAF: string;
+      tafFriendly?: string;
       forecast?: {
         periods: Array<{
           timeFrom: string;
@@ -46,6 +49,7 @@ interface WeatherGraphsProps {
           visibility?: string;
           clouds?: Array<{ coverage: string; altitude: number }>;
         }>;
+        summary?: string;
       };
     };
   };
@@ -55,12 +59,24 @@ interface WeatherGraphsProps {
   isNow: boolean;
 }
 
-function parseVisibility(visStr?: string): number | null {
-  if (!visStr) return null;
-  const match = visStr.match(/(\d+(?:\.\d+)?)\s*(?:SM|mi|mile)/i);
-  if (match) {
-    return parseFloat(match[1]);
+function parseVisibility(vis?: string | number): number | null {
+  if (vis === null || vis === undefined) return null;
+  
+  if (typeof vis === 'number') {
+    return vis;
   }
+  
+  if (typeof vis === 'string') {
+    const match = vis.match(/(\d+(?:\.\d+)?)\s*(?:SM|mi|mile)/i);
+    if (match) {
+      return parseFloat(match[1]);
+    }
+    const numMatch = vis.match(/^(\d+(?:\.\d+)?)$/);
+    if (numMatch) {
+      return parseFloat(numMatch[1]);
+    }
+  }
+  
   return null;
 }
 
@@ -244,11 +260,43 @@ export function WeatherGraphs({
     return null;
   }
 
+  if (!weather) {
+    return null;
+  }
+
   return (
     <div className="space-y-3">
+      {/* METAR Display */}
+      {weather.metar && (
+        <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50">
+          <div className="text-xs font-semibold text-gray-300 mb-1 flex items-center justify-between">
+            <span>METAR</span>
+            {isNow && <span className="text-blue-400 text-[10px] font-medium">CURRENT</span>}
+          </div>
+          <div className="text-[10px] font-mono text-gray-400 break-all">{weather.metar}</div>
+        </div>
+      )}
+
+      {/* TAF Display */}
+      {weather.taf?.rawTAF && (
+        <div className="p-2 bg-slate-800/50 rounded border border-dashed border-slate-600/50">
+          <div className="text-xs font-semibold text-gray-400 mb-1 flex items-center justify-between">
+            <span>TAF</span>
+            {!isNow && <span className="text-slate-500 text-[10px] font-medium">FORECAST</span>}
+          </div>
+          <div className="text-[10px] font-mono text-gray-500 break-all">{weather.taf.rawTAF}</div>
+        </div>
+      )}
+
+      {/* Visibility Graph */}
       {visibilityData && (
         <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50">
-          <div className="text-xs font-medium text-gray-300 mb-2">Visibility</div>
+          <div className="text-xs font-medium text-gray-300 mb-2 flex items-center justify-between">
+            <span>Visibility</span>
+            <span className="text-[10px] text-gray-500">
+              {isNow ? 'METAR' : 'TAF'}
+            </span>
+          </div>
           <div style={{ height: '120px', position: 'relative' }}>
             <Line
               data={{
@@ -319,7 +367,12 @@ export function WeatherGraphs({
 
       {cloudbaseData && cloudbaseData.data.some((c: number | null) => c !== null) && (
         <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50">
-          <div className="text-xs font-medium text-gray-300 mb-2">Cloudbase</div>
+          <div className="text-xs font-medium text-gray-300 mb-2 flex items-center justify-between">
+            <span>Cloudbase</span>
+            <span className="text-[10px] text-gray-500">
+              {isNow ? 'METAR' : 'TAF'}
+            </span>
+          </div>
           <div style={{ height: '120px', position: 'relative' }}>
             <Line
               data={{
@@ -390,7 +443,12 @@ export function WeatherGraphs({
 
       {windData && windData.data.some((w: number | null) => w !== null) && (
         <div className="p-2 bg-slate-800/50 rounded border border-slate-700/50">
-          <div className="text-xs font-medium text-gray-300 mb-2">Wind Speed</div>
+          <div className="text-xs font-medium text-gray-300 mb-2 flex items-center justify-between">
+            <span>Wind Speed</span>
+            <span className="text-[10px] text-gray-500">
+              {isNow ? 'METAR' : 'TAF'}
+            </span>
+          </div>
           <div style={{ height: '120px', position: 'relative' }}>
             <Line
               data={{
