@@ -506,6 +506,8 @@ export function WeatherGraphs({
                   ...chartOptions.scales,
                   y: {
                     ...chartOptions.scales.y,
+                    min: 0,
+                    max: 10,
                     title: {
                       display: true,
                       text: 'Miles',
