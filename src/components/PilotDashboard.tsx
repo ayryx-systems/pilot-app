@@ -299,17 +299,6 @@ export function PilotDashboard() {
           <div className="hidden md:flex md:w-[40%] md:min-w-[380px] md:max-w-[500px] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
             {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
-              {/* Time-Based Graphs */}
-              {selectedAirport && baseline && (
-                <TimeBasedGraphs
-                  baseline={baseline}
-                  airportCode={selectedAirport}
-                  selectedTime={selectedTime}
-                  loading={baselineLoading || loading}
-                  onTimeClick={setSelectedTime}
-                />
-              )}
-
               {/* Situation Overview */}
               <SituationOverview
                 summary={summary}
@@ -321,7 +310,19 @@ export function PilotDashboard() {
                 baseline={baseline}
                 baselineLoading={baselineLoading}
                 isDemo={selectedAirport === 'KDEN'}
+                selectedTime={selectedTime}
               />
+
+              {/* Time-Based Graphs */}
+              {selectedAirport && baseline && (
+                <TimeBasedGraphs
+                  baseline={baseline}
+                  airportCode={selectedAirport}
+                  selectedTime={selectedTime}
+                  loading={baselineLoading || loading}
+                  onTimeClick={setSelectedTime}
+                />
+              )}
             </div>
           </div>
         )}

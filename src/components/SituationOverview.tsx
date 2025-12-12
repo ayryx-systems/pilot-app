@@ -2,9 +2,11 @@
 
 import React, { useState } from 'react';
 import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
-import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Radio, Zap, MapPin, Navigation, Car } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Navigation } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
+import { WeatherGraphs } from './WeatherGraphs';
+import { utcToAirportLocal, formatAirportLocalTime } from '@/utils/airportTime';
 
 interface WeatherData {
   metar: string;
@@ -18,6 +20,22 @@ interface WeatherData {
   };
   visibility?: string;
   timestamp: string;
+  taf?: {
+    rawTAF: string;
+    tafFriendly?: string;
+    forecast?: {
+      periods: Array<{
+        timeFrom: string;
+        timeTo: string;
+        changeType: string;
+        wind?: { direction: number; speed: number; gust?: number };
+        visibility?: string;
+        weather?: string;
+        clouds?: Array<{ coverage: string; altitude: number }>;
+      }>;
+      summary?: string;
+    };
+  };
 }
 
 interface SituationOverviewProps {
@@ -33,6 +51,7 @@ interface SituationOverviewProps {
   baseline?: BaselineData | null;
   baselineLoading?: boolean;
   isDemo?: boolean;
+  selectedTime?: Date;
 }
 
 export function SituationOverview({
@@ -44,10 +63,39 @@ export function SituationOverview({
   summaryMetadata,
   baseline,
   baselineLoading,
-  isDemo
+  isDemo,
+  selectedTime,
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
+  const [expandedWeather, setExpandedWeather] = useState(false);
+
+  const currentTime = selectedTime || new Date();
+  const isNow = selectedTime ? (() => {
+    const now = new Date();
+    const diff = Math.abs(selectedTime.getTime() - now.getTime());
+    return diff <= 60000;
+  })() : true;
+
+  const getForecastTimeRange = () => {
+    if (!weather?.taf?.forecast?.periods || weather.taf.forecast.periods.length === 0) {
+      return null;
+    }
+    const periods = weather.taf.forecast.periods;
+    const firstPeriod = periods[0];
+    const lastPeriod = periods[periods.length - 1];
+    if (firstPeriod && lastPeriod) {
+      const fromTime = new Date(firstPeriod.timeFrom);
+      const toTime = new Date(lastPeriod.timeTo);
+      const fromLocal = utcToAirportLocal(fromTime, airportCode || '', baseline);
+      const toLocal = utcToAirportLocal(toTime, airportCode || '', baseline);
+      return {
+        from: formatAirportLocalTime(fromTime, airportCode || '', baseline),
+        to: formatAirportLocalTime(toTime, airportCode || '', baseline),
+      };
+    }
+    return null;
+  };
 
   const openConditionModal = (key: string, condition: any) => {
     setSelectedCondition({ key, condition });
@@ -118,77 +166,97 @@ export function SituationOverview({
     );
   }
 
+  const getConditionIcon = (conditionKey: string) => {
+    switch (conditionKey.toLowerCase()) {
+      case 'traffic':
+        return <Plane className="w-5 h-5 text-white" />;
+      case 'approach':
+        return <Navigation className="w-5 h-5 text-white" />;
+      case 'special':
+        return <AlertTriangle className="w-5 h-5 text-white" />;
+      default:
+        return <Info className="w-5 h-5 text-white" />;
+    }
+  };
+
+  const filteredConditions = summary?.conditions
+    ? Object.entries(summary.conditions).filter(([key]) => 
+        key !== 'weather' && 
+        key !== 'processing' && 
+        key !== 'runway' && 
+        key !== 'ground'
+      )
+    : [];
+
   return (
-    <div className="relative" style={{ zIndex: 2147483647 }}>
-
-      {/* Demo Mode Indicator - Removed Denver specific disclaimer to save space */}
-
-      {/* Current Situation - Fixed Element */}
+    <div className="relative space-y-4" style={{ zIndex: 2147483647 }}>
+      {/* Current Situation Summary */}
       {summary && (
-        <div className="p-2 rounded-lg border-2 mb-3 bg-slate-700/50 border-slate-500/50 text-gray-200">
+        <div className="p-2 rounded-lg border-2 bg-slate-700/50 border-slate-500/50 text-gray-200">
           <div className="text-sm leading-relaxed">
             {summary.situation_overview}
           </div>
         </div>
       )}
 
+      {/* CURRENT CONDITIONS Section */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 mb-2">
+          <div className="h-px flex-1 bg-slate-700"></div>
+          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+            {isNow ? 'Current Conditions' : `Conditions at ${formatAirportLocalTime(currentTime, airportCode || '', baseline)}`}
+          </span>
+          <div className="h-px flex-1 bg-slate-700"></div>
+        </div>
 
-      {/* Main Condition Grid - Always Visible */}
-      {summary?.conditions ? (
-        <div className="space-y-2">
-          {/* Primary Grid - All conditions visible */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Weather Button */}
+        {summary?.conditions ? (
+          <div className="space-y-2">
+            {/* Weather Card - Expandable with Graphs */}
             {(weather || summary.conditions.weather) && (
-              <button
-                onClick={() => setIsWeatherModalOpen(true)}
-                className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(summary.conditions.weather?.status)
-                  }`}
-              >
-                <div className="flex items-center justify-between w-full mb-1">
-                  <div className="flex items-center">
-                    <Cloud className="w-5 h-5 text-white mr-2" />
-                    <span className={`text-sm font-semibold ${getStatusTextColor(summary.conditions.weather?.status)}`}>Weather</span>
+              <div className={`rounded-xl border-2 ${isNow ? 'border-slate-500 bg-slate-700/80' : 'border-dashed border-slate-600 bg-slate-700/50'} transition-all`}>
+                <button
+                  onClick={() => setExpandedWeather(!expandedWeather)}
+                  className={`w-full flex flex-col p-2 text-left transition-all duration-200 hover:bg-slate-600/50 ${getStatusColor(summary.conditions.weather?.status)}`}
+                >
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="flex items-center">
+                      <Cloud className="w-5 h-5 text-white mr-2" />
+                      <span className={`text-sm font-semibold ${getStatusTextColor(summary.conditions.weather?.status)}`}>Weather</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {getStatusIcon(summary.conditions.weather?.status)}
+                      <span className="text-xs text-gray-400">{expandedWeather ? '−' : '+'}</span>
+                    </div>
                   </div>
-                  {getStatusIcon(summary.conditions.weather?.status)}
-                </div>
-                <div className="text-xs text-gray-300 leading-tight">
-                  {summary.conditions.weather?.short_summary ||
-                    (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
-                      summary.conditions.weather?.status?.charAt(0).toUpperCase() +
-                      summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
-                </div>
-              </button>
+                  <div className="text-xs text-gray-300 leading-tight">
+                    {summary.conditions.weather?.short_summary ||
+                      (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
+                        summary.conditions.weather?.status?.charAt(0).toUpperCase() +
+                        summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
+                  </div>
+                </button>
+                {expandedWeather && weather && airportCode && (
+                  <div className="px-2 pb-2 border-t border-slate-600/50">
+                    <WeatherGraphs
+                      weather={weather}
+                      airportCode={airportCode}
+                      selectedTime={currentTime}
+                      baseline={baseline}
+                      isNow={isNow}
+                    />
+                  </div>
+                )}
+              </div>
             )}
 
-            {/* Other Conditions */}
-            {Object.entries(summary.conditions)
-              .filter(([key]) => key !== 'weather' && key !== 'processing')
-              .slice(0, 5) // Show up to 5 more conditions (6 total)
-              .map(([key, condition]) => {
-                const getConditionIcon = (conditionKey: string) => {
-                  switch (conditionKey.toLowerCase()) {
-                    case 'traffic':
-                      return <Plane className="w-5 h-5 text-white" />;
-                    case 'approach':
-                      return <Navigation className="w-5 h-5 text-white" />;
-                    case 'runway':
-                      return <MapPin className="w-5 h-5 text-white" />;
-                    case 'ground':
-                      return <Car className="w-5 h-5 text-white" />;
-                    case 'special':
-                      return <AlertTriangle className="w-5 h-5 text-white" />;
-                    default:
-                      return <Info className="w-5 h-5 text-white" />;
-                  }
-                };
-
-                return (
+            {/* Other Conditions - Traffic, Approach, Special */}
+            {filteredConditions.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {filteredConditions.map(([key, condition]) => (
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(condition.status)
-                      }`}
+                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 ${isNow ? 'border-slate-500 bg-slate-700/80' : 'border-dashed border-slate-600 bg-slate-700/50'} hover:bg-slate-600 ${getStatusColor(condition.status)}`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center">
@@ -203,76 +271,69 @@ export function SituationOverview({
                           condition.status?.slice(1) || 'Normal conditions')}
                     </div>
                   </button>
-                );
-              })}
+                ))}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            {['Weather', 'Traffic', 'Approach', 'Special'].map((label) => (
+              <div key={label} className={`flex flex-col p-2 rounded-xl border-2 ${isNow ? 'border-slate-600 bg-slate-700' : 'border-dashed border-slate-600 bg-slate-700/50'}`}>
+                <div className="flex items-center justify-between w-full mb-1">
+                  <div className="flex items-center">
+                    <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
+                    <span className="text-sm font-semibold text-gray-400">{label}</span>
+                  </div>
+                  <div className="w-4 h-4 rounded-full bg-slate-500 animate-pulse"></div>
+                </div>
+                <div className="text-xs text-gray-400 animate-pulse">
+                  Loading...
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* FORECAST Section - Only show if TAF data exists and we're looking at future time */}
+      {weather?.taf?.forecast && !isNow && (
+        <div className="space-y-2 opacity-80">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-px flex-1 bg-slate-700"></div>
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
+              Forecast {getForecastTimeRange() ? `(${getForecastTimeRange()?.from} - ${getForecastTimeRange()?.to})` : ''}
+            </span>
+            <div className="h-px flex-1 bg-slate-700"></div>
           </div>
 
-          {/* Additional Conditions if any - Show as regular buttons below the main grid */}
-          {Object.entries(summary.conditions).length > 6 && (
-            <div className="grid grid-cols-2 gap-3">
-              {Object.entries(summary.conditions)
-                .filter(([key]) => key !== 'weather' && key !== 'processing')
-                .slice(5) // Additional conditions beyond the first 6
-                .map(([key, condition]) => {
-                  const getConditionIcon = (conditionKey: string) => {
-                    switch (conditionKey.toLowerCase()) {
-                      case 'traffic':
-                        return <Plane className="w-5 h-5 text-white" />;
-                      case 'approach':
-                        return <Navigation className="w-5 h-5 text-white" />;
-                      case 'runway':
-                        return <MapPin className="w-5 h-5 text-white" />;
-                      case 'ground':
-                        return <Car className="w-5 h-5 text-white" />;
-                      case 'special':
-                        return <AlertTriangle className="w-5 h-5 text-white" />;
-                      default:
-                        return <Info className="w-5 h-5 text-white" />;
-                    }
-                  };
-
-                  return (
-                    <button
-                      key={key}
-                      onClick={() => openConditionModal(key, condition)}
-                      className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 shadow-lg hover:shadow-xl hover:bg-slate-600 ${getStatusColor(condition.status)
-                        }`}
-                    >
-                      <div className="flex items-center justify-between w-full mb-1">
-                        <div className="flex items-center">
-                          {getConditionIcon(key)}
-                          <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
-                        </div>
-                        {getStatusIcon(condition.status)}
-                      </div>
-                      <div className="text-xs text-gray-300 leading-tight">
-                        {condition.short_summary ||
-                          (condition.status?.charAt(0).toUpperCase() +
-                            condition.status?.slice(1) || 'Normal conditions')}
-                      </div>
-                    </button>
-                  );
-                })}
-            </div>
-          )}
-        </div>
-      ) : (
-        // Loading/No Data State
-        <div className="grid grid-cols-2 gap-3">
-          {['Weather', 'Traffic', 'Approach', 'Runway', 'Ground', 'Special'].map((label) => (
-            <div key={label} className="flex flex-col p-2 rounded-xl border-2 border-slate-600 bg-slate-700">
+          <div className={`rounded-xl border-2 border-dashed border-slate-600 bg-slate-700/50`}>
+            <button
+              onClick={() => setExpandedWeather(!expandedWeather)}
+              className="w-full flex flex-col p-2 text-left transition-all duration-200 hover:bg-slate-600/30"
+            >
               <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center">
-                  <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
-                  <span className="text-sm font-semibold text-gray-400">{label}</span>
+                  <Cloud className="w-5 h-5 text-slate-400 mr-2" />
+                  <span className="text-sm font-semibold text-slate-400">Weather Forecast</span>
                 </div>
-                <div className="w-4 h-4 rounded-full bg-slate-500 animate-pulse"></div>
+                <span className="text-xs text-gray-500">{expandedWeather ? '−' : '+'}</span>
               </div>
-              <div className="text-xs text-gray-400 animate-pulse">
-                Loading...
+              <div className="text-xs text-gray-400 leading-tight">
+                TAF available - tap to view forecast graphs
               </div>
-            </div>
-          ))}
+            </button>
+            {expandedWeather && weather && airportCode && (
+              <div className="px-2 pb-2 border-t border-slate-600/30">
+                <WeatherGraphs
+                  weather={weather}
+                  airportCode={airportCode}
+                  selectedTime={currentTime}
+                  baseline={baseline}
+                  isNow={false}
+                />
+              </div>
+            )}
+          </div>
         </div>
       )}
 
