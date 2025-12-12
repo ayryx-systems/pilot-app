@@ -39,6 +39,14 @@ interface WeatherData {
       summary?: string;
     };
   };
+  graph?: {
+    timeSlots: string[];
+    visibility: (number | null)[];
+    cloudbase: (number | null)[];
+    wind: (number | null)[];
+    metarRaw: string | null;
+    tafRaw: string | null;
+  } | null;
 }
 
 interface SituationOverviewProps {
@@ -238,13 +246,11 @@ export function SituationOverview({
                         summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
                   </div>
                 </button>
-                {expandedWeather && weather && airportCode && (
+                {expandedWeather && weather && (
                   <div className="px-2 pb-2 border-t border-slate-600/50">
                     <WeatherGraphs
                       weather={weather}
-                      airportCode={airportCode}
                       selectedTime={currentTime}
-                      baseline={baseline}
                       isNow={isNow}
                     />
                   </div>
@@ -325,13 +331,11 @@ export function SituationOverview({
                 TAF available - tap to view forecast graphs
               </div>
             </button>
-            {expandedWeather && weather && airportCode && (
+            {expandedWeather && weather && (
               <div className="px-2 pb-2 border-t border-slate-600/30">
                 <WeatherGraphs
                   weather={weather}
-                  airportCode={airportCode}
                   selectedTime={currentTime}
-                  baseline={baseline}
                   isNow={false}
                 />
               </div>

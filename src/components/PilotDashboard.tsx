@@ -261,7 +261,7 @@ export function PilotDashboard() {
           selectedTime={selectedTime}
           onTimeChange={setSelectedTime}
           minHoursAhead={0}
-          maxHoursAhead={24}
+          maxHoursAhead={48}
           baseline={baseline}
         />
       )}

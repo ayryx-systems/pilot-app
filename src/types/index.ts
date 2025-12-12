@@ -47,6 +47,14 @@ export interface AirportOverview {
         summary?: string;
       };
     };
+    graph?: {
+      timeSlots: string[];
+      visibility: (number | null)[];
+      cloudbase: (number | null)[];
+      wind: (number | null)[];
+      metarRaw: string | null;
+      tafRaw: string | null;
+    } | null;
   };
   runways: Array<{
     name: string;
