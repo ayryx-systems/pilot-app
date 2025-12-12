@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatLocalTimeDate } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
@@ -79,6 +79,34 @@ export function TimeSlider({
 
   // Check if selected time is within 1 minute of airport's current time
   const isNow = Math.abs(selectedTimeLocal.getTime() - airportNowLocal.getTime()) <= 60000;
+  
+  // Track if we're in "NOW" mode to update in real-time
+  const isNowRef = useRef(isNow);
+  const onTimeChangeRef = useRef(onTimeChange);
+  
+  // Keep refs updated
+  isNowRef.current = isNow;
+  onTimeChangeRef.current = onTimeChange;
+
+  // Update selectedTime in real-time when slider is at NOW
+  useEffect(() => {
+    if (!isNow) {
+      return; // Don't update if user has moved slider away from NOW
+    }
+
+    // Update immediately to sync with current time
+    onTimeChangeRef.current(getCurrentUTCTime());
+
+    // Set up interval to update every second
+    const interval = setInterval(() => {
+      // Check if still in "NOW" mode (user hasn't moved slider)
+      if (isNowRef.current) {
+        onTimeChangeRef.current(getCurrentUTCTime());
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [isNow]);
 
   return (
     <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 px-4 py-3">
