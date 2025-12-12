@@ -14,7 +14,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { BaselineData } from '@/types';
-import { utcToAirportLocal, getAirportUTCOffset } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportUTCOffset, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
 
 ChartJS.register(
   CategoryScale,
@@ -36,37 +36,12 @@ interface TimeBasedGraphsProps {
 }
 
 function getDayOfWeekName(dateStr: string): string {
-  const date = new Date(dateStr + 'T00:00:00Z');
+  // dateStr is in YYYY-MM-DD format (airport local date)
+  // Parse it as a local date (not UTC)
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = new Date(year, month - 1, day);
   const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-  return days[date.getUTCDay()];
-}
-
-function getSeason(dateStr: string, baseline: BaselineData | null, year: string): 'summer' | 'winter' {
-  if (!baseline || !baseline.dstDatesByYear) {
-    return 'summer';
-  }
-
-  const yearStr = typeof year === 'string' ? year : year.toString();
-  const dstDates = baseline.dstDatesByYear[yearStr];
-
-  if (!dstDates) {
-    return 'summer';
-  }
-
-  const [dstStartYear, dstStartMonth, dstStartDay] = dstDates.start.split('-').map(Number);
-  const [dstEndYear, dstEndMonth, dstEndDay] = dstDates.end.split('-').map(Number);
-  const dstStart = new Date(dstStartYear, dstStartMonth - 1, dstStartDay);
-  const dstEnd = new Date(dstEndYear, dstEndMonth - 1, dstEndDay);
-
-  const [dateYear, dateMonth, dateDay] = dateStr.split('-').map(Number);
-  const dateOnly = new Date(dateYear, dateMonth - 1, dateDay);
-  const dstStartOnly = new Date(dstStart.getFullYear(), dstStart.getMonth(), dstStart.getDate());
-  const dstEndOnly = new Date(dstEnd.getFullYear(), dstEnd.getMonth(), dstEnd.getDate());
-
-  if (dateOnly >= dstStartOnly && dateOnly < dstEndOnly) {
-    return 'summer';
-  }
-  return 'winter';
+  return days[date.getDay()];
 }
 
 function getSeasonalAverageData(baseline: BaselineData | null, season: 'summer' | 'winter') {
@@ -147,13 +122,15 @@ export function TimeBasedGraphs({
       return;
     }
 
-    const dateStr = selectedTime.toISOString().split('T')[0];
+    // Get the airport local date string (not UTC date)
+    const dateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
     const dayOfWeek = getDayOfWeekName(dateStr);
     const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
 
-    const [year] = dateStr.split('-');
-    const season = getSeason(dateStr, baseline, year);
+    // Use the airport local date for season calculation
+    const localDateForSeason = utcToAirportLocal(selectedTime, airportCode, baseline);
+    const season = getAirportSeason(localDateForSeason, baseline);
     const seasonDisplay = season.charAt(0).toUpperCase() + season.slice(1);
 
     const dayData = baseline[season]?.dayOfWeekTimeSlots?.[dayOfWeek];
