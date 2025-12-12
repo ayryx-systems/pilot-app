@@ -18,7 +18,9 @@ interface WeatherData {
     speed: number;
     gust?: number;
   };
-  visibility?: string;
+  visibility?: number | string;
+  clouds?: Array<{ coverage: string; altitude: number }>;
+  cloudbase?: number | null;
   timestamp: string;
   taf?: {
     rawTAF: string;
@@ -29,9 +31,10 @@ interface WeatherData {
         timeTo: string;
         changeType: string;
         wind?: { direction: number; speed: number; gust?: number };
-        visibility?: string;
+        visibility?: number | string;
         weather?: string;
         clouds?: Array<{ coverage: string; altitude: number }>;
+        cloudbase?: number | null;
       }>;
       summary?: string;
     };

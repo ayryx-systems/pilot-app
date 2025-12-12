@@ -13,7 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { utcToAirportLocal, getAirportLocalDateString, formatAirportLocalTime } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportLocalDateString, formatAirportLocalTime, getCurrentUTCTime } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
 
 ChartJS.register(
@@ -31,7 +31,9 @@ interface WeatherGraphsProps {
   weather?: {
     metar: string;
     metarFriendly?: string;
-    visibility?: string;
+    visibility?: number | string;
+    clouds?: Array<{ coverage: string; altitude: number }>;
+    cloudbase?: number | null;
     wind?: {
       direction: number;
       speed: number;
@@ -46,8 +48,10 @@ interface WeatherGraphsProps {
           timeTo: string;
           changeType: string;
           wind?: { direction: number; speed: number; gust?: number };
-          visibility?: string;
+          visibility?: number | string;
+          weather?: string;
           clouds?: Array<{ coverage: string; altitude: number }>;
+          cloudbase?: number | null;
         }>;
         summary?: string;
       };
@@ -67,10 +71,28 @@ function parseVisibility(vis?: string | number): number | null {
   }
   
   if (typeof vis === 'string') {
-    const match = vis.match(/(\d+(?:\.\d+)?)\s*(?:SM|mi|mile)/i);
-    if (match) {
-      return parseFloat(match[1]);
+    const upperVis = vis.toUpperCase();
+    
+    if (upperVis === '10+' || upperVis === 'P10SM' || upperVis === 'P10') {
+      return 10;
     }
+    
+    if (upperVis === '6+' || upperVis === 'P6SM' || upperVis === 'P6') {
+      return 6;
+    }
+    
+    const match = vis.match(/(\d+(?:\s*\/\s*\d+)?)\s*(?:SM|mi|mile|M)/i);
+    if (match) {
+      const value = match[1];
+      if (value.includes('/')) {
+        const parts = value.split('/').map(p => p.trim());
+        if (parts.length === 2) {
+          return parseFloat(parts[0]) / parseFloat(parts[1]);
+        }
+      }
+      return parseFloat(value);
+    }
+    
     const numMatch = vis.match(/^(\d+(?:\.\d+)?)$/);
     if (numMatch) {
       return parseFloat(numMatch[1]);
@@ -78,12 +100,6 @@ function parseVisibility(vis?: string | number): number | null {
   }
   
   return null;
-}
-
-function getCloudbase(clouds?: Array<{ coverage: string; altitude: number }>): number | null {
-  if (!clouds || clouds.length === 0) return null;
-  const lowestCloud = clouds.find(c => c.coverage !== 'CLR' && c.coverage !== 'SKC');
-  return lowestCloud ? lowestCloud.altitude / 100 : null;
 }
 
 export function WeatherGraphs({
@@ -106,7 +122,7 @@ export function WeatherGraphs({
     }
 
     const currentVis = parseVisibility(weather.visibility);
-    const currentCloudbase = null;
+    const currentCloudbase = weather.cloudbase !== null && weather.cloudbase !== undefined ? weather.cloudbase : null;
     const currentWind = weather.wind?.speed || null;
 
     const timeSlots: string[] = [];
@@ -117,20 +133,37 @@ export function WeatherGraphs({
     const selectedTimeLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
     const selectedHour = selectedTimeLocal.getUTCHours();
     const selectedMinute = selectedTimeLocal.getUTCMinutes();
-    const selectedTimeLabel = `${String(selectedHour).padStart(2, '0')}:${String(Math.floor(selectedMinute / 15) * 15).padStart(2, '0')}`;
+    const selectedTimeSlotMinutes = selectedHour * 60 + Math.floor(selectedMinute / 15) * 15;
+    const selectedTimeLabel = `${String(Math.floor(selectedTimeSlotMinutes / 60) % 24).padStart(2, '0')}:${String(selectedTimeSlotMinutes % 60).padStart(2, '0')}`;
 
-    if (isNow && currentVis !== null) {
-      timeSlots.push('NOW');
-      visibilities.push(currentVis);
-      cloudbases.push(currentCloudbase);
-      windSpeeds.push(currentWind);
-    }
+    const nowTime = getCurrentUTCTime();
+    const nowTimeLocal = utcToAirportLocal(nowTime, airportCode, baseline);
+    const nowHour = nowTimeLocal.getUTCHours();
+    const nowMinute = nowTimeLocal.getUTCMinutes();
+    const nowTimeSlotMinutes = nowHour * 60 + Math.floor(nowMinute / 15) * 15;
+    const nowTimeLabel = `${String(Math.floor(nowTimeSlotMinutes / 60) % 24).padStart(2, '0')}:${String(nowTimeSlotMinutes % 60).padStart(2, '0')}`;
 
-    if (weather.taf?.forecast?.periods && weather.taf.forecast.periods.length > 0) {
+    const hoursToShow = 36;
+    const slotsToShow = hoursToShow * 4;
+
+    const slotMap = new Map<string, { vis: number | null; cloudbase: number | null; wind: number | null; isTempo: boolean; periodIndex: number }>();
+
+    if (weather?.taf?.forecast?.periods && weather.taf.forecast.periods.length > 0) {
       const periods = weather.taf.forecast.periods;
-      const slotMap = new Map<string, { vis: number | null; cloudbase: number | null; wind: number | null }>();
+
+      const regularPeriods: typeof periods = [];
+      const tempoPeriods: typeof periods = [];
 
       periods.forEach((period) => {
+        const isTempo = period.changeType === 'TEMPO' || period.changeType === 'tempo';
+        if (isTempo) {
+          tempoPeriods.push(period);
+        } else {
+          regularPeriods.push(period);
+        }
+      });
+
+      regularPeriods.forEach((period, periodIndex) => {
         try {
           const fromTime = new Date(period.timeFrom);
           const toTime = new Date(period.timeTo);
@@ -143,37 +176,159 @@ export function WeatherGraphs({
           const toLocal = utcToAirportLocal(toTime, airportCode, baseline);
 
           const periodVis = parseVisibility(period.visibility);
-          const periodCloudbase = getCloudbase(period.clouds);
+          const periodCloudbase = period.cloudbase !== null && period.cloudbase !== undefined ? period.cloudbase : null;
           const periodWind = period.wind?.speed || null;
 
           const fromHour = fromLocal.getUTCHours();
-          const fromMin = Math.floor(fromLocal.getUTCMinutes() / 15) * 15;
+          const fromMin = fromLocal.getUTCMinutes();
           const toHour = toLocal.getUTCHours();
-          const toMin = Math.floor(toLocal.getUTCMinutes() / 15) * 15;
+          const toMin = toLocal.getUTCMinutes();
 
-          const fromSlot = `${String(fromHour).padStart(2, '0')}:${String(fromMin).padStart(2, '0')}`;
-          const toSlot = `${String(toHour).padStart(2, '0')}:${String(toMin).padStart(2, '0')}`;
+          const fromSlotMinutes = fromHour * 60 + fromMin;
+          const toSlotMinutes = toHour * 60 + toMin;
 
-          slotMap.set(fromSlot, { vis: periodVis, cloudbase: periodCloudbase, wind: periodWind });
-          slotMap.set(toSlot, { vis: periodVis, cloudbase: periodCloudbase, wind: periodWind });
+          const startSlotMinutes = Math.max(fromSlotMinutes, nowTimeSlotMinutes);
+
+          for (let slotMin = startSlotMinutes; slotMin <= toSlotMinutes; slotMin += 15) {
+            const hour = Math.floor(slotMin / 60) % 24;
+            const minute = slotMin % 60;
+            const timeSlot = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+            if (!slotMap.has(timeSlot)) {
+              slotMap.set(timeSlot, { 
+                vis: periodVis, 
+                cloudbase: periodCloudbase, 
+                wind: periodWind,
+                isTempo: false,
+                periodIndex
+              });
+            }
+          }
         } catch (e) {
-          console.warn('Error parsing TAF period:', e);
+          console.warn('Error parsing TAF period:', e, period);
         }
       });
 
-      const sortedSlots = Array.from(slotMap.keys()).sort();
-      sortedSlots.forEach(slot => {
-        if (!timeSlots.includes(slot)) {
-          const data = slotMap.get(slot)!;
-          timeSlots.push(slot);
-          visibilities.push(data.vis);
-          cloudbases.push(data.cloudbase);
-          windSpeeds.push(data.wind);
+      tempoPeriods.forEach((period, tempoIndex) => {
+        try {
+          const fromTime = new Date(period.timeFrom);
+          const toTime = new Date(period.timeTo);
+          
+          if (isNaN(fromTime.getTime()) || isNaN(toTime.getTime())) {
+            return;
+          }
+
+          const fromLocal = utcToAirportLocal(fromTime, airportCode, baseline);
+          const toLocal = utcToAirportLocal(toTime, airportCode, baseline);
+
+          const periodVis = parseVisibility(period.visibility);
+          const periodCloudbase = period.cloudbase !== null && period.cloudbase !== undefined ? period.cloudbase : null;
+          const periodWind = period.wind?.speed || null;
+
+          const fromHour = fromLocal.getUTCHours();
+          const fromMin = fromLocal.getUTCMinutes();
+          const toHour = toLocal.getUTCHours();
+          const toMin = toLocal.getUTCMinutes();
+
+          const fromSlotMinutes = fromHour * 60 + fromMin;
+          const toSlotMinutes = toHour * 60 + toMin;
+
+          const startSlotMinutes = Math.max(fromSlotMinutes, nowTimeSlotMinutes);
+
+          for (let slotMin = startSlotMinutes; slotMin <= toSlotMinutes; slotMin += 15) {
+            const hour = Math.floor(slotMin / 60) % 24;
+            const minute = slotMin % 60;
+            const timeSlot = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+
+            slotMap.set(timeSlot, { 
+              vis: periodVis, 
+              cloudbase: periodCloudbase, 
+              wind: periodWind,
+              isTempo: true,
+              periodIndex: tempoIndex
+            });
+          }
+        } catch (e) {
+          console.warn('Error parsing TAF TEMPO period:', e, period);
         }
+      });
+
+    }
+
+    const slotEntries: Array<{ slot: string; vis: number | null; cloudbase: number | null; wind: number | null; sortKey: number }> = [];
+
+    for (let i = 0; i <= slotsToShow; i++) {
+      const slotMin = nowTimeSlotMinutes + (i * 15);
+      const totalMinutes = slotMin;
+      const hour = Math.floor(totalMinutes / 60) % 24;
+      const minute = totalMinutes % 60;
+      const timeSlot = `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+      
+      const data = slotMap.get(timeSlot);
+      slotEntries.push({
+        slot: timeSlot,
+        vis: data ? data.vis : null,
+        cloudbase: data ? data.cloudbase : null,
+        wind: data ? data.wind : null,
+        sortKey: slotMin,
       });
     }
 
-    const selectedIndex = timeSlots.indexOf(selectedTimeLabel);
+    if (isNow && currentVis !== null) {
+      const nowIndex = slotEntries.findIndex(entry => entry.sortKey === nowTimeSlotMinutes);
+      
+      if (nowIndex >= 0) {
+        slotEntries[nowIndex].slot = 'NOW';
+        slotEntries[nowIndex].vis = currentVis;
+        slotEntries[nowIndex].cloudbase = currentCloudbase;
+        slotEntries[nowIndex].wind = currentWind;
+      } else {
+        const insertIndex = slotEntries.findIndex(entry => entry.sortKey > nowTimeSlotMinutes);
+        if (insertIndex >= 0) {
+          slotEntries.splice(insertIndex, 0, {
+            slot: 'NOW',
+            vis: currentVis,
+            cloudbase: currentCloudbase,
+            wind: currentWind,
+            sortKey: nowTimeSlotMinutes,
+          });
+        } else {
+          slotEntries.push({
+            slot: 'NOW',
+            vis: currentVis,
+            cloudbase: currentCloudbase,
+            wind: currentWind,
+            sortKey: nowTimeSlotMinutes,
+          });
+        }
+      }
+    }
+
+    slotEntries.sort((a, b) => {
+      if (a.slot === 'NOW' && b.slot === 'NOW') return 0;
+      if (a.slot === 'NOW') return nowTimeSlotMinutes - b.sortKey;
+      if (b.slot === 'NOW') return a.sortKey - nowTimeSlotMinutes;
+      return a.sortKey - b.sortKey;
+    });
+
+    slotEntries.forEach(entry => {
+      timeSlots.push(entry.slot);
+      visibilities.push(entry.vis);
+      cloudbases.push(entry.cloudbase);
+      windSpeeds.push(entry.wind);
+    });
+
+    let selectedIndex = -1;
+    const nowIndex = timeSlots.indexOf('NOW');
+    
+    if (isNow && nowIndex >= 0) {
+      selectedIndex = nowIndex;
+    } else {
+      selectedIndex = timeSlots.indexOf(selectedTimeLabel);
+      if (selectedIndex < 0 && nowIndex >= 0) {
+        selectedIndex = nowIndex;
+      }
+    }
 
     if (timeSlots.length > 0) {
       setVisibilityData({
