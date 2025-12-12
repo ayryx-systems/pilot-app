@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { BaselineData } from '@/types';
+import { utcToAirportLocal, getAirportUTCOffset } from '@/utils/airportTime';
 
 ChartJS.register(
   CategoryScale,
@@ -103,11 +104,31 @@ function alignTimeSlots(dayTimeSlots: string[], seasonalTimeSlots: string[]) {
   };
 }
 
-function getTimeSlotKey(date: Date): string {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
+function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData | null): string {
+  // date is a UTC Date object representing a moment in time
+  // Convert UTC date to airport local time
+  const localDate = utcToAirportLocal(date, airportCode, baseline);
+  // Extract hours and minutes from the local time representation
+  // Since utcToAirportLocal returns a Date where UTC milliseconds represent local time,
+  // we use getUTCHours() and getUTCMinutes() to get the local time components
+  const hours = localDate.getUTCHours();
+  const minutes = localDate.getUTCMinutes();
   const slotMinutes = Math.floor(minutes / 15) * 15;
-  return `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
+  const timeSlot = `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
+  
+  // Debug logging (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[TimeBasedGraphs] getTimeSlotKey:', {
+      inputUTC: date.toISOString(),
+      localDateUTC: localDate.toISOString(),
+      hours,
+      minutes,
+      slotMinutes,
+      timeSlot
+    });
+  }
+  
+  return timeSlot;
 }
 
 export function TimeBasedGraphs({
@@ -128,7 +149,7 @@ export function TimeBasedGraphs({
 
     const dateStr = selectedTime.toISOString().split('T')[0];
     const dayOfWeek = getDayOfWeekName(dateStr);
-    const timeSlot = getTimeSlotKey(selectedTime);
+    const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
 
     const [year] = dateStr.split('-');

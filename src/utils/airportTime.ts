@@ -74,12 +74,26 @@ export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<strin
 
 /**
  * Get UTC offset in hours for an airport at a specific date
+ * date should be a UTC Date object
  */
 export function getAirportUTCOffset(airportCode: string, date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): number {
   const timezone = getAirportTimezone(airportCode);
   const season = getSeason(date, baseline);
   const offset = UTC_OFFSETS[timezone] || { winter: -6, summer: -5 };
-  return season === 'summer' ? offset.summer : offset.winter;
+  const offsetHours = season === 'summer' ? offset.summer : offset.winter;
+  
+  // Debug logging (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[airportTime] getAirportUTCOffset:', {
+      airportCode,
+      dateUTC: date.toISOString(),
+      timezone,
+      season,
+      offsetHours
+    });
+  }
+  
+  return offsetHours;
 }
 
 /**
