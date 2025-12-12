@@ -10,6 +10,7 @@ import { MapControls } from './MapControls';
 import { TimeSlider } from './TimeSlider';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
+import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
 import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
@@ -24,6 +25,7 @@ export function PilotDashboard() {
   useEffect(() => {
     setMounted(true);
   }, []);
+
   const {
     selectedAirport,
     setSelectedAirport,
@@ -42,6 +44,14 @@ export function PilotDashboard() {
     summaryMetadata,
     refreshData
   } = usePilotData();
+
+  // Update selectedTime to current airport time when airport changes
+  useEffect(() => {
+    if (selectedAirport) {
+      // Initialize to current UTC time (will be converted to airport local time by TimeSlider)
+      setSelectedTime(getCurrentUTCTime());
+    }
+  }, [selectedAirport]);
 
   // Debug data structure to help identify issues
   useEffect(() => {
@@ -247,11 +257,12 @@ export function PilotDashboard() {
       {/* Time Slider - Always visible when airport selected */}
       {selectedAirport && (
         <TimeSlider
-          currentTime={new Date()}
+          airportCode={selectedAirport}
           selectedTime={selectedTime}
           onTimeChange={setSelectedTime}
           minHoursAhead={0}
           maxHoursAhead={24}
+          baseline={baseline}
         />
       )}
 

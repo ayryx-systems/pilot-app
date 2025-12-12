@@ -2,60 +2,83 @@
 
 import React from 'react';
 import { Clock } from 'lucide-react';
+import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatLocalTimeDate } from '@/utils/airportTime';
+import { BaselineData } from '@/types';
 
 interface TimeSliderProps {
-  currentTime: Date;
+  airportCode: string;
   selectedTime: Date;
   onTimeChange: (time: Date) => void;
   minHoursAhead?: number;
   maxHoursAhead?: number;
+  baseline?: BaselineData | null;
 }
 
 export function TimeSlider({
-  currentTime,
+  airportCode,
   selectedTime,
   onTimeChange,
   minHoursAhead = 0,
   maxHoursAhead = 24,
+  baseline,
 }: TimeSliderProps) {
-  const now = currentTime;
-  const minTime = new Date(now.getTime() + minHoursAhead * 60 * 60 * 1000);
-  const maxTime = new Date(now.getTime() + maxHoursAhead * 60 * 60 * 1000);
+  // Get current UTC time
+  const utcNow = getCurrentUTCTime();
   
-  const totalMinutes = (maxTime.getTime() - minTime.getTime()) / (1000 * 60);
-  const selectedMinutes = (selectedTime.getTime() - minTime.getTime()) / (1000 * 60);
+  // Convert UTC now to airport local time (for display/calculation)
+  const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
+  
+  // Calculate min/max times in airport local time
+  const minTimeLocal = new Date(airportNowLocal.getTime() + minHoursAhead * 60 * 60 * 1000);
+  const maxTimeLocal = new Date(airportNowLocal.getTime() + maxHoursAhead * 60 * 60 * 1000);
+  
+  // Convert selectedTime (UTC) to airport local time for display/calculation
+  const selectedTimeLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
+  
+  const totalMinutes = (maxTimeLocal.getTime() - minTimeLocal.getTime()) / (1000 * 60);
+  const selectedMinutes = (selectedTimeLocal.getTime() - minTimeLocal.getTime()) / (1000 * 60);
   const sliderValue = Math.max(0, Math.min(100, (selectedMinutes / totalMinutes) * 100));
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
     const minutes = (value / 100) * totalMinutes;
-    const newTime = new Date(minTime.getTime() + minutes * 60 * 1000);
-    onTimeChange(newTime);
+    const newLocalTime = new Date(minTimeLocal.getTime() + minutes * 60 * 1000);
+    
+    // Convert airport local time back to UTC for storage
+    const newUTCTime = airportLocalToUTC(newLocalTime, airportCode, baseline);
+    onTimeChange(newUTCTime);
   };
 
   const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false,
-    });
+    // date should be a UTC Date object
+    // formatAirportLocalTime will convert it to airport local time for display
+    return formatAirportLocalTime(date, airportCode, baseline);
   };
 
   const formatDate = (date: Date) => {
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    const dateLocal = utcToAirportLocal(date, airportCode, baseline);
+    const todayLocal = airportNowLocal;
+    const tomorrowLocal = new Date(todayLocal);
+    tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
     
-    if (date.toDateString() === today.toDateString()) {
+    // Compare dates (just date part, not time) - use UTC dates for comparison
+    const dateStr = date.toISOString().split('T')[0];
+    const todayStr = utcNow.toISOString().split('T')[0];
+    const tomorrowDate = new Date(utcNow);
+    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
+    
+    if (dateStr === todayStr) {
       return 'Today';
-    } else if (date.toDateString() === tomorrow.toDateString()) {
+    } else if (dateStr === tomorrowStr) {
       return 'Tomorrow';
     } else {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      return dateLocal.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
   };
 
-  const isNow = selectedTime.getTime() <= now.getTime() + 60000; // Within 1 minute of now
+  // Check if selected time is within 1 minute of airport's current time
+  const isNow = Math.abs(selectedTimeLocal.getTime() - airportNowLocal.getTime()) <= 60000;
 
   return (
     <div className="bg-slate-800/95 backdrop-blur-sm border-b border-slate-700/50 px-4 py-3">
@@ -113,7 +136,7 @@ export function TimeSlider({
               {formatTime(selectedTime)}
             </div>
             <div className="text-xs text-gray-400">
-              {formatDate(selectedTime)}
+              {formatDate(selectedTime)} ({airportCode})
             </div>
           </div>
           
@@ -126,8 +149,7 @@ export function TimeSlider({
       </div>
 
       <div className="flex justify-between mt-2 text-xs text-gray-500">
-        <span>{formatTime(minTime)}</span>
-        <span>{formatTime(maxTime)}</span>
+        <span>Range: {formatLocalTimeDate(minTimeLocal)} - {formatLocalTimeDate(maxTimeLocal)} ({airportCode} local time)</span>
       </div>
     </div>
   );
