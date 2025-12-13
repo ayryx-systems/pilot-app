@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState, useMemo, memo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -68,7 +68,7 @@ interface WeatherGraphsProps {
   isNow: boolean;
 }
 
-export function WeatherGraphs({
+export const WeatherGraphs = memo(function WeatherGraphs({
   weather,
   selectedTime,
   isNow,
@@ -77,37 +77,50 @@ export function WeatherGraphs({
   const [cloudbaseData, setCloudbaseData] = useState<any>(null);
   const [windData, setWindData] = useState<any>(null);
 
+  // Memoize graph data to prevent unnecessary recalculations
+  const graphData = useMemo(() => {
+    if (!weather?.graph) return null;
+    return weather.graph;
+  }, [weather?.graph]);
+
+  // Memoize selected index calculation
+  const selectedIndex = useMemo(() => {
+    if (!graphData) return -1;
+    
+    const { timeSlots } = graphData;
+    const now = getCurrentUTCTime();
+    const selectedMinutes = Math.floor((selectedTime.getTime() - now.getTime()) / (1000 * 60));
+    
+    let idx = -1;
+    const nowIndex = timeSlots.indexOf('NOW');
+    
+    if (isNow && nowIndex >= 0) {
+      idx = nowIndex;
+    } else {
+      const slotIntervalMinutes = 15;
+      const targetSlot = Math.round(selectedMinutes / slotIntervalMinutes);
+      
+      if (targetSlot >= 0 && targetSlot < timeSlots.length) {
+        idx = targetSlot;
+      } else if (targetSlot < 0) {
+        idx = nowIndex >= 0 ? nowIndex : 0;
+      } else {
+        idx = timeSlots.length - 1;
+      }
+    }
+    
+    return idx;
+  }, [graphData, selectedTime, isNow]);
+
   useEffect(() => {
-    if (!weather?.graph) {
+    if (!graphData) {
       setVisibilityData(null);
       setCloudbaseData(null);
       setWindData(null);
       return;
     }
 
-    const graph = weather.graph;
-    const { timeSlots, visibility, cloudbase, wind } = graph;
-
-    const now = getCurrentUTCTime();
-    const selectedMinutes = Math.floor((selectedTime.getTime() - now.getTime()) / (1000 * 60));
-    
-    let selectedIndex = -1;
-    const nowIndex = timeSlots.indexOf('NOW');
-    
-    if (isNow && nowIndex >= 0) {
-      selectedIndex = nowIndex;
-    } else {
-      const slotIntervalMinutes = 15;
-      const targetSlot = Math.round(selectedMinutes / slotIntervalMinutes);
-      
-      if (targetSlot >= 0 && targetSlot < timeSlots.length) {
-        selectedIndex = targetSlot;
-      } else if (targetSlot < 0) {
-        selectedIndex = nowIndex >= 0 ? nowIndex : 0;
-      } else {
-        selectedIndex = timeSlots.length - 1;
-      }
-    }
+    const { timeSlots, visibility, cloudbase, wind } = graphData;
 
     if (visibility.some(v => v !== null)) {
       setVisibilityData({
@@ -141,7 +154,7 @@ export function WeatherGraphs({
     } else {
       setWindData(null);
     }
-  }, [weather?.graph, selectedTime, isNow]);
+  }, [graphData, selectedIndex]);
 
   if (!weather?.graph) {
     return null;
@@ -288,6 +301,13 @@ export function WeatherGraphs({
               animation: {
                 duration: 0,
               },
+              transitions: {
+                active: {
+                  animation: {
+                    duration: 0,
+                  },
+                },
+              },
               plugins: {
                 legend: {
                   display: false,
@@ -364,6 +384,14 @@ export function WeatherGraphs({
             options={{
               responsive: true,
               maintainAspectRatio: false,
+              animation: { duration: 0 },
+              transitions: {
+                active: {
+                  animation: {
+                    duration: 0,
+                  },
+                },
+              },
               plugins: {
                 legend: {
                   display: false,
@@ -431,6 +459,16 @@ export function WeatherGraphs({
             options={{
               responsive: true,
               maintainAspectRatio: false,
+              animation: {
+                duration: 0,
+              },
+              transitions: {
+                active: {
+                  animation: {
+                    duration: 0,
+                  },
+                },
+              },
               plugins: {
                 legend: {
                   display: false,
@@ -473,4 +511,6 @@ export function WeatherGraphs({
       )}
     </div>
   );
-}
+});
+
+

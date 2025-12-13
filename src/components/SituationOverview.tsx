@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, memo } from 'react';
 import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
 import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Navigation } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
@@ -65,7 +65,7 @@ interface SituationOverviewProps {
   selectedTime?: Date;
 }
 
-export function SituationOverview({
+export const SituationOverview = memo(function SituationOverview({
   summary,
   weather,
   loading,
@@ -80,6 +80,18 @@ export function SituationOverview({
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
   const [expandedWeather, setExpandedWeather] = useState(false);
+
+  // All hooks must be called before any early returns
+  const filteredConditions = useMemo(() => {
+    return summary?.conditions
+      ? Object.entries(summary.conditions).filter(([key]) => 
+          key !== 'weather' && 
+          key !== 'processing' && 
+          key !== 'runway' && 
+          key !== 'ground'
+        )
+      : [];
+  }, [summary?.conditions]);
 
   const currentTime = selectedTime || new Date();
   const isNow = selectedTime ? (() => {
@@ -189,15 +201,6 @@ export function SituationOverview({
         return <Info className="w-5 h-5 text-white" />;
     }
   };
-
-  const filteredConditions = summary?.conditions
-    ? Object.entries(summary.conditions).filter(([key]) => 
-        key !== 'weather' && 
-        key !== 'processing' && 
-        key !== 'runway' && 
-        key !== 'ground'
-      )
-    : [];
 
   return (
     <div className="relative space-y-4" style={{ zIndex: 2147483647 }}>
@@ -392,4 +395,4 @@ export function SituationOverview({
       )}
     </div>
   );
-}
+});

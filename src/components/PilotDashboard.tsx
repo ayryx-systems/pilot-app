@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { PilotMap } from './PilotMap';
 import { AirportSelector } from './AirportSelector';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -98,6 +98,7 @@ export function PilotDashboard() {
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Save map display options to localStorage whenever they change
   useEffect(() => {
@@ -105,6 +106,83 @@ export function PilotDashboard() {
       localStorage.setItem('pilotApp_mapDisplayOptions', JSON.stringify(mapDisplayOptions));
     }
   }, [mapDisplayOptions]);
+
+  // Preserve scroll position when data updates
+  const scrollPositionRef = useRef<number>(0);
+  const isRestoringRef = useRef<boolean>(false);
+  const restoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Save scroll position continuously
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      if (!isRestoringRef.current) {
+        scrollPositionRef.current = container.scrollTop;
+      }
+    };
+    
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => container.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  // Restore scroll position aggressively after any data change
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    
+    const savedPosition = scrollPositionRef.current;
+    if (savedPosition <= 0) return;
+
+    // Clear any pending restore
+    if (restoreTimeoutRef.current) {
+      clearTimeout(restoreTimeoutRef.current);
+    }
+
+    isRestoringRef.current = true;
+
+    // Immediate restore
+    container.scrollTop = savedPosition;
+
+    // Also restore after a short delay to catch any late resets
+    restoreTimeoutRef.current = setTimeout(() => {
+      if (container && scrollPositionRef.current > 0) {
+        container.scrollTop = scrollPositionRef.current;
+      }
+      isRestoringRef.current = false;
+    }, 0);
+
+    return () => {
+      if (restoreTimeoutRef.current) {
+        clearTimeout(restoreTimeoutRef.current);
+      }
+    };
+  }, [airportOverview?.weather?.timestamp, summary?.situation_overview, baseline]);
+
+  // Continuous monitor to catch any scroll resets
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const monitor = setInterval(() => {
+      if (!isRestoringRef.current && scrollPositionRef.current > 0) {
+        const currentScroll = container.scrollTop;
+        const savedScroll = scrollPositionRef.current;
+        
+        // If scroll was reset (jumped to top or significantly changed), restore it
+        if (Math.abs(currentScroll - savedScroll) > 50 && currentScroll < savedScroll) {
+          isRestoringRef.current = true;
+          container.scrollTop = savedScroll;
+          setTimeout(() => {
+            isRestoringRef.current = false;
+          }, 100);
+        }
+      }
+    }, 50); // Check every 50ms
+
+    return () => clearInterval(monitor);
+  }, []);
 
   // Auto-refresh data every 30 seconds when connected
   useEffect(() => {
@@ -296,11 +374,23 @@ export function PilotDashboard() {
 
         {/* Right Panel - Graphs and Info (hidden on mobile when fullscreen, visible on tablet/desktop) */}
         {!mapFullscreen && (
-          <div className="hidden md:flex md:w-[40%] md:min-w-[380px] md:max-w-[500px] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
+          <div key="right-panel" className="hidden md:flex md:w-[40%] md:min-w-[380px] md:max-w-[500px] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
             {/* Scrollable Content Area */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3">
+            <div 
+              key="scroll-container"
+              ref={scrollContainerRef} 
+              className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3"
+              onScroll={(e) => {
+                // Track scroll via React event
+                const target = e.currentTarget;
+                if (!isRestoringRef.current) {
+                  scrollPositionRef.current = target.scrollTop;
+                }
+              }}
+            >
               {/* Situation Overview */}
               <SituationOverview
+                key={`situation-${selectedAirport}`}
                 summary={summary}
                 weather={airportOverview?.weather}
                 loading={loading}
