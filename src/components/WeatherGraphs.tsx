@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -99,10 +99,13 @@ export function WeatherGraphs({
     } else {
       const slotIntervalMinutes = 15;
       const targetSlot = Math.round(selectedMinutes / slotIntervalMinutes);
+      
       if (targetSlot >= 0 && targetSlot < timeSlots.length) {
         selectedIndex = targetSlot;
-      } else if (nowIndex >= 0) {
-        selectedIndex = nowIndex;
+      } else if (targetSlot < 0) {
+        selectedIndex = nowIndex >= 0 ? nowIndex : 0;
+      } else {
+        selectedIndex = timeSlots.length - 1;
       }
     }
 
@@ -145,6 +148,100 @@ export function WeatherGraphs({
   }
 
   const { metarRaw, tafRaw } = weather.graph;
+  
+  const visibilitySelectedIdx = visibilityData?.selectedIndex ?? -1;
+  const cloudbaseSelectedIdx = cloudbaseData?.selectedIndex ?? -1;
+  const windSelectedIdx = windData?.selectedIndex ?? -1;
+  
+  const visibilityPlugins = useMemo(() => [
+    {
+      id: 'highlightSelected',
+      afterDraw: (chart: any) => {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        
+        if (visibilitySelectedIdx >= 0 && visibilitySelectedIdx < meta.data.length) {
+          const point = meta.data[visibilitySelectedIdx];
+          const x = point.x;
+          const y = point.y;
+          
+          ctx.save();
+          ctx.strokeStyle = 'white';
+          ctx.fillStyle = 'white';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgb(59, 130, 246)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      },
+    },
+  ], [visibilitySelectedIdx]);
+  
+  const cloudbasePlugins = useMemo(() => [
+    {
+      id: 'highlightSelected',
+      afterDraw: (chart: any) => {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        
+        if (cloudbaseSelectedIdx >= 0 && cloudbaseSelectedIdx < meta.data.length) {
+          const point = meta.data[cloudbaseSelectedIdx];
+          const x = point.x;
+          const y = point.y;
+          
+          ctx.save();
+          ctx.strokeStyle = 'white';
+          ctx.fillStyle = 'white';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgb(59, 130, 246)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      },
+    },
+  ], [cloudbaseSelectedIdx]);
+  
+  const windPlugins = useMemo(() => [
+    {
+      id: 'highlightSelected',
+      afterDraw: (chart: any) => {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0);
+        
+        if (windSelectedIdx >= 0 && windSelectedIdx < meta.data.length) {
+          const point = meta.data[windSelectedIdx];
+          const x = point.x;
+          const y = point.y;
+          
+          ctx.save();
+          ctx.strokeStyle = 'white';
+          ctx.fillStyle = 'white';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = 'rgb(59, 130, 246)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+      },
+    },
+  ], [windSelectedIdx]);
 
   return (
     <div className="space-y-4">
@@ -188,6 +285,9 @@ export function WeatherGraphs({
             options={{
               responsive: true,
               maintainAspectRatio: false,
+              animation: {
+                duration: 0,
+              },
               plugins: {
                 legend: {
                   display: false,
@@ -232,36 +332,7 @@ export function WeatherGraphs({
                 }
               },
             }}
-            plugins={[
-              {
-                id: 'highlightSelected',
-                afterDraw: (chart) => {
-                  const ctx = chart.ctx;
-                  const chartArea = chart.chartArea;
-                  const meta = chart.getDatasetMeta(0);
-                  
-                  if (visibilityData.selectedIndex >= 0 && visibilityData.selectedIndex < meta.data.length) {
-                    const point = meta.data[visibilityData.selectedIndex];
-                    const x = point.x;
-                    const y = point.y;
-                    
-                    ctx.save();
-                    ctx.strokeStyle = 'white';
-                    ctx.fillStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgb(59, 130, 246)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.restore();
-                  }
-                },
-              },
-            ]}
+            plugins={visibilityPlugins}
             />
           </div>
         </div>
@@ -328,35 +399,7 @@ export function WeatherGraphs({
                 },
               },
             }}
-            plugins={[
-              {
-                id: 'highlightSelected',
-                afterDraw: (chart) => {
-                  const ctx = chart.ctx;
-                  const meta = chart.getDatasetMeta(0);
-                  
-                  if (cloudbaseData.selectedIndex >= 0 && cloudbaseData.selectedIndex < meta.data.length) {
-                    const point = meta.data[cloudbaseData.selectedIndex];
-                    const x = point.x;
-                    const y = point.y;
-                    
-                    ctx.save();
-                    ctx.strokeStyle = 'white';
-                    ctx.fillStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgb(59, 130, 246)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.restore();
-                  }
-                },
-              },
-            ]}
+            plugins={cloudbasePlugins}
             />
           </div>
         </div>
@@ -423,35 +466,7 @@ export function WeatherGraphs({
                 },
               },
             }}
-            plugins={[
-              {
-                id: 'highlightSelected',
-                afterDraw: (chart) => {
-                  const ctx = chart.ctx;
-                  const meta = chart.getDatasetMeta(0);
-                  
-                  if (windData.selectedIndex >= 0 && windData.selectedIndex < meta.data.length) {
-                    const point = meta.data[windData.selectedIndex];
-                    const x = point.x;
-                    const y = point.y;
-                    
-                    ctx.save();
-                    ctx.strokeStyle = 'white';
-                    ctx.fillStyle = 'white';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.fill();
-                    ctx.strokeStyle = 'rgb(59, 130, 246)';
-                    ctx.lineWidth = 2;
-                    ctx.beginPath();
-                    ctx.arc(x, y, 6, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.restore();
-                  }
-                },
-              },
-            ]}
+            plugins={windPlugins}
             />
           </div>
         </div>
