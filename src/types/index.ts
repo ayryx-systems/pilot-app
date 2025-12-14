@@ -28,6 +28,7 @@ export interface AirportOverview {
     };
     visibility?: number | string;
     clouds?: Array<{ coverage: string; altitude: number }>;
+    ceiling?: number | null;
     cloudbase?: number | null;
     timestamp: string;
     taf?: {
@@ -42,7 +43,8 @@ export interface AirportOverview {
           visibility?: number | string;
           weather?: string;
           clouds?: Array<{ coverage: string; altitude: number }>;
-          cloudbase?: number | null;
+          ceiling?: number | null;
+    cloudbase?: number | null;
         }>;
         summary?: string;
       };
@@ -50,7 +52,8 @@ export interface AirportOverview {
     graph?: {
       timeSlots: string[];
       visibility: (number | null)[];
-      cloudbase: (number | null)[];
+      ceiling: (number | null)[];
+      cloudbase?: (number | null)[];
       wind: (number | null)[];
       metarRaw: string | null;
       tafRaw: string | null;

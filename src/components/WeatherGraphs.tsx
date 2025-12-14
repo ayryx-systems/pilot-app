@@ -32,6 +32,7 @@ interface WeatherGraphsProps {
     metarFriendly?: string;
     visibility?: number | string;
     clouds?: Array<{ coverage: string; altitude: number }>;
+    ceiling?: number | null;
     cloudbase?: number | null;
     wind?: {
       direction: number;
@@ -50,7 +51,8 @@ interface WeatherGraphsProps {
           visibility?: number | string;
           weather?: string;
           clouds?: Array<{ coverage: string; altitude: number }>;
-          cloudbase?: number | null;
+          ceiling?: number | null;
+    cloudbase?: number | null;
         }>;
         summary?: string;
       };
@@ -58,7 +60,8 @@ interface WeatherGraphsProps {
     graph?: {
       timeSlots: string[];
       visibility: (number | null)[];
-      cloudbase: (number | null)[];
+      ceiling: (number | null)[];
+      cloudbase?: (number | null)[];
       wind: (number | null)[];
       metarRaw: string | null;
       tafRaw: string | null;
@@ -74,7 +77,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   isNow,
 }: WeatherGraphsProps) {
   const [visibilityData, setVisibilityData] = useState<any>(null);
-  const [cloudbaseData, setCloudbaseData] = useState<any>(null);
+  const [ceilingData, setCeilingData] = useState<any>(null);
   const [windData, setWindData] = useState<any>(null);
 
   // Memoize graph data to prevent unnecessary recalculations
@@ -146,12 +149,13 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   useEffect(() => {
     if (!graphData) {
       setVisibilityData(null);
-      setCloudbaseData(null);
+      setCeilingData(null);
       setWindData(null);
       return;
     }
 
-    const { timeSlots, visibility, cloudbase, wind } = graphData;
+    const { timeSlots, visibility, ceiling, cloudbase, wind } = graphData;
+    const ceilingData = ceiling || cloudbase;
 
     if (visibility.some(v => v !== null)) {
       setVisibilityData({
@@ -164,15 +168,15 @@ export const WeatherGraphs = memo(function WeatherGraphs({
       setVisibilityData(null);
     }
 
-    if (cloudbase.some(c => c !== null)) {
-      setCloudbaseData({
+    if (ceilingData && ceilingData.some((c: number | null) => c !== null)) {
+      setCeilingData({
         labels: formattedLabels || timeSlots,
-        data: cloudbase,
+        data: ceilingData,
         selectedIndex,
         selectedTime: selectedIndex >= 0 ? timeSlots[selectedIndex] : 'NOW',
       });
     } else {
-      setCloudbaseData(null);
+      setCeilingData(null);
     }
 
     if (wind.some(w => w !== null)) {
@@ -194,7 +198,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const { metarRaw, tafRaw } = weather.graph;
   
   const visibilitySelectedIdx = visibilityData?.selectedIndex ?? -1;
-  const cloudbaseSelectedIdx = cloudbaseData?.selectedIndex ?? -1;
+  const ceilingSelectedIdx = ceilingData?.selectedIndex ?? -1;
   const windSelectedIdx = windData?.selectedIndex ?? -1;
   
   const visibilityPlugins = useMemo(() => [
@@ -227,15 +231,15 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     },
   ], [visibilitySelectedIdx]);
   
-  const cloudbasePlugins = useMemo(() => [
+  const ceilingPlugins = useMemo(() => [
     {
       id: 'highlightSelected',
       afterDraw: (chart: any) => {
         const ctx = chart.ctx;
         const meta = chart.getDatasetMeta(0);
         
-        if (cloudbaseSelectedIdx >= 0 && cloudbaseSelectedIdx < meta.data.length) {
-          const point = meta.data[cloudbaseSelectedIdx];
+        if (ceilingSelectedIdx >= 0 && ceilingSelectedIdx < meta.data.length) {
+          const point = meta.data[ceilingSelectedIdx];
           const x = point.x;
           const y = point.y;
           
@@ -255,7 +259,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         }
       },
     },
-  ], [cloudbaseSelectedIdx]);
+  ], [ceilingSelectedIdx]);
   
   const windPlugins = useMemo(() => [
     {
@@ -405,20 +409,20 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         </div>
       )}
 
-      {cloudbaseData && (
+      {ceilingData && (
         <div>
           <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-gray-300">Cloudbase</h3>
+            <h3 className="text-sm font-semibold text-gray-300">Ceiling</h3>
             <span className="text-xs text-gray-500">METAR</span>
           </div>
           <div className="h-48">
             <Line
             data={{
-              labels: cloudbaseData.labels,
+              labels: ceilingData.labels,
               datasets: [
                 {
-                  label: 'Cloudbase (ft)',
-                  data: cloudbaseData.data,
+                  label: 'Ceiling (ft)',
+                  data: ceilingData.data,
                   borderColor: 'rgb(59, 130, 246)',
                   backgroundColor: 'rgba(59, 130, 246, 0.1)',
                   fill: true,
@@ -483,7 +487,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
               },
             }}
-            plugins={cloudbasePlugins}
+            plugins={ceilingPlugins}
             />
           </div>
         </div>
