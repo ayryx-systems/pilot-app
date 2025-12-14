@@ -79,7 +79,6 @@ export const SituationOverview = memo(function SituationOverview({
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
-  const [expandedWeather, setExpandedWeather] = useState(false);
 
   // All hooks must be called before any early returns
   const filteredConditions = useMemo(() => {
@@ -100,25 +99,6 @@ export const SituationOverview = memo(function SituationOverview({
     return diff <= 60000;
   })() : true;
 
-  const getForecastTimeRange = () => {
-    if (!weather?.taf?.forecast?.periods || weather.taf.forecast.periods.length === 0) {
-      return null;
-    }
-    const periods = weather.taf.forecast.periods;
-    const firstPeriod = periods[0];
-    const lastPeriod = periods[periods.length - 1];
-    if (firstPeriod && lastPeriod) {
-      const fromTime = new Date(firstPeriod.timeFrom);
-      const toTime = new Date(lastPeriod.timeTo);
-      const fromLocal = utcToAirportLocal(fromTime, airportCode || '', baseline);
-      const toLocal = utcToAirportLocal(toTime, airportCode || '', baseline);
-      return {
-        from: formatAirportLocalTime(fromTime, airportCode || '', baseline),
-        to: formatAirportLocalTime(toTime, airportCode || '', baseline),
-      };
-    }
-    return null;
-  };
 
   const openConditionModal = (key: string, condition: any) => {
     setSelectedCondition({ key, condition });
@@ -213,25 +193,22 @@ export const SituationOverview = memo(function SituationOverview({
         </div>
       )}
 
-      {/* CURRENT CONDITIONS Section */}
+      {/* CONDITIONS Section */}
       <div className="space-y-2">
         <div className="flex items-center gap-2 mb-2">
           <div className="h-px flex-1 bg-slate-700"></div>
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            {isNow ? 'Current Conditions' : `Conditions at ${formatAirportLocalTime(currentTime, airportCode || '', baseline)}`}
+            Conditions
           </span>
           <div className="h-px flex-1 bg-slate-700"></div>
         </div>
 
         {summary?.conditions ? (
           <div className="space-y-2">
-            {/* Weather Card - Expandable with Graphs */}
+            {/* Weather Card with Graphs */}
             {(weather || summary.conditions.weather) && (
-              <div className={`rounded-xl border-2 ${isNow ? 'border-slate-500 bg-slate-700/80' : 'border-dashed border-slate-600 bg-slate-700/50'} transition-all`}>
-                <button
-                  onClick={() => setExpandedWeather(!expandedWeather)}
-                  className={`w-full flex flex-col p-2 text-left transition-all duration-200 hover:bg-slate-600/50 ${getStatusColor(summary.conditions.weather?.status)}`}
-                >
+              <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(summary.conditions.weather?.status)}`}>
+                <div className="flex flex-col p-2">
                   <div className="flex items-center justify-between w-full mb-1">
                     <div className="flex items-center">
                       <Cloud className="w-5 h-5 text-white mr-2" />
@@ -239,17 +216,16 @@ export const SituationOverview = memo(function SituationOverview({
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusIcon(summary.conditions.weather?.status)}
-                      <span className="text-xs text-gray-400">{expandedWeather ? '−' : '+'}</span>
                     </div>
                   </div>
-                  <div className="text-xs text-gray-300 leading-tight">
+                  <div className="text-xs text-gray-300 leading-tight mb-2">
                     {summary.conditions.weather?.short_summary ||
                       (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
                         summary.conditions.weather?.status?.charAt(0).toUpperCase() +
                         summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
                   </div>
-                </button>
-                {expandedWeather && weather && (
+                </div>
+                {weather && (
                   <div className="px-2 pb-2 border-t border-slate-600/50">
                     <WeatherGraphs
                       weather={weather}
@@ -268,7 +244,7 @@ export const SituationOverview = memo(function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 ${isNow ? 'border-slate-500 bg-slate-700/80' : 'border-dashed border-slate-600 bg-slate-700/50'} hover:bg-slate-600 ${getStatusColor(condition.status)}`}
+                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 border-slate-500 bg-slate-700/80 hover:bg-slate-600 ${getStatusColor(condition.status)}`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center">
@@ -290,7 +266,7 @@ export const SituationOverview = memo(function SituationOverview({
         ) : (
           <div className="grid grid-cols-2 gap-2">
             {['Weather', 'Traffic', 'Approach', 'Special'].map((label) => (
-              <div key={label} className={`flex flex-col p-2 rounded-xl border-2 ${isNow ? 'border-slate-600 bg-slate-700' : 'border-dashed border-slate-600 bg-slate-700/50'}`}>
+              <div key={label} className={`flex flex-col p-2 rounded-xl border-2 border-slate-600 bg-slate-700`}>
                 <div className="flex items-center justify-between w-full mb-1">
                   <div className="flex items-center">
                     <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
@@ -306,29 +282,6 @@ export const SituationOverview = memo(function SituationOverview({
           </div>
         )}
       </div>
-
-      {/* FORECAST Section - Only show if TAF data exists and we're looking at future time */}
-      {weather?.taf?.forecast && !isNow && (
-        <div className="space-y-2 opacity-80">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-px flex-1 bg-slate-700"></div>
-            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wide">
-              Forecast {getForecastTimeRange() ? `(${getForecastTimeRange()?.from} - ${getForecastTimeRange()?.to})` : ''}
-            </span>
-            <div className="h-px flex-1 bg-slate-700"></div>
-          </div>
-
-          <div className={`rounded-xl border-2 border-dashed border-slate-600 bg-slate-700/50 p-2`}>
-            <div className="flex items-center mb-1">
-              <Cloud className="w-5 h-5 text-slate-400 mr-2" />
-              <span className="text-sm font-semibold text-slate-400">Weather Forecast</span>
-            </div>
-            <div className="text-xs text-gray-400 leading-tight">
-              {weather.taf.tafFriendly || 'TAF forecast available - expand Weather above to view graphs'}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Status Indicators */}
       {(summary?.fallback || (summaryMetadata && !summaryMetadata.active)) && (
