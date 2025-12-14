@@ -83,6 +83,37 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     return weather.graph;
   }, [weather?.graph]);
 
+  // Create formatted labels with round hour values, showing only unique hours
+  const formattedLabels = useMemo(() => {
+    if (!graphData?.timeSlots) return null;
+    
+    const labels: string[] = [];
+    let lastHour = '';
+    
+    graphData.timeSlots.forEach((label) => {
+      if (label === 'NOW') {
+        labels.push('NOW');
+        return;
+      }
+      
+      const [hours, minutes] = label.split(':').map(Number);
+      
+      // Round to nearest hour for display
+      const roundedHour = minutes >= 30 ? (hours + 1) % 24 : hours;
+      const hourLabel = `${String(roundedHour).padStart(2, '0')}:00`;
+      
+      // Only include label if it's a new hour (avoid duplicates)
+      if (hourLabel !== lastHour) {
+        labels.push(hourLabel);
+        lastHour = hourLabel;
+      } else {
+        labels.push('');
+      }
+    });
+    
+    return labels;
+  }, [graphData?.timeSlots]);
+
   // Memoize selected index calculation
   const selectedIndex = useMemo(() => {
     if (!graphData) return -1;
@@ -124,7 +155,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
     if (visibility.some(v => v !== null)) {
       setVisibilityData({
-        labels: timeSlots,
+        labels: formattedLabels || timeSlots,
         data: visibility,
         selectedIndex,
         selectedTime: selectedIndex >= 0 ? timeSlots[selectedIndex] : 'NOW',
@@ -135,7 +166,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
     if (cloudbase.some(c => c !== null)) {
       setCloudbaseData({
-        labels: timeSlots,
+        labels: formattedLabels || timeSlots,
         data: cloudbase,
         selectedIndex,
         selectedTime: selectedIndex >= 0 ? timeSlots[selectedIndex] : 'NOW',
@@ -146,7 +177,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
     if (wind.some(w => w !== null)) {
       setWindData({
-        labels: timeSlots,
+        labels: formattedLabels || timeSlots,
         data: wind,
         selectedIndex,
         selectedTime: selectedIndex >= 0 ? timeSlots[selectedIndex] : 'NOW',
@@ -154,7 +185,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     } else {
       setWindData(null);
     }
-  }, [graphData, selectedIndex]);
+  }, [graphData, selectedIndex, formattedLabels]);
 
   if (!weather?.graph) {
     return null;
@@ -326,6 +357,10 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                     maxRotation: 0,
                     autoSkip: true,
                     maxTicksLimit: 8,
+                    callback: function(value: any, index: number) {
+                      const label = this.getLabelForValue(value);
+                      return label || undefined;
+                    },
                   },
                 },
                 y: {
@@ -410,6 +445,10 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                     maxRotation: 0,
                     autoSkip: true,
                     maxTicksLimit: 8,
+                    callback: function(value: any, index: number) {
+                      const label = this.getLabelForValue(value);
+                      return label || undefined;
+                    },
                   },
                 },
                 y: {
@@ -487,6 +526,10 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                     maxRotation: 0,
                     autoSkip: true,
                     maxTicksLimit: 8,
+                    callback: function(value: any, index: number) {
+                      const label = this.getLabelForValue(value);
+                      return label || undefined;
+                    },
                   },
                 },
                 y: {
