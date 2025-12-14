@@ -112,21 +112,48 @@ export function usePilotData() {
   }, [state.selectedAirport]);
 
   // Load data for specific airport
-  const loadAirportData = useCallback(async (airportId: string) => {
+  const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean }) => {
     if (!airportId) return;
 
     console.log(`[usePilotData] Loading data for airport: ${airportId}`);
-    setState(prev => ({ ...prev, loading: true, baselineLoading: true, error: null }));
+    
+    let currentBaseline: BaselineData | null = null;
+    setState(prev => {
+      currentBaseline = prev.baseline;
+      // Only set baselineLoading if we're actually going to fetch baseline
+      const willFetchBaseline = !options?.skipBaseline && !prev.baseline;
+      return { 
+        ...prev, 
+        loading: true, 
+        baselineLoading: willFetchBaseline, 
+        error: null 
+      };
+    });
 
     try {
-      // Load all data in parallel
-      const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse, baselineResponse] = await Promise.allSettled([
+      // Only fetch baseline if we don't already have it for this airport
+      // If skipping, don't include it in Promise.allSettled to avoid unnecessary state updates
+      const shouldFetchBaseline = !options?.skipBaseline && !currentBaseline;
+      const baselinePromise = shouldFetchBaseline
+        ? pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Baseline not available') }))
+        : null;
+
+      // Load all data in parallel (only include baseline if we're actually fetching it)
+      const promises = [
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
         pilotApi.getGroundTracks(airportId),
         pilotApi.getSituationSummary(airportId),
-        pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected', reason: new Error('Baseline not available') })),
-      ]);
+      ];
+      
+      if (baselinePromise) {
+        promises.push(baselinePromise);
+      }
+
+      const responses = await Promise.allSettled(promises);
+      const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse, baselineResponse] = responses.length === 5
+        ? responses
+        : [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }];
 
       const updates: Partial<PilotAppState> = { loading: false };
 
@@ -187,14 +214,25 @@ export function usePilotData() {
         };
       }
 
-      if (baselineResponse.status === 'fulfilled') {
-        updates.baseline = baselineResponse.value.baseline;
-        updates.baselineLoading = false;
-      } else {
-        console.warn('Baseline data not available:', baselineResponse.reason);
-        updates.baseline = null;
-        updates.baselineLoading = false;
+      // Only process baseline response if we actually fetched it
+      if (shouldFetchBaseline) {
+        if (baselineResponse.status === 'fulfilled') {
+          const newBaseline = baselineResponse.value.baseline;
+          if (newBaseline !== undefined && newBaseline !== currentBaseline) {
+            updates.baseline = newBaseline;
+          }
+          updates.baselineLoading = false;
+        } else {
+          // Baseline fetch failed
+          if (!currentBaseline) {
+            console.warn('Baseline data not available:', baselineResponse.reason);
+            updates.baseline = null;
+          }
+          updates.baselineLoading = false;
+        }
       }
+      // If we skipped baseline, don't touch baseline or baselineLoading in updates
+      // This prevents unnecessary state changes and re-renders
 
       // Set error message based on failed requests
       const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
@@ -227,10 +265,35 @@ export function usePilotData() {
         pireps: updates.pireps?.length || 0,
         tracks: updates.tracks?.length || 0,
         summary: !!updates.summary,
-        errors: failedRequests.length
+        errors: failedRequests.length,
+        baselineUpdated: 'baseline' in updates,
+        baselineLoadingUpdated: 'baselineLoading' in updates
       });
 
-      setState(prev => ({ ...prev, ...updates }));
+      // Only update state if there are actual changes
+      // This prevents unnecessary re-renders when data hasn't changed
+      setState(prev => {
+        // Check if any meaningful updates exist
+        const hasUpdates = Object.keys(updates).length > 0 && (
+          updates.airportOverview !== undefined ||
+          updates.pireps !== undefined ||
+          updates.tracks !== undefined ||
+          updates.summary !== undefined ||
+          updates.baseline !== undefined ||
+          updates.baselineLoading !== undefined ||
+          updates.loading !== undefined ||
+          updates.error !== undefined ||
+          updates.pirepsMetadata !== undefined ||
+          updates.tracksMetadata !== undefined ||
+          updates.summaryMetadata !== undefined
+        );
+        
+        if (!hasUpdates) {
+          return prev; // No changes, return previous state to prevent re-render
+        }
+        
+        return { ...prev, ...updates };
+      });
     } catch (error) {
       console.error('Failed to load airport data:', error);
       setState(prev => ({
@@ -255,7 +318,7 @@ export function usePilotData() {
     setState(prev => ({
       ...prev,
       selectedAirport: airportId,
-      // Clear previous airport data
+      // Clear previous airport data (but keep baseline if same airport)
       airportOverview: null,
       pireps: [],
       tracks: [],
@@ -263,7 +326,8 @@ export function usePilotData() {
       pirepsMetadata: undefined,
       tracksMetadata: undefined,
       summaryMetadata: undefined,
-      baseline: null,
+      // Only clear baseline if switching to a different airport
+      baseline: airportId === prev.selectedAirport ? prev.baseline : null,
       baselineLoading: false,
     }));
   }, []);
@@ -291,7 +355,9 @@ export function usePilotData() {
   // Load airport data when selection changes
   useEffect(() => {
     if (state.selectedAirport && state.connectionStatus.connected) {
-      loadAirportData(state.selectedAirport);
+      // Skip baseline fetch if we already have it (prevents unnecessary refetches)
+      const skipBaseline = state.baseline !== null;
+      loadAirportData(state.selectedAirport, { skipBaseline });
     }
   }, [state.selectedAirport, state.connectionStatus.connected, loadAirportData]);
 

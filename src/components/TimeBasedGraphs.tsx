@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -106,7 +106,7 @@ function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData
   return timeSlot;
 }
 
-export function TimeBasedGraphs({
+export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   baseline,
   airportCode,
   selectedTime,
@@ -115,12 +115,66 @@ export function TimeBasedGraphs({
 }: TimeBasedGraphsProps) {
   const chartRef = useRef<ChartJS<'line'>>(null);
   const [chartData, setChartData] = useState<any>(null);
+  const prevBaselineRef = useRef<BaselineData | null>(null);
+  const prevSelectedTimeRef = useRef<Date | null>(null);
+  const prevChartDataRef = useRef<any>(null);
+  
+  // Memoize selectedTime to prevent unnecessary recalculations
+  const selectedTimeKey = useMemo(() => {
+    // Round to nearest minute to prevent micro-changes from triggering updates
+    const time = selectedTime.getTime();
+    return Math.floor(time / 60000) * 60000; // Round to nearest minute
+  }, [selectedTime]);
 
   useEffect(() => {
-    if (!baseline || loading) {
-      setChartData(null);
+    // Debug: Log what's triggering this effect
+    const baselineChanged = prevBaselineRef.current !== baseline;
+    const timeChanged = !prevSelectedTimeRef.current || 
+      Math.abs(prevSelectedTimeRef.current.getTime() - selectedTime.getTime()) > 1000;
+    const loadingChanged = loading !== undefined;
+    
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[TimeBasedGraphs] useEffect triggered:', {
+        baselineChanged,
+        timeChanged,
+        loading,
+        baselineRef: baseline !== null,
+        prevBaselineRef: prevBaselineRef.current !== null,
+        selectedTime: selectedTime.toISOString(),
+        prevSelectedTime: prevSelectedTimeRef.current?.toISOString(),
+      });
+    }
+
+    // Don't clear chart data if we're just loading other data (not baseline)
+    // Only clear if baseline is missing or we're actually loading baseline
+    if (!baseline) {
+      if (chartData) {
+        setChartData(null);
+      }
+      prevBaselineRef.current = null;
+      prevSelectedTimeRef.current = null;
       return;
     }
+
+    // Skip recalculation if baseline and selectedTime haven't actually changed
+    // Use reference equality for baseline (should be stable if backend caching works)
+    // Compare using selectedTimeKey (rounded to minute) to prevent micro-updates
+    const timeKeyChanged = !prevSelectedTimeRef.current || 
+      Math.abs(prevSelectedTimeRef.current.getTime() - selectedTimeKey) > 60000; // 1 minute threshold
+    
+    if (!baselineChanged && !timeKeyChanged && chartData) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[TimeBasedGraphs] Skipping recalculation - no meaningful changes');
+      }
+      return; // No need to recalculate - data hasn't meaningfully changed
+    }
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[TimeBasedGraphs] Recalculating chart data');
+    }
+
+    prevBaselineRef.current = baseline;
+    prevSelectedTimeRef.current = new Date(selectedTimeKey);
 
     // Get the airport local date string (not UTC date)
     const dateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
@@ -167,7 +221,7 @@ export function TimeBasedGraphs({
     const matchedTimeSlot = dayTimeSlots.find(ts => ts === timeSlot) || dayTimeSlots[0];
     const currentTimeSlotIndex = alignment.alignedTimeSlots.indexOf(matchedTimeSlot);
 
-    setChartData({
+    const newChartData = {
       labels: alignment.alignedTimeSlots,
       datasets: [
         {
@@ -218,8 +272,24 @@ export function TimeBasedGraphs({
       title: `Traffic Forecast - ${dayOfWeekDisplay}`,
       currentTimeSlotIndex,
       alignedTimeSlots: alignment.alignedTimeSlots,
-    });
-  }, [baseline, airportCode, selectedTime, loading]);
+    };
+
+    // Only update chartData if it's actually different to prevent unnecessary Chart.js updates
+    const shouldUpdate = !prevChartDataRef.current || 
+        JSON.stringify(prevChartDataRef.current.labels) !== JSON.stringify(newChartData.labels) ||
+        JSON.stringify(prevChartDataRef.current.datasets?.[0]?.data) !== JSON.stringify(newChartData.datasets[0]?.data) ||
+        JSON.stringify(prevChartDataRef.current.datasets?.[1]?.data) !== JSON.stringify(newChartData.datasets[1]?.data) ||
+        prevChartDataRef.current.currentTimeSlotIndex !== newChartData.currentTimeSlotIndex;
+    
+    if (shouldUpdate) {
+      setChartData(newChartData);
+      prevChartDataRef.current = newChartData;
+    } else {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[TimeBasedGraphs] Chart data unchanged, skipping update');
+      }
+    }
+  }, [baseline, airportCode, selectedTimeKey]);
 
   if (loading) {
     return (
@@ -379,4 +449,27 @@ export function TimeBasedGraphs({
       </div>
     </div>
   );
-}
+}, (prevProps, nextProps) => {
+  // Custom comparison function: return true if props are equal (skip re-render)
+  // Return false if props differ (re-render)
+  
+  // Baseline reference changed - need to re-render
+  if (prevProps.baseline !== nextProps.baseline) return false;
+  
+  // Airport changed - need to re-render
+  if (prevProps.airportCode !== nextProps.airportCode) return false;
+  
+  // SelectedTime changed significantly (> 1 second) - need to re-render
+  const timeDiff = Math.abs(prevProps.selectedTime.getTime() - nextProps.selectedTime.getTime());
+  if (timeDiff > 1000) return false;
+  
+  // Loading state: only re-render if going from not-loading to loading
+  // Skip re-render when loading completes (prevents flicker)
+  if (prevProps.loading !== nextProps.loading) {
+    // Only re-render if we're starting to load (not finishing)
+    return nextProps.loading === false && prevProps.loading === true;
+  }
+  
+  // All props are effectively equal - skip re-render
+  return true;
+});

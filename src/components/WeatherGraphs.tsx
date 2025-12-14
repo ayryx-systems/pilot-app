@@ -375,7 +375,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   },
                   title: {
                     display: true,
-                    text: 'Miles',
+                    text: 'Status Miles',
                     color: 'rgba(255, 255, 255, 0.6)',
                   },
                 },
