@@ -464,11 +464,16 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   },
                 },
                 y: {
+                  min: 0,
                   grid: {
                     color: 'rgba(255, 255, 255, 0.1)',
                   },
                   ticks: {
                     color: 'rgba(255, 255, 255, 0.6)',
+                    callback: function(value: any) {
+                      if (value === 0) return 'ground';
+                      return value.toString();
+                    },
                   },
                   title: {
                     display: true,
