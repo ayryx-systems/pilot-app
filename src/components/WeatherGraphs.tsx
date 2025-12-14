@@ -315,7 +315,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
               labels: visibilityData.labels,
               datasets: [
                 {
-                  label: 'Visibility (miles)',
+                  label: 'Visibility (km)',
                   data: visibilityData.data,
                   borderColor: 'rgb(59, 130, 246)',
                   backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -345,6 +345,14 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
                 tooltip: {
                   enabled: true,
+                  callbacks: {
+                    label: function(context: any) {
+                      const value = context.parsed.y;
+                      if (value === null || value === undefined) return 'N/A';
+                      if (value >= 10) return '10+ km (unlimited)';
+                      return `${value.toFixed(1)} km`;
+                    },
+                  },
                 },
               },
               scales: {
@@ -375,7 +383,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   },
                   title: {
                     display: true,
-                    text: 'Status Miles',
+                    text: 'Kilometers',
                     color: 'rgba(255, 255, 255, 0.6)',
                   },
                 },
