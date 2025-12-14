@@ -318,31 +318,14 @@ export const SituationOverview = memo(function SituationOverview({
             <div className="h-px flex-1 bg-slate-700"></div>
           </div>
 
-          <div className={`rounded-xl border-2 border-dashed border-slate-600 bg-slate-700/50`}>
-            <button
-              onClick={() => setExpandedWeather(!expandedWeather)}
-              className="w-full flex flex-col p-2 text-left transition-all duration-200 hover:bg-slate-600/30"
-            >
-              <div className="flex items-center justify-between w-full mb-1">
-                <div className="flex items-center">
-                  <Cloud className="w-5 h-5 text-slate-400 mr-2" />
-                  <span className="text-sm font-semibold text-slate-400">Weather Forecast</span>
-                </div>
-                <span className="text-xs text-gray-500">{expandedWeather ? '−' : '+'}</span>
-              </div>
-              <div className="text-xs text-gray-400 leading-tight">
-                TAF available - tap to view forecast graphs
-              </div>
-            </button>
-            {expandedWeather && weather && (
-              <div className="px-2 pb-2 border-t border-slate-600/30">
-                <WeatherGraphs
-                  weather={weather}
-                  selectedTime={currentTime}
-                  isNow={false}
-                />
-              </div>
-            )}
+          <div className={`rounded-xl border-2 border-dashed border-slate-600 bg-slate-700/50 p-2`}>
+            <div className="flex items-center mb-1">
+              <Cloud className="w-5 h-5 text-slate-400 mr-2" />
+              <span className="text-sm font-semibold text-slate-400">Weather Forecast</span>
+            </div>
+            <div className="text-xs text-gray-400 leading-tight">
+              {weather.taf.tafFriendly || 'TAF forecast available - expand Weather above to view graphs'}
+            </div>
           </div>
         </div>
       )}

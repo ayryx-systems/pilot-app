@@ -196,105 +196,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   }
 
   const { metarRaw, tafRaw } = weather.graph;
-  
-  const visibilitySelectedIdx = visibilityData?.selectedIndex ?? -1;
-  const ceilingSelectedIdx = ceilingData?.selectedIndex ?? -1;
-  const windSelectedIdx = windData?.selectedIndex ?? -1;
-  
-  const visibilityPlugins = useMemo(() => [
-    {
-      id: 'highlightSelected',
-      afterDraw: (chart: any) => {
-        const ctx = chart.ctx;
-        const meta = chart.getDatasetMeta(0);
-        
-        if (visibilitySelectedIdx >= 0 && visibilitySelectedIdx < meta.data.length) {
-          const point = meta.data[visibilitySelectedIdx];
-          const x = point.x;
-          const y = point.y;
-          
-          ctx.save();
-          ctx.strokeStyle = 'white';
-          ctx.fillStyle = 'white';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = 'rgb(59, 130, 246)';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-      },
-    },
-  ], [visibilitySelectedIdx]);
-  
-  const ceilingPlugins = useMemo(() => [
-    {
-      id: 'highlightSelected',
-      afterDraw: (chart: any) => {
-        const ctx = chart.ctx;
-        const meta = chart.getDatasetMeta(0);
-        
-        if (ceilingSelectedIdx >= 0 && ceilingSelectedIdx < meta.data.length) {
-          const point = meta.data[ceilingSelectedIdx];
-          const value = chart.data.datasets[0].data[ceilingSelectedIdx];
-          
-          // Only highlight if the value is not null/undefined
-          if (value !== null && value !== undefined) {
-            const x = point.x;
-            const y = point.y;
-            
-            ctx.save();
-            ctx.strokeStyle = 'white';
-            ctx.fillStyle = 'white';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.strokeStyle = 'rgb(59, 130, 246)';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(x, y, 6, 0, Math.PI * 2);
-            ctx.stroke();
-            ctx.restore();
-          }
-        }
-      },
-    },
-  ], [ceilingSelectedIdx]);
-  
-  const windPlugins = useMemo(() => [
-    {
-      id: 'highlightSelected',
-      afterDraw: (chart: any) => {
-        const ctx = chart.ctx;
-        const meta = chart.getDatasetMeta(0);
-        
-        if (windSelectedIdx >= 0 && windSelectedIdx < meta.data.length) {
-          const point = meta.data[windSelectedIdx];
-          const x = point.x;
-          const y = point.y;
-          
-          ctx.save();
-          ctx.strokeStyle = 'white';
-          ctx.fillStyle = 'white';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = 'rgb(59, 130, 246)';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
-        }
-      },
-    },
-  ], [windSelectedIdx]);
 
   return (
     <div className="space-y-4">
@@ -316,7 +217,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-gray-300">Visibility</h3>
-            <span className="text-xs text-gray-500">METAR</span>
           </div>
           <div className="h-48">
             <Line
@@ -330,8 +230,19 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   backgroundColor: 'rgba(59, 130, 246, 0.1)',
                   fill: true,
                   tension: 0.4,
-                  pointRadius: 0,
+                  pointRadius: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 6 : 0;
+                  },
                   pointHoverRadius: 4,
+                  pointBackgroundColor: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                  },
+                  pointBorderColor: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
+                  },
+                  pointBorderWidth: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 2 : 0;
+                  },
                 },
               ],
             }}
@@ -408,7 +319,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 }
               },
             }}
-            plugins={visibilityPlugins}
             />
           </div>
         </div>
@@ -418,7 +328,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-gray-300">Ceiling</h3>
-            <span className="text-xs text-gray-500">METAR</span>
           </div>
           <div className="h-48">
             <Line
@@ -435,8 +344,27 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                     above: 'rgba(59, 130, 246, 0.1)',
                   },
                   tension: 0.4,
-                  pointRadius: 0,
+                  pointRadius: (ctx: any) => {
+                    const value = ceilingData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
+                    return ctx.dataIndex === selectedIndex ? 6 : 0;
+                  },
                   pointHoverRadius: 4,
+                  pointBackgroundColor: (ctx: any) => {
+                    const value = ceilingData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
+                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                  },
+                  pointBorderColor: (ctx: any) => {
+                    const value = ceilingData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
+                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
+                  },
+                  pointBorderWidth: (ctx: any) => {
+                    const value = ceilingData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
+                    return ctx.dataIndex === selectedIndex ? 2 : 0;
+                  },
                   spanGaps: false,
                 },
               ],
@@ -505,7 +433,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
               },
             }}
-            plugins={ceilingPlugins}
             />
           </div>
         </div>
@@ -515,7 +442,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         <div>
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-gray-300">Wind Speed</h3>
-            <span className="text-xs text-gray-500">METAR</span>
           </div>
           <div className="h-48">
             <Line
@@ -529,8 +455,19 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   backgroundColor: 'rgba(59, 130, 246, 0.1)',
                   fill: true,
                   tension: 0.4,
-                  pointRadius: 0,
+                  pointRadius: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 6 : 0;
+                  },
                   pointHoverRadius: 4,
+                  pointBackgroundColor: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                  },
+                  pointBorderColor: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
+                  },
+                  pointBorderWidth: (ctx: any) => {
+                    return ctx.dataIndex === selectedIndex ? 2 : 0;
+                  },
                 },
               ],
             }}
@@ -586,7 +523,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
               },
             }}
-            plugins={windPlugins}
             />
           </div>
         </div>
