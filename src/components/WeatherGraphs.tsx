@@ -380,6 +380,10 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   ticks: {
                     color: 'rgba(255, 255, 255, 0.6)',
                     stepSize: 2,
+                    callback: function(value: any) {
+                      if (value === 10) return '10+';
+                      return value.toString();
+                    },
                   },
                   title: {
                     display: true,
