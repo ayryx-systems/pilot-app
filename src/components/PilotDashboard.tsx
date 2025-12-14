@@ -403,9 +403,10 @@ export function PilotDashboard() {
                 selectedTime={selectedTime}
               />
 
-              {/* Time-Based Graphs */}
+              {/* Time-Based Graphs - Traffic Forecast */}
               {selectedAirport && baseline && (
                 <TimeBasedGraphs
+                  key={`traffic-${selectedAirport}-${selectedTime.getTime()}`}
                   baseline={baseline}
                   airportCode={selectedAirport}
                   selectedTime={selectedTime}
