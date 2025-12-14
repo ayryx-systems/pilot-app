@@ -240,22 +240,27 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         
         if (ceilingSelectedIdx >= 0 && ceilingSelectedIdx < meta.data.length) {
           const point = meta.data[ceilingSelectedIdx];
-          const x = point.x;
-          const y = point.y;
+          const value = chart.data.datasets[0].data[ceilingSelectedIdx];
           
-          ctx.save();
-          ctx.strokeStyle = 'white';
-          ctx.fillStyle = 'white';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.strokeStyle = 'rgb(59, 130, 246)';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(x, y, 6, 0, Math.PI * 2);
-          ctx.stroke();
-          ctx.restore();
+          // Only highlight if the value is not null/undefined
+          if (value !== null && value !== undefined) {
+            const x = point.x;
+            const y = point.y;
+            
+            ctx.save();
+            ctx.strokeStyle = 'white';
+            ctx.fillStyle = 'white';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = 'rgb(59, 130, 246)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(x, y, 6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+          }
         }
       },
     },
@@ -425,10 +430,14 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   data: ceilingData.data,
                   borderColor: 'rgb(59, 130, 246)',
                   backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  fill: true,
+                  fill: {
+                    target: 'origin',
+                    above: 'rgba(59, 130, 246, 0.1)',
+                  },
                   tension: 0.4,
                   pointRadius: 0,
                   pointHoverRadius: 4,
+                  spanGaps: false,
                 },
               ],
             }}
@@ -449,6 +458,15 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
                 tooltip: {
                   enabled: true,
+                  callbacks: {
+                    label: function(context: any) {
+                      const value = context.parsed.y;
+                      if (value === null || value === undefined) {
+                        return 'No ceiling (clear skies)';
+                      }
+                      return `${value.toLocaleString()} ft`;
+                    },
+                  },
                 },
               },
               scales: {
