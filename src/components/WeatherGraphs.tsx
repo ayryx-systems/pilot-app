@@ -318,8 +318,9 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                       },
                       scales: {
                         x: {
-                          display: isBottom,
+                          display: true,
                           grid: {
+                            display: true,
                             color: 'rgba(255, 255, 255, 0.1)',
                             drawBorder: isBottom,
                           },
