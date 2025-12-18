@@ -77,7 +77,7 @@ function getSeasonalAverageData(baseline: BaselineData | null, season: 'summer' 
   }
 
   const timeSlots = Object.keys(seasonalData.seasonalTimeSlots).sort();
-  const counts = timeSlots.map(ts => seasonalData.seasonalTimeSlots![ts].averageArrivals || 0);
+  const counts = timeSlots.map(ts => seasonalData.seasonalTimeSlots![ts].averageCount || seasonalData.seasonalTimeSlots![ts].averageArrivals || 0);
   const sampleSizes = timeSlots.map(ts => seasonalData.seasonalTimeSlots![ts].sampleSize?.days || 0);
 
   return { timeSlots, counts, sampleSizes, season };
@@ -139,7 +139,7 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
     }
 
     const dayTimeSlots = Object.keys(dayData).sort();
-    const dayCounts = dayTimeSlots.map(ts => dayData[ts].averageArrivals || 0);
+    const dayCounts = dayTimeSlots.map(ts => dayData[ts].averageCount || dayData[ts].averageArrivals || 0);
     const daySampleSizes = dayTimeSlots.map(ts => dayData[ts].sampleSize?.days || 0);
 
     const seasonalAvg = getSeasonalAverageData(baseline, season);

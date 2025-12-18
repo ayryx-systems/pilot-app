@@ -364,6 +364,7 @@ export interface OSMResponse {
 
 export interface BaselineTimeSlot {
   averageArrivals?: number;
+  averageCount?: number;
   medianTimeFrom50nm?: number;
   sampleSize?: {
     days: number;
