@@ -1136,7 +1136,7 @@ export function PilotMap({
 
             // Create image overlay that scales with zoom
             const imageOverlay = L.imageOverlay(staticWeatherUrl, bounds, {
-              opacity: 0.8, // Increased from 0.7 for better visibility
+              opacity: 0.3, // Reduced opacity for better map visibility
               interactive: false,
               crossOrigin: 'anonymous',
               alt: 'NOAA Weather Radar',
@@ -1148,7 +1148,7 @@ export function PilotMap({
               console.log('[🌦️ WEATHER API] ✅ Static weather image loaded successfully - NO MORE REQUESTS NEEDED!');
               console.log('[🌦️ WEATHER API] 🎯 Weather overlay should now be VISIBLE across entire US');
               console.log('[🌦️ WEATHER API] 📊 Image bounds:', bounds);
-              console.log('[🌦️ WEATHER API] 🎨 Opacity:', 0.8);
+              console.log('[🌦️ WEATHER API] 🎨 Opacity:', 0.3);
             });
 
             imageOverlay.on('error', (e) => {
