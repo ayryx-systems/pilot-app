@@ -2362,10 +2362,20 @@ export function PilotMap({
     console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
     
     mapInstance.eachLayer((layer: any) => {
-      if (layer._runwayLabel) {
+      if (layer._runwayLabel || layer._runwayPolyline) {
         mapInstance.removeLayer(layer);
       }
     });
+    
+    const getRunwayWeight = (zoom: number): number => {
+      if (zoom <= 9) return 2;
+      if (zoom <= 11) return 3;
+      if (zoom <= 13) return 5;
+      if (zoom <= 15) return 7;
+      return 8;
+    };
+    
+    const runwayWeight = getRunwayWeight(currentZoom);
     
     osmData.runways.forEach((way: any) => {
       if (way.geometry && way.geometry.length > 1) {
@@ -2380,11 +2390,12 @@ export function PilotMap({
         
         const runway = Leaflet.polyline(coordinates, {
           color: '#0ea5e9',
-          weight: 8,
+          weight: runwayWeight,
           opacity: 1.0,
           interactive: false,
           pane: 'overlayPane'
         });
+        (runway as any)._runwayPolyline = true;
         runway.addTo(mapInstance);
         runway.bringToFront();
 
