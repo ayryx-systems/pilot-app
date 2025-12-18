@@ -197,6 +197,12 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
   const { metarRaw, tafRaw } = weather.graph;
 
+  const graphs = [
+    { data: visibilityData, title: 'Visibility', yTitle: 'Kilometers', isBottom: false },
+    { data: ceilingData, title: 'Ceiling', yTitle: 'Feet', isBottom: false },
+    { data: windData, title: 'Wind Speed', yTitle: 'Knots', isBottom: true },
+  ].filter(g => g.data !== null);
+
   return (
     <div className="space-y-4">
       {metarRaw && (
@@ -213,343 +219,169 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         </div>
       )}
 
-      {visibilityData && (
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-gray-300">Visibility</h3>
-          </div>
-          <div className="h-48">
-            <Line
-            data={{
-              labels: visibilityData.labels,
-              datasets: [
-                {
-                  label: 'Visibility (km)',
-                  data: visibilityData.data,
-                  borderColor: 'rgb(59, 130, 246)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  fill: true,
-                  tension: 0.4,
-                  pointRadius: (ctx: any) => {
-                    const value = visibilityData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 6 : 0;
-                  },
-                  pointHoverRadius: 4,
-                  pointBackgroundColor: (ctx: any) => {
-                    const value = visibilityData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                  },
-                  pointBorderColor: (ctx: any) => {
-                    const value = visibilityData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
-                  },
-                  pointBorderWidth: (ctx: any) => {
-                    const value = visibilityData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 2 : 0;
-                  },
-                  spanGaps: false,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: {
-                duration: 0,
-              },
-              transitions: {
-                active: {
-                  animation: {
-                    duration: 0,
-                  },
-                },
-              },
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: true,
-                  callbacks: {
-                    label: function(context: any) {
-                      const value = context.parsed.y;
-                      if (value === null || value === undefined) return 'N/A';
-                      if (value >= 10) return '10+ km (unlimited)';
-                      return `${value.toFixed(1)} km`;
-                    },
-                  },
-                },
-              },
-              scales: {
-                x: {
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    maxRotation: 0,
-                    autoSkip: true,
-                    maxTicksLimit: 8,
-                    callback: function(value: any, index: number) {
-                      const label = this.getLabelForValue(value);
-                      return label || undefined;
-                    },
-                  },
-                },
-                y: {
-                  min: 0,
-                  max: 10,
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    stepSize: 2,
-                    callback: function(value: any) {
-                      if (value === 10) return '10+';
-                      return value.toString();
-                    },
-                  },
-                  title: {
-                    display: true,
-                    text: 'Kilometers',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                  },
-                },
-              },
-              onHover: (event, activeElements) => {
-                const canvas = event.native?.target as HTMLCanvasElement;
-                if (canvas) {
-                  canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-                }
-              },
-            }}
-            />
-          </div>
-        </div>
-      )}
+      {graphs.length > 0 && (
+        <div className="space-y-1">
+          {graphs.map((graph, index) => {
+            const isBottom = index === graphs.length - 1;
+            const isVisibility = graph.title === 'Visibility';
+            const isCeiling = graph.title === 'Ceiling';
+            const isWind = graph.title === 'Wind Speed';
 
-      {ceilingData && (
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-gray-300">Ceiling</h3>
-          </div>
-          <div className="h-36">
-            <Line
-            data={{
-              labels: ceilingData.labels,
-              datasets: [
-                {
-                  label: 'Ceiling (ft)',
-                  data: ceilingData.data,
-                  borderColor: 'rgb(59, 130, 246)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  fill: {
-                    target: 'origin',
-                    above: 'rgba(59, 130, 246, 0.1)',
-                  },
-                  tension: 0.4,
-                  pointRadius: (ctx: any) => {
-                    const value = ceilingData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 6 : 0;
-                  },
-                  pointHoverRadius: 4,
-                  pointBackgroundColor: (ctx: any) => {
-                    const value = ceilingData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                  },
-                  pointBorderColor: (ctx: any) => {
-                    const value = ceilingData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
-                  },
-                  pointBorderWidth: (ctx: any) => {
-                    const value = ceilingData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 2 : 0;
-                  },
-                  spanGaps: false,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: { duration: 0 },
-              transitions: {
-                active: {
-                  animation: {
-                    duration: 0,
-                  },
-                },
-              },
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: true,
-                  callbacks: {
-                    label: function(context: any) {
-                      const value = context.parsed.y;
-                      if (value === null || value === undefined) {
-                        return 'No ceiling (clear skies)';
-                      }
-                      return `${value.toLocaleString()} ft`;
-                    },
-                  },
-                },
-              },
-              scales: {
-                x: {
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    maxRotation: 0,
-                    autoSkip: true,
-                    maxTicksLimit: 8,
-                    callback: function(value: any, index: number) {
-                      const label = this.getLabelForValue(value);
-                      return label || undefined;
-                    },
-                  },
-                },
-                y: {
-                  min: 0,
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    callback: function(value: any) {
-                      if (value === 0) return 'ground';
-                      return value.toString();
-                    },
-                  },
-                  title: {
-                    display: true,
-                    text: 'Feet',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                  },
-                },
-              },
-            }}
-            />
-          </div>
-        </div>
-      )}
-
-      {windData && (
-        <div>
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="text-sm font-semibold text-gray-300">Wind Speed</h3>
-          </div>
-          <div className="h-36">
-            <Line
-            data={{
-              labels: windData.labels,
-              datasets: [
-                {
-                  label: 'Wind Speed (knots)',
-                  data: windData.data,
-                  borderColor: 'rgb(59, 130, 246)',
-                  backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                  fill: true,
-                  tension: 0.4,
-                  pointRadius: (ctx: any) => {
-                    const value = windData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 6 : 0;
-                  },
-                  pointHoverRadius: 4,
-                  pointBackgroundColor: (ctx: any) => {
-                    const value = windData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                  },
-                  pointBorderColor: (ctx: any) => {
-                    const value = windData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 'transparent';
-                    return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
-                  },
-                  pointBorderWidth: (ctx: any) => {
-                    const value = windData.data[ctx.dataIndex];
-                    if (value === null || value === undefined) return 0;
-                    return ctx.dataIndex === selectedIndex ? 2 : 0;
-                  },
-                  spanGaps: false,
-                },
-              ],
-            }}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              animation: {
-                duration: 0,
-              },
-              transitions: {
-                active: {
-                  animation: {
-                    duration: 0,
-                  },
-                },
-              },
-              plugins: {
-                legend: {
-                  display: false,
-                },
-                tooltip: {
-                  enabled: true,
-                  callbacks: {
-                    label: function(context: any) {
-                      const value = context.parsed.y;
-                      if (value === null || value === undefined) return 'N/A';
-                      return `${value.toFixed(1)} knots`;
-                    },
-                  },
-                },
-              },
-              scales: {
-                x: {
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    maxRotation: 0,
-                    autoSkip: true,
-                    maxTicksLimit: 8,
-                    callback: function(value: any, index: number) {
-                      const label = this.getLabelForValue(value);
-                      return label || undefined;
-                    },
-                  },
-                },
-                y: {
-                  grid: {
-                    color: 'rgba(255, 255, 255, 0.1)',
-                  },
-                  ticks: {
-                    color: 'rgba(255, 255, 255, 0.6)',
-                  },
-                  title: {
-                    display: true,
-                    text: 'Knots',
-                    color: 'rgba(255, 255, 255, 0.6)',
-                  },
-                },
-              },
-            }}
-            />
-          </div>
+            return (
+              <div key={graph.title} className={isBottom ? '' : 'mb-0'}>
+                <div className="flex justify-between items-center mb-1">
+                  <h3 className="text-xs font-semibold text-gray-300">{graph.title}</h3>
+                </div>
+                <div className="h-32">
+                  <Line
+                    data={{
+                      labels: graph.data.labels,
+                      datasets: [
+                        {
+                          label: `${graph.title} (${graph.yTitle.toLowerCase()})`,
+                          data: graph.data.data,
+                          borderColor: 'rgb(59, 130, 246)',
+                          backgroundColor: isCeiling 
+                            ? 'rgba(59, 130, 246, 0.1)'
+                            : 'rgba(59, 130, 246, 0.1)',
+                          fill: isCeiling 
+                            ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' }
+                            : true,
+                          tension: 0.4,
+                          pointRadius: (ctx: any) => {
+                            const value = graph.data.data[ctx.dataIndex];
+                            if (value === null || value === undefined) return 0;
+                            return ctx.dataIndex === selectedIndex ? 6 : 0;
+                          },
+                          pointHoverRadius: 4,
+                          pointBackgroundColor: (ctx: any) => {
+                            const value = graph.data.data[ctx.dataIndex];
+                            if (value === null || value === undefined) return 'transparent';
+                            return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                          },
+                          pointBorderColor: (ctx: any) => {
+                            const value = graph.data.data[ctx.dataIndex];
+                            if (value === null || value === undefined) return 'transparent';
+                            return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
+                          },
+                          pointBorderWidth: (ctx: any) => {
+                            const value = graph.data.data[ctx.dataIndex];
+                            if (value === null || value === undefined) return 0;
+                            return ctx.dataIndex === selectedIndex ? 2 : 0;
+                          },
+                          spanGaps: false,
+                        },
+                      ],
+                    }}
+                    options={{
+                      responsive: true,
+                      maintainAspectRatio: false,
+                      animation: { duration: 0 },
+                      transitions: {
+                        active: {
+                          animation: { duration: 0 },
+                        },
+                      },
+                      plugins: {
+                        legend: {
+                          display: false,
+                        },
+                        tooltip: {
+                          enabled: true,
+                          callbacks: {
+                            label: function(context: any) {
+                              const value = context.parsed.y;
+                              if (value === null || value === undefined) {
+                                if (isCeiling) return 'No ceiling (clear skies)';
+                                return 'N/A';
+                              }
+                              if (isVisibility) {
+                                if (value >= 10) return '10+ km (unlimited)';
+                                return `${value.toFixed(1)} km`;
+                              }
+                              if (isCeiling) {
+                                return `${value.toLocaleString()} ft`;
+                              }
+                              if (isWind) {
+                                return `${value.toFixed(1)} knots`;
+                              }
+                              return value.toString();
+                            },
+                          },
+                        },
+                      },
+                      layout: {
+                        padding: {
+                          left: 0,
+                          right: 0,
+                        },
+                      },
+                      scales: {
+                        x: {
+                          display: isBottom,
+                          grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                            drawBorder: isBottom,
+                          },
+                          ticks: {
+                            display: isBottom,
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                            callback: function(value: any, index: number) {
+                              const label = this.getLabelForValue(value);
+                              return label || undefined;
+                            },
+                          },
+                        },
+                        y: {
+                          min: isVisibility ? 0 : undefined,
+                          max: isVisibility ? 10 : undefined,
+                          grid: {
+                            color: 'rgba(255, 255, 255, 0.1)',
+                            drawBorder: false,
+                          },
+                          ticks: {
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            stepSize: isVisibility ? 2 : undefined,
+                            callback: function(value: any) {
+                              if (isVisibility) {
+                                if (value === 10) return '10+';
+                                return value.toString();
+                              }
+                              if (isCeiling) {
+                                if (value === 0) return 'ground';
+                                return value.toString();
+                              }
+                              return value.toString();
+                            },
+                          },
+                          title: {
+                            display: true,
+                            text: graph.yTitle,
+                            color: 'rgba(255, 255, 255, 0.6)',
+                            font: {
+                              size: 10,
+                            },
+                          },
+                          afterFit: function(scaleInstance: any) {
+                            scaleInstance.width = 70;
+                          },
+                        },
+                      },
+                      onHover: (event, activeElements) => {
+                        const canvas = event.native?.target as HTMLCanvasElement;
+                        if (canvas) {
+                          canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
+                        }
+                      },
+                    }}
+                  />
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
