@@ -338,7 +338,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-gray-300">Ceiling</h3>
           </div>
-          <div className="h-48">
+          <div className="h-36">
             <Line
             data={{
               labels: ceilingData.labels,
@@ -452,7 +452,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
           <div className="flex justify-between items-center mb-2">
             <h3 className="text-sm font-semibold text-gray-300">Wind Speed</h3>
           </div>
-          <div className="h-48">
+          <div className="h-36">
             <Line
             data={{
               labels: windData.labels,
