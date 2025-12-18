@@ -2410,12 +2410,17 @@ export function PilotMap({
               icon: Leaflet.divIcon({
                 className: "runway-label",
                 html: `<div style="
-                  color: #000000; font-size: 10px; font-weight: 700;
-                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                  background: rgba(255,255,255,0.95); padding: 1px 3px;
-                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                  white-space: nowrap; text-align: center; line-height: 1;
-                  min-width: 16px; display: inline-block; z-index: 3000;
+                  color: #ffffff; font-size: 10px; font-weight: 700;
+                  text-shadow: 
+                    -1px -1px 0 #000000,
+                    1px -1px 0 #000000,
+                    -1px 1px 0 #000000,
+                    1px 1px 0 #000000,
+                    0 0 2px rgba(0,0,0,0.8);
+                  background: rgba(0,0,0,0.3); padding: 1px 2px;
+                  border-radius: 1px; white-space: nowrap; 
+                  text-align: center; line-height: 1;
+                  display: inline-block; z-index: 3000;
                 ">${runwayNumbers[0]}</div>`,
                 iconSize: [20, 14], iconAnchor: [10, 14]
               }),
@@ -2428,12 +2433,17 @@ export function PilotMap({
               icon: Leaflet.divIcon({
                 className: "runway-label",
                 html: `<div style="
-                  color: #000000; font-size: 10px; font-weight: 700;
-                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                  background: rgba(255,255,255,0.95); padding: 1px 3px;
-                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                  white-space: nowrap; text-align: center; line-height: 1;
-                  min-width: 16px; display: inline-block; z-index: 3000;
+                  color: #ffffff; font-size: 10px; font-weight: 700;
+                  text-shadow: 
+                    -1px -1px 0 #000000,
+                    1px -1px 0 #000000,
+                    -1px 1px 0 #000000,
+                    1px 1px 0 #000000,
+                    0 0 2px rgba(0,0,0,0.8);
+                  background: rgba(0,0,0,0.3); padding: 1px 2px;
+                  border-radius: 1px; white-space: nowrap; 
+                  text-align: center; line-height: 1;
+                  display: inline-block; z-index: 3000;
                 ">${runwayNumbers[1]}</div>`,
                 iconSize: [20, 14], iconAnchor: [10, 14]
               }),
