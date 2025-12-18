@@ -420,7 +420,7 @@ export function PilotMap({
         // runways: DISABLED - now using OSM data
         dmeRings: L.layerGroup().addTo(map),
         waypoints: waypointsGroup,
-        // extendedCenterlines: DISABLED - now using OSM data
+        extendedCenterlines: L.layerGroup().addTo(map),
         pireps: pirepsGroup,
         tracks: tracksGroup,
         osm: L.layerGroup().addTo(map),
@@ -726,96 +726,7 @@ export function PilotMap({
     updateWaypoints();
   }, [mapInstance, displayOptions.showWaypoints, airportConfig]);
 
-  // Update extended centerlines display
-  useEffect(() => {
-    if (!mapInstance) return;
-    // Extended centerlines are now handled by OSM data, no need to process FAA data
-    return;
-
-    const updateExtendedCenterlines = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
-
-      // Clear existing extended centerlines
-      layerGroupsRef.current.extendedCenterlines.clearLayers();
-
-      if (displayOptions.showExtendedCenterlines) {
-        // DISABLED: Using OSM data instead of FAA runway calculations
-        // Extended centerlines will be handled by OSM features
-        return; // Early return to skip FAA extended centerline rendering
-        
-        // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
-        const runways = airportConfig?.runways || airportData?.runways || [];
-
-        runways.forEach((runway: any) => {
-          if (runway.threshold && runway.oppositeEnd) {
-            // Calculate extended centerline points (extend 20 NM from each end)
-            const extensionDistanceNm = 20;
-            const extensionDistanceMeters = extensionDistanceNm * 1852;
-
-            // Calculate runway bearing
-            const lat1 = runway.threshold.lat * Math.PI / 180;
-            const lon1 = runway.threshold.lon * Math.PI / 180;
-            const lat2 = runway.oppositeEnd.lat * Math.PI / 180;
-            const lon2 = runway.oppositeEnd.lon * Math.PI / 180;
-
-            const deltaLon = lon2 - lon1;
-            const y = Math.sin(deltaLon) * Math.cos(lat2);
-            const x = Math.cos(lat1) * Math.sin(lat2) - Math.sin(lat1) * Math.cos(lat2) * Math.cos(deltaLon);
-            const bearing = Math.atan2(y, x);
-
-            // Extend from threshold
-            const extLat1 = runway.threshold.lat - (extensionDistanceMeters / 111320) * Math.cos(bearing);
-            const extLon1 = runway.threshold.lon - (extensionDistanceMeters / (111320 * Math.cos(runway.threshold.lat * Math.PI / 180))) * Math.sin(bearing);
-
-            // Extend from opposite end
-            const extLat2 = runway.oppositeEnd.lat + (extensionDistanceMeters / 111320) * Math.cos(bearing);
-            const extLon2 = runway.oppositeEnd.lon + (extensionDistanceMeters / (111320 * Math.cos(runway.oppositeEnd.lat * Math.PI / 180))) * Math.sin(bearing);
-
-            // Draw the actual runway line that connects the thresholds
-            const runwayLine = L.polyline([
-              [runway.threshold.lat, runway.threshold.lon],
-              [runway.oppositeEnd.lat, runway.oppositeEnd.lon]
-            ], {
-              color: '#3b82f6', // Blue color
-              weight: 2,
-              opacity: 0.9,
-            });
-            layerGroupsRef.current.extendedCenterlines.addLayer(runwayLine);
-
-            // Create extended centerline for first direction (from threshold outward)
-            const centerline1 = L.polyline([
-              [runway.threshold.lat, runway.threshold.lon],
-              [extLat1, extLon1]
-            ], {
-              color: '#06b6d4', // Bright cyan-blue for extended centerlines
-              weight: 2,
-              opacity: 0.7,
-              dashArray: '10,10', // Longer dashes for distinction from approaches
-              interactive: false,
-            });
-
-            // Create extended centerline for opposite direction (from opposite end outward)
-            const centerline2 = L.polyline([
-              [runway.oppositeEnd.lat, runway.oppositeEnd.lon],
-              [extLat2, extLon2]
-            ], {
-              color: '#06b6d4', // Bright cyan-blue for extended centerlines
-              weight: 2,
-              opacity: 0.7,
-              dashArray: '10,10', // Longer dashes for distinction from approaches
-              interactive: false,
-            });
-
-            layerGroupsRef.current.extendedCenterlines.addLayer(centerline1);
-            layerGroupsRef.current.extendedCenterlines.addLayer(centerline2);
-          }
-        });
-      }
-    };
-
-    updateExtendedCenterlines();
-  }, [mapInstance, displayOptions.showExtendedCenterlines, airportConfig, airportData]);
+  // Extended centerlines are now handled in the OSM features update effect
 
   // Update PIREP markers
   useEffect(() => {
@@ -2818,10 +2729,83 @@ export function PilotMap({
           }
         }
       });
+
+      // 3. Draw extended centerlines for runways (if enabled)
+      if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
+        layerGroupsRef.current.extendedCenterlines.clearLayers();
+        
+        osmData.runways.forEach((runway) => {
+          try {
+            const coordinates = runway.geometry || [];
+            if (coordinates.length < 2) {
+              return;
+            }
+
+            const startPoint = coordinates[0];
+            const endPoint = coordinates[coordinates.length - 1];
+
+            if (!startPoint || !endPoint || !startPoint.lat || !startPoint.lon || !endPoint.lat || !endPoint.lon) {
+              return;
+            }
+
+            const dx = endPoint.lat - startPoint.lat;
+            const dy = endPoint.lon - startPoint.lon;
+            const length = Math.sqrt(dx * dx + dy * dy);
+
+            if (length === 0) {
+              return;
+            }
+
+            const extendedDistance = 30 * 1.852;
+            const kmToDegrees = 1 / 111;
+
+            const extendedStartLat = startPoint.lat - (dx / length) * extendedDistance * kmToDegrees;
+            const extendedStartLon = startPoint.lon - (dy / length) * extendedDistance * kmToDegrees;
+
+            const extendedEndLat = endPoint.lat + (dx / length) * extendedDistance * kmToDegrees;
+            const extendedEndLon = endPoint.lon + (dy / length) * extendedDistance * kmToDegrees;
+
+            const centerLine1 = L.polyline(
+              [
+                [startPoint.lat, startPoint.lon],
+                [extendedStartLat, extendedStartLon],
+              ],
+              {
+                color: "#9ca3af",
+                weight: 2,
+                opacity: 0.8,
+                dashArray: "8,4",
+                interactive: false,
+              }
+            );
+
+            const centerLine2 = L.polyline(
+              [
+                [endPoint.lat, endPoint.lon],
+                [extendedEndLat, extendedEndLon],
+              ],
+              {
+                color: "#9ca3af",
+                weight: 2,
+                opacity: 0.8,
+                dashArray: "8,4",
+                interactive: false,
+              }
+            );
+
+            layerGroupsRef.current.extendedCenterlines.addLayer(centerLine1);
+            layerGroupsRef.current.extendedCenterlines.addLayer(centerLine2);
+          } catch (error) {
+            console.warn("Error drawing extended centerline:", error, runway);
+          }
+        });
+      } else if (layerGroupsRef.current.extendedCenterlines) {
+        layerGroupsRef.current.extendedCenterlines.clearLayers();
+      }
     };
 
     updateOSMFeatures();
-  }, [mapInstance, displayOptions.showOSMFeatures, osmData]);
+  }, [mapInstance, displayOptions.showOSMFeatures, displayOptions.showExtendedCenterlines, osmData]);
 
   // Redraw OSM features when zoom changes
   useEffect(() => {
@@ -3190,6 +3174,79 @@ export function PilotMap({
             }
           }
         });
+
+        // 3. Draw extended centerlines for runways (if enabled)
+        if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
+          layerGroupsRef.current.extendedCenterlines.clearLayers();
+          
+          osmData.runways.forEach((runway) => {
+            try {
+              const coordinates = runway.geometry || [];
+              if (coordinates.length < 2) {
+                return;
+              }
+
+              const startPoint = coordinates[0];
+              const endPoint = coordinates[coordinates.length - 1];
+
+              if (!startPoint || !endPoint || !startPoint.lat || !startPoint.lon || !endPoint.lat || !endPoint.lon) {
+                return;
+              }
+
+              const dx = endPoint.lat - startPoint.lat;
+              const dy = endPoint.lon - startPoint.lon;
+              const length = Math.sqrt(dx * dx + dy * dy);
+
+              if (length === 0) {
+                return;
+              }
+
+              const extendedDistance = 30 * 1.852;
+              const kmToDegrees = 1 / 111;
+
+              const extendedStartLat = startPoint.lat - (dx / length) * extendedDistance * kmToDegrees;
+              const extendedStartLon = startPoint.lon - (dy / length) * extendedDistance * kmToDegrees;
+
+              const extendedEndLat = endPoint.lat + (dx / length) * extendedDistance * kmToDegrees;
+              const extendedEndLon = endPoint.lon + (dy / length) * extendedDistance * kmToDegrees;
+
+              const centerLine1 = L.polyline(
+                [
+                  [startPoint.lat, startPoint.lon],
+                  [extendedStartLat, extendedStartLon],
+                ],
+                {
+                  color: "#9ca3af",
+                  weight: 2,
+                  opacity: 0.8,
+                  dashArray: "8,4",
+                  interactive: false,
+                }
+              );
+
+              const centerLine2 = L.polyline(
+                [
+                  [endPoint.lat, endPoint.lon],
+                  [extendedEndLat, extendedEndLon],
+                ],
+                {
+                  color: "#9ca3af",
+                  weight: 2,
+                  opacity: 0.8,
+                  dashArray: "8,4",
+                  interactive: false,
+                }
+              );
+
+              layerGroupsRef.current.extendedCenterlines.addLayer(centerLine1);
+              layerGroupsRef.current.extendedCenterlines.addLayer(centerLine2);
+            } catch (error) {
+              console.warn("Error drawing extended centerline:", error, runway);
+            }
+          });
+        } else if (layerGroupsRef.current.extendedCenterlines) {
+          layerGroupsRef.current.extendedCenterlines.clearLayers();
+        }
       };
 
       updateOSMFeatures();
@@ -3202,7 +3259,7 @@ export function PilotMap({
     return () => {
       mapInstance.off('zoomend', handleZoomEnd);
     };
-  }, [mapInstance, displayOptions.showOSMFeatures, osmData]);
+  }, [mapInstance, displayOptions.showOSMFeatures, displayOptions.showExtendedCenterlines, osmData]);
 
   // Handle recenter events (similar to ATC dashboard)
   useEffect(() => {
