@@ -2358,6 +2358,163 @@ export function PilotMap({
     };
   }, [mapInstance, displayOptions.showMetars]);
 
+  const renderRunways = (mapInstance: L.Map, osmData: any, currentZoom: number, Leaflet: typeof L) => {
+    console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
+    
+    mapInstance.eachLayer((layer: any) => {
+      if (layer._runwayLabel) {
+        mapInstance.removeLayer(layer);
+      }
+    });
+    
+    osmData.runways.forEach((way: any) => {
+      if (way.geometry && way.geometry.length > 1) {
+        const coordinates = way.geometry.map((point: any) => {
+          if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
+            return null;
+          }
+          return [point.lat, point.lon] as [number, number];
+        }).filter((coord: any) => coord !== null);
+        
+        if (coordinates.length < 2) return;
+        
+        const runway = Leaflet.polyline(coordinates, {
+          color: '#0ea5e9',
+          weight: 8,
+          opacity: 1.0,
+          interactive: false,
+          pane: 'overlayPane'
+        });
+        runway.addTo(mapInstance);
+        runway.bringToFront();
+
+        if (currentZoom >= 11) {
+          const runwayRef = way.tags?.ref;
+          if (runwayRef && runwayRef.includes('/')) {
+            const runwayNumbers = runwayRef.split('/');
+            const startPoint = coordinates[0];
+            const endPoint = coordinates[coordinates.length - 1];
+            
+            const startLabel = Leaflet.marker(startPoint, {
+              icon: Leaflet.divIcon({
+                className: "runway-label",
+                html: `<div style="
+                  color: #000000; font-size: 10px; font-weight: 700;
+                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                  background: rgba(255,255,255,0.95); padding: 1px 3px;
+                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                  white-space: nowrap; text-align: center; line-height: 1;
+                  min-width: 16px; display: inline-block; z-index: 3000;
+                ">${runwayNumbers[0]}</div>`,
+                iconSize: [20, 14], iconAnchor: [10, 14]
+              }),
+              interactive: false, pane: 'popupPane'
+            });
+            startLabel.addTo(mapInstance);
+            (startLabel as any)._runwayLabel = true;
+
+            const endLabel = Leaflet.marker(endPoint, {
+              icon: Leaflet.divIcon({
+                className: "runway-label",
+                html: `<div style="
+                  color: #000000; font-size: 10px; font-weight: 700;
+                  text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
+                  background: rgba(255,255,255,0.95); padding: 1px 3px;
+                  border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
+                  white-space: nowrap; text-align: center; line-height: 1;
+                  min-width: 16px; display: inline-block; z-index: 3000;
+                ">${runwayNumbers[1]}</div>`,
+                iconSize: [20, 14], iconAnchor: [10, 14]
+              }),
+              interactive: false, pane: 'popupPane'
+            });
+            endLabel.addTo(mapInstance);
+            (endLabel as any)._runwayLabel = true;
+          }
+        }
+      }
+    });
+  };
+
+  const renderExtendedCenterlines = (
+    osmData: any,
+    displayOptions: any,
+    layerGroupsRef: React.MutableRefObject<Record<string, L.LayerGroup>>,
+    Leaflet: typeof L
+  ) => {
+    if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
+      layerGroupsRef.current.extendedCenterlines.clearLayers();
+      
+      osmData.runways.forEach((runway: any) => {
+        try {
+          const coordinates = runway.geometry || [];
+          if (coordinates.length < 2) {
+            return;
+          }
+
+          const startPoint = coordinates[0];
+          const endPoint = coordinates[coordinates.length - 1];
+
+          if (!startPoint || !endPoint || !startPoint.lat || !startPoint.lon || !endPoint.lat || !endPoint.lon) {
+            return;
+          }
+
+          const dx = endPoint.lat - startPoint.lat;
+          const dy = endPoint.lon - startPoint.lon;
+          const length = Math.sqrt(dx * dx + dy * dy);
+
+          if (length === 0) {
+            return;
+          }
+
+          const extendedDistance = 30 * 1.852;
+          const kmToDegrees = 1 / 111;
+
+          const extendedStartLat = startPoint.lat - (dx / length) * extendedDistance * kmToDegrees;
+          const extendedStartLon = startPoint.lon - (dy / length) * extendedDistance * kmToDegrees;
+
+          const extendedEndLat = endPoint.lat + (dx / length) * extendedDistance * kmToDegrees;
+          const extendedEndLon = endPoint.lon + (dy / length) * extendedDistance * kmToDegrees;
+
+          const centerLine1 = Leaflet.polyline(
+            [
+              [startPoint.lat, startPoint.lon],
+              [extendedStartLat, extendedStartLon],
+            ],
+            {
+              color: "#9ca3af",
+              weight: 2,
+              opacity: 0.8,
+              dashArray: "8,4",
+              interactive: false,
+            }
+          );
+
+          const centerLine2 = Leaflet.polyline(
+            [
+              [endPoint.lat, endPoint.lon],
+              [extendedEndLat, extendedEndLon],
+            ],
+            {
+              color: "#9ca3af",
+              weight: 2,
+              opacity: 0.8,
+              dashArray: "8,4",
+              interactive: false,
+            }
+          );
+
+          layerGroupsRef.current.extendedCenterlines.addLayer(centerLine1);
+          layerGroupsRef.current.extendedCenterlines.addLayer(centerLine2);
+        } catch (error) {
+          console.warn("Error drawing extended centerline:", error, runway);
+        }
+      });
+    } else if (layerGroupsRef.current.extendedCenterlines) {
+      layerGroupsRef.current.extendedCenterlines.clearLayers();
+    }
+  };
+
   // Update OSM features display - WITH ZOOM-BASED VISIBILITY
   useEffect(() => {
     if (!mapInstance || !osmData) return;
@@ -2650,158 +2807,8 @@ export function PilotMap({
         }
       }
 
-      // 2. ALWAYS render runways LAST (so they appear on top)
-      console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
-      
-      // Clear all existing runway labels from the map first
-      mapInstance.eachLayer((layer: any) => {
-        if (layer._runwayLabel) {
-          mapInstance.removeLayer(layer);
-        }
-      });
-      
-      osmData.runways.forEach((way, index) => {
-        if (way.geometry && way.geometry.length > 1) {
-          const coordinates = way.geometry.map(point => {
-            if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
-              return null;
-            }
-            return [point.lat, point.lon] as [number, number];
-          }).filter(coord => coord !== null);
-          
-          if (coordinates.length < 2) return;
-          
-          const runway = L.polyline(coordinates, {
-            color: '#0ea5e9',
-            weight: 8,
-            opacity: 1.0,
-            interactive: false,
-            pane: 'overlayPane'
-          });
-          runway.addTo(mapInstance);
-          runway.bringToFront(); // Ensure runways are on top
-
-          // Only add runway labels if zoom level is 11 or higher
-          if (currentZoom >= 11) {
-            const runwayRef = way.tags?.ref;
-            if (runwayRef && runwayRef.includes('/')) {
-              const runwayNumbers = runwayRef.split('/');
-              const startPoint = coordinates[0];
-              const endPoint = coordinates[coordinates.length - 1];
-              
-              // Simple label placement at both ends
-              const startLabel = L.marker(startPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000; font-size: 10px; font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95); padding: 1px 3px;
-                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap; text-align: center; line-height: 1;
-                    min-width: 16px; display: inline-block; z-index: 3000;
-                  ">${runwayNumbers[0]}</div>`,
-                  iconSize: [20, 14], iconAnchor: [10, 14]
-                }),
-                interactive: false, pane: 'popupPane'
-              });
-              startLabel.addTo(mapInstance);
-              (startLabel as any)._runwayLabel = true; // Mark as runway label
-
-              const endLabel = L.marker(endPoint, {
-                icon: L.divIcon({
-                  className: "runway-label",
-                  html: `<div style="
-                    color: #000000; font-size: 10px; font-weight: 700;
-                    text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                    background: rgba(255,255,255,0.95); padding: 1px 3px;
-                    border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                    white-space: nowrap; text-align: center; line-height: 1;
-                    min-width: 16px; display: inline-block; z-index: 3000;
-                  ">${runwayNumbers[1]}</div>`,
-                  iconSize: [20, 14], iconAnchor: [10, 14]
-                }),
-                interactive: false, pane: 'popupPane'
-              });
-              endLabel.addTo(mapInstance);
-              (endLabel as any)._runwayLabel = true; // Mark as runway label
-            }
-          }
-        }
-      });
-
-      // 3. Draw extended centerlines for runways (if enabled)
-      if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
-        layerGroupsRef.current.extendedCenterlines.clearLayers();
-        
-        osmData.runways.forEach((runway) => {
-          try {
-            const coordinates = runway.geometry || [];
-            if (coordinates.length < 2) {
-              return;
-            }
-
-            const startPoint = coordinates[0];
-            const endPoint = coordinates[coordinates.length - 1];
-
-            if (!startPoint || !endPoint || !startPoint.lat || !startPoint.lon || !endPoint.lat || !endPoint.lon) {
-              return;
-            }
-
-            const dx = endPoint.lat - startPoint.lat;
-            const dy = endPoint.lon - startPoint.lon;
-            const length = Math.sqrt(dx * dx + dy * dy);
-
-            if (length === 0) {
-              return;
-            }
-
-            const extendedDistance = 30 * 1.852;
-            const kmToDegrees = 1 / 111;
-
-            const extendedStartLat = startPoint.lat - (dx / length) * extendedDistance * kmToDegrees;
-            const extendedStartLon = startPoint.lon - (dy / length) * extendedDistance * kmToDegrees;
-
-            const extendedEndLat = endPoint.lat + (dx / length) * extendedDistance * kmToDegrees;
-            const extendedEndLon = endPoint.lon + (dy / length) * extendedDistance * kmToDegrees;
-
-            const centerLine1 = L.polyline(
-              [
-                [startPoint.lat, startPoint.lon],
-                [extendedStartLat, extendedStartLon],
-              ],
-              {
-                color: "#9ca3af",
-                weight: 2,
-                opacity: 0.8,
-                dashArray: "8,4",
-                interactive: false,
-              }
-            );
-
-            const centerLine2 = L.polyline(
-              [
-                [endPoint.lat, endPoint.lon],
-                [extendedEndLat, extendedEndLon],
-              ],
-              {
-                color: "#9ca3af",
-                weight: 2,
-                opacity: 0.8,
-                dashArray: "8,4",
-                interactive: false,
-              }
-            );
-
-            layerGroupsRef.current.extendedCenterlines.addLayer(centerLine1);
-            layerGroupsRef.current.extendedCenterlines.addLayer(centerLine2);
-          } catch (error) {
-            console.warn("Error drawing extended centerline:", error, runway);
-          }
-        });
-      } else if (layerGroupsRef.current.extendedCenterlines) {
-        layerGroupsRef.current.extendedCenterlines.clearLayers();
-      }
+      renderRunways(mapInstance, osmData, currentZoom, L);
+      renderExtendedCenterlines(osmData, displayOptions, layerGroupsRef, L);
     };
 
     updateOSMFeatures();
@@ -3096,157 +3103,8 @@ export function PilotMap({
           }
         }
 
-        // 2. ALWAYS render runways LAST (so they appear on top)
-        
-        // Clear all existing runway labels from the map first
-        mapInstance.eachLayer((layer: any) => {
-          if (layer._runwayLabel) {
-            mapInstance.removeLayer(layer);
-          }
-        });
-        
-        osmData.runways.forEach((way, index) => {
-          if (way.geometry && way.geometry.length > 1) {
-            const coordinates = way.geometry.map(point => {
-              if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
-                return null;
-              }
-              return [point.lat, point.lon] as [number, number];
-            }).filter(coord => coord !== null);
-            
-            if (coordinates.length < 2) return;
-            
-            const runway = L.polyline(coordinates, {
-              color: '#0ea5e9',
-              weight: 8,
-              opacity: 1.0,
-              interactive: false,
-              pane: 'overlayPane'
-            });
-            runway.addTo(mapInstance);
-            runway.bringToFront(); // Ensure runways are on top
-
-            // Only add runway labels if zoom level is 11 or higher
-            if (currentZoom >= 10) {
-              const runwayRef = way.tags?.ref;
-              if (runwayRef && runwayRef.includes('/')) {
-                const runwayNumbers = runwayRef.split('/');
-                const startPoint = coordinates[0];
-                const endPoint = coordinates[coordinates.length - 1];
-                
-                // Simple label placement at both ends
-                const startLabel = L.marker(startPoint, {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000; font-size: 10px; font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95); padding: 1px 3px;
-                      border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap; text-align: center; line-height: 1;
-                      min-width: 16px; display: inline-block; z-index: 3000;
-                    ">${runwayNumbers[0]}</div>`,
-                    iconSize: [20, 14], iconAnchor: [10, 14]
-                  }),
-                  interactive: false, pane: 'popupPane'
-                });
-                startLabel.addTo(mapInstance);
-                (startLabel as any)._runwayLabel = true; // Mark as runway label
-
-                const endLabel = L.marker(endPoint, {
-                  icon: L.divIcon({
-                    className: "runway-label",
-                    html: `<div style="
-                      color: #000000; font-size: 10px; font-weight: 700;
-                      text-shadow: 0px 0px 2px rgba(255,255,255,0.8);
-                      background: rgba(255,255,255,0.95); padding: 1px 3px;
-                      border-radius: 2px; border: 1px solid rgba(0,0,0,0.2);
-                      white-space: nowrap; text-align: center; line-height: 1;
-                      min-width: 16px; display: inline-block; z-index: 3000;
-                    ">${runwayNumbers[1]}</div>`,
-                    iconSize: [20, 14], iconAnchor: [10, 14]
-                  }),
-                  interactive: false, pane: 'popupPane'
-                });
-                endLabel.addTo(mapInstance);
-                (endLabel as any)._runwayLabel = true; // Mark as runway label
-              }
-            }
-          }
-        });
-
-        // 3. Draw extended centerlines for runways (if enabled)
-        if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
-          layerGroupsRef.current.extendedCenterlines.clearLayers();
-          
-          osmData.runways.forEach((runway) => {
-            try {
-              const coordinates = runway.geometry || [];
-              if (coordinates.length < 2) {
-                return;
-              }
-
-              const startPoint = coordinates[0];
-              const endPoint = coordinates[coordinates.length - 1];
-
-              if (!startPoint || !endPoint || !startPoint.lat || !startPoint.lon || !endPoint.lat || !endPoint.lon) {
-                return;
-              }
-
-              const dx = endPoint.lat - startPoint.lat;
-              const dy = endPoint.lon - startPoint.lon;
-              const length = Math.sqrt(dx * dx + dy * dy);
-
-              if (length === 0) {
-                return;
-              }
-
-              const extendedDistance = 30 * 1.852;
-              const kmToDegrees = 1 / 111;
-
-              const extendedStartLat = startPoint.lat - (dx / length) * extendedDistance * kmToDegrees;
-              const extendedStartLon = startPoint.lon - (dy / length) * extendedDistance * kmToDegrees;
-
-              const extendedEndLat = endPoint.lat + (dx / length) * extendedDistance * kmToDegrees;
-              const extendedEndLon = endPoint.lon + (dy / length) * extendedDistance * kmToDegrees;
-
-              const centerLine1 = L.polyline(
-                [
-                  [startPoint.lat, startPoint.lon],
-                  [extendedStartLat, extendedStartLon],
-                ],
-                {
-                  color: "#9ca3af",
-                  weight: 2,
-                  opacity: 0.8,
-                  dashArray: "8,4",
-                  interactive: false,
-                }
-              );
-
-              const centerLine2 = L.polyline(
-                [
-                  [endPoint.lat, endPoint.lon],
-                  [extendedEndLat, extendedEndLon],
-                ],
-                {
-                  color: "#9ca3af",
-                  weight: 2,
-                  opacity: 0.8,
-                  dashArray: "8,4",
-                  interactive: false,
-                }
-              );
-
-              layerGroupsRef.current.extendedCenterlines.addLayer(centerLine1);
-              layerGroupsRef.current.extendedCenterlines.addLayer(centerLine2);
-            } catch (error) {
-              console.warn("Error drawing extended centerline:", error, runway);
-            }
-          });
-        } else if (layerGroupsRef.current.extendedCenterlines) {
-          layerGroupsRef.current.extendedCenterlines.clearLayers();
-        }
+        renderRunways(mapInstance, osmData, currentZoom, L);
+        renderExtendedCenterlines(osmData, displayOptions, layerGroupsRef, L);
       };
 
       updateOSMFeatures();
