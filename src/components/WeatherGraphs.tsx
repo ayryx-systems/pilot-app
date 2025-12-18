@@ -231,18 +231,27 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   fill: true,
                   tension: 0.4,
                   pointRadius: (ctx: any) => {
+                    const value = visibilityData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
                     return ctx.dataIndex === selectedIndex ? 6 : 0;
                   },
                   pointHoverRadius: 4,
                   pointBackgroundColor: (ctx: any) => {
+                    const value = visibilityData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
                     return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
                   },
                   pointBorderColor: (ctx: any) => {
+                    const value = visibilityData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
                     return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
                   },
                   pointBorderWidth: (ctx: any) => {
+                    const value = visibilityData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
                     return ctx.dataIndex === selectedIndex ? 2 : 0;
                   },
+                  spanGaps: false,
                 },
               ],
             }}
@@ -456,18 +465,27 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   fill: true,
                   tension: 0.4,
                   pointRadius: (ctx: any) => {
+                    const value = windData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
                     return ctx.dataIndex === selectedIndex ? 6 : 0;
                   },
                   pointHoverRadius: 4,
                   pointBackgroundColor: (ctx: any) => {
+                    const value = windData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
                     return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
                   },
                   pointBorderColor: (ctx: any) => {
+                    const value = windData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 'transparent';
                     return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
                   },
                   pointBorderWidth: (ctx: any) => {
+                    const value = windData.data[ctx.dataIndex];
+                    if (value === null || value === undefined) return 0;
                     return ctx.dataIndex === selectedIndex ? 2 : 0;
                   },
+                  spanGaps: false,
                 },
               ],
             }}
@@ -490,6 +508,13 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 },
                 tooltip: {
                   enabled: true,
+                  callbacks: {
+                    label: function(context: any) {
+                      const value = context.parsed.y;
+                      if (value === null || value === undefined) return 'N/A';
+                      return `${value.toFixed(1)} knots`;
+                    },
+                  },
                 },
               },
               scales: {
