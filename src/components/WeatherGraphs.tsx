@@ -548,7 +548,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 }}
               >
                 <div className="flex relative" style={{ height: `${totalHeight}px` }}>
-                  <div className="flex-shrink-0 relative" style={{ width: '70px', height: `${totalHeight}px` }}>
+                  <div className="flex-shrink-0 relative" style={{ width: '45px', height: `${totalHeight}px` }}>
                     {eventRows.map((row, rowIdx) => {
                       const topPosition = headerHeight + (rowIdx * rowHeight);
                       return (
