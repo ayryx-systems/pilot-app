@@ -2,7 +2,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
-import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatLocalTimeDate } from '@/utils/airportTime';
+import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
 
 interface TimeSliderProps {
@@ -174,10 +174,6 @@ export function TimeSlider({
             </div>
           )}
         </div>
-      </div>
-
-      <div className="flex justify-between mt-2 text-xs text-gray-500">
-        <span>Range: {formatLocalTimeDate(minTimeLocal)} - {formatLocalTimeDate(maxTimeLocal)} ({airportCode} local time)</span>
       </div>
     </div>
   );
