@@ -511,7 +511,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         const rowHeight = 18;
         const maxVisibleRows = 8;
         const headerHeight = 0;
-        const bottomPadding = 10;
+        const xAxisHeight = 30;
+        const bottomPadding = xAxisHeight;
         const totalHeight = headerHeight + (maxRows * rowHeight) + bottomPadding;
         const visibleHeight = Math.min(totalHeight, headerHeight + (maxVisibleRows * rowHeight) + bottomPadding);
         const chartLabels = formattedLabels || graphData.timeSlots;
@@ -540,7 +541,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 </span>
               )}
             </div>
-            <div className="relative rounded p-2">
+            <div className="relative rounded pt-2 px-2">
               <div 
                 className="relative overflow-y-auto"
                 style={{ 
@@ -569,7 +570,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                     })}
                   </div>
                   <div className="flex-1 relative" style={{ minWidth: 0, height: `${totalHeight}px` }}>
-                    <div className="absolute inset-0 pointer-events-none z-0" style={{ paddingTop: `${headerHeight}px`, paddingBottom: '0px', paddingLeft: '0px', paddingRight: '0px' }}>
+                    <div className="absolute pointer-events-none z-0" style={{ top: `${headerHeight}px`, bottom: '0px', left: '0px', right: '0px', paddingBottom: '0px' }}>
                       <Line
                         data={{
                           labels: chartLabels,
@@ -592,7 +593,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                           layout: {
                             padding: {
                               top: 0,
-                              bottom: 0,
+                              bottom: 3,
                               left: 0,
                               right: 0,
                             },
