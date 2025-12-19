@@ -16,6 +16,7 @@ import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
+import { ClockDisplay } from './ClockDisplay';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -260,6 +261,8 @@ export function PilotDashboard() {
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
+          {mounted && <ClockDisplay airportCode={selectedAirport} baseline={baseline} />}
+          
           {mounted && selectedAirport && (
             <SimpleDataAge
               timestamp={getDataStatus().timestamp}
