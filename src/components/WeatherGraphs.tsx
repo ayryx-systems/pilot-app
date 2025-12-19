@@ -204,6 +204,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const [visibilityData, setVisibilityData] = useState<any>(null);
   const [ceilingData, setCeilingData] = useState<any>(null);
   const [windData, setWindData] = useState<any>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const savedScrollPositionRef = useRef<number>(0);
 
   // Memoize graph data to prevent unnecessary recalculations
   const graphData = useMemo(() => {
@@ -316,6 +318,20 @@ export const WeatherGraphs = memo(function WeatherGraphs({
       setWindData(null);
     }
   }, [graphData, selectedIndex, formattedLabels]);
+
+  useEffect(() => {
+    if (scrollContainerRef.current && savedScrollPositionRef.current > 0) {
+      requestAnimationFrame(() => {
+        if (scrollContainerRef.current) {
+          scrollContainerRef.current.scrollTop = savedScrollPositionRef.current;
+        }
+      });
+    }
+  }, [graphData]);
+
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    savedScrollPositionRef.current = e.currentTarget.scrollTop;
+  };
 
   if (!weather?.graph) {
     return null;
@@ -665,10 +681,12 @@ export const WeatherGraphs = memo(function WeatherGraphs({
             </div>
             <div className="relative rounded pt-2 px-2">
               <div 
+                ref={scrollContainerRef}
                 className="relative overflow-y-auto"
                 style={{ 
                   maxHeight: `${visibleHeight}px`,
                 }}
+                onScroll={handleScroll}
               >
                 <div className="flex relative" style={{ height: `${totalHeight}px` }}>
                   <div className="flex-shrink-0 relative" style={{ width: '45px', height: `${totalHeight}px` }}>
