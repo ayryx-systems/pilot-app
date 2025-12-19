@@ -486,7 +486,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                         padding: {
                           left: 0,
                           right: 0,
-                          top: 0,
+                          top: isVisibility ? 16 : 0,
                           bottom: 0,
                         },
                       },
@@ -524,8 +524,12 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                           ticks: {
                             color: 'rgba(255, 255, 255, 0.6)',
                             stepSize: isVisibility ? 2 : undefined,
+                            autoSkip: isVisibility ? false : true,
+                            maxTicksLimit: isVisibility ? undefined : undefined,
+                            includeBounds: isVisibility ? false : true,
                             callback: function(value: any) {
                               if (isVisibility) {
+                                if (value > 10) return undefined;
                                 if (value === 10) return '10+';
                                 return value.toString();
                               }
