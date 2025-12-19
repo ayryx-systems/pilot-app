@@ -347,7 +347,7 @@ export function PilotDashboard() {
       {/* Main Content: Split Screen Layout for Landscape */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Map Section - Left Side (full width on mobile, flexible on desktop) */}
-        <div className="flex-1 relative min-w-0" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
+        <div className="flex-1 relative min-w-0 md:flex-[0_0_55%] md:max-w-[55%]" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -374,7 +374,7 @@ export function PilotDashboard() {
 
         {/* Right Panel - Graphs and Info (hidden on mobile when fullscreen, visible on tablet/desktop) */}
         {!mapFullscreen && (
-          <div key="right-panel" className="hidden md:flex md:w-[40%] md:min-w-[380px] md:max-w-[500px] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
+          <div key="right-panel" className="hidden md:flex md:w-[45%] md:min-w-[400px] md:max-w-[45%] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
             {/* Scrollable Content Area */}
             <div 
               key="scroll-container"
@@ -505,7 +505,7 @@ export function PilotDashboard() {
 
       {/* Bottom Status Bar - Airport Info (only on map side) */}
       {airportOverview && !mapFullscreen && (
-        <div className="absolute left-0 md:right-[40%] right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
+        <div className="absolute left-0 md:right-[45%] right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
           <div className="flex justify-between items-center text-xs">
             <div className="flex items-center space-x-4">
               <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
