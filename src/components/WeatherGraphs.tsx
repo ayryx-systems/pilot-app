@@ -257,7 +257,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
       )}
 
       {graphs.length > 0 && (
-        <div className="space-y-1">
+        <div className="space-y-0.5">
           {graphs.map((graph, index) => {
             const isBottom = index === graphs.length - 1;
             const isVisibility = graph.title === 'Visibility';
@@ -266,10 +266,10 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
             return (
               <div key={graph.title} className={isBottom ? '' : 'mb-0'}>
-                <div className="flex justify-between items-center mb-1">
+                <div className="flex justify-between items-center mb-0.5">
                   <h3 className="text-xs font-semibold text-gray-300">{graph.title}</h3>
                 </div>
-                <div className="h-20">
+                <div className="h-20 -mt-1">
                   <Line
                     data={{
                       labels: graph.data.labels,
@@ -351,6 +351,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                         padding: {
                           left: 0,
                           right: 0,
+                          top: 0,
+                          bottom: 0,
                         },
                       },
                       scales: {
@@ -400,7 +402,11 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             text: graph.yTitle,
                             color: 'rgba(255, 255, 255, 0.6)',
                             font: {
-                              size: 10,
+                              size: 9,
+                            },
+                            padding: {
+                              top: 0,
+                              bottom: 0,
                             },
                           },
                           afterFit: function(scaleInstance: any) {
@@ -432,113 +438,225 @@ export const WeatherGraphs = memo(function WeatherGraphs({
 
         if (validEvents.length === 0) return null;
 
-        const maxRows = Math.min(validEvents.length, 6);
-        const rowHeight = 32;
-        const timelineHeight = maxRows * rowHeight + 28;
+        const layoutEvents = (events: typeof validEvents) => {
+          const eventsByCategory = new Map<string, typeof validEvents>();
+          
+          events.forEach(event => {
+            const category = event.category || 'other';
+            if (!eventsByCategory.has(category)) {
+              eventsByCategory.set(category, []);
+            }
+            eventsByCategory.get(category)!.push(event);
+          });
+
+          const categoryRows: Array<{ category: string; events: Array<typeof events[0] & { rowIndex: number }> }> = [];
+          let globalRowIndex = 0;
+
+          const categoryOrder = ['thunderstorm', 'snow', 'rain', 'fog', 'freezing', 'volcanic', 'other'];
+          const sortedCategories = Array.from(eventsByCategory.entries()).sort((a, b) => {
+            const idxA = categoryOrder.indexOf(a[0]);
+            const idxB = categoryOrder.indexOf(b[0]);
+            if (idxA === -1 && idxB === -1) return a[0].localeCompare(b[0]);
+            if (idxA === -1) return 1;
+            if (idxB === -1) return -1;
+            return idxA - idxB;
+          });
+
+          sortedCategories.forEach(([category, categoryEvents]) => {
+            const sortedEvents = [...categoryEvents].sort((a, b) => {
+              if (a.startIndex !== b.startIndex) {
+                return a.startIndex - b.startIndex;
+              }
+              return a.endIndex - b.endIndex;
+            });
+
+            const rows: Array<Array<typeof events[0]>> = [];
+
+            for (const event of sortedEvents) {
+              let placed = false;
+              
+              for (let rowIdx = 0; rowIdx < rows.length; rowIdx++) {
+                const row = rows[rowIdx];
+                const overlaps = row.some(existingEvent => {
+                  return !(event.endIndex < existingEvent.startIndex || event.startIndex > existingEvent.endIndex);
+                });
+                
+                if (!overlaps) {
+                  row.push(event);
+                  placed = true;
+                  break;
+                }
+              }
+              
+              if (!placed) {
+                rows.push([event]);
+              }
+            }
+
+            rows.forEach((row, localRowIdx) => {
+              categoryRows.push({
+                category,
+                events: row.map(event => ({ ...event, rowIndex: globalRowIndex + localRowIdx }))
+              });
+            });
+
+            globalRowIndex += rows.length;
+          });
+
+          return categoryRows.flatMap(cr => cr.events);
+        };
+
+        const laidOutEvents = layoutEvents(validEvents);
+        const maxRows = Math.max(...laidOutEvents.map(e => e.rowIndex), -1) + 1;
+        const rowHeight = 18;
+        const maxVisibleRows = 8;
+        const headerHeight = 0;
+        const bottomPadding = 10;
+        const totalHeight = headerHeight + (maxRows * rowHeight) + bottomPadding;
+        const visibleHeight = Math.min(totalHeight, headerHeight + (maxVisibleRows * rowHeight) + bottomPadding);
         const chartLabels = formattedLabels || graphData.timeSlots;
         const emptyData = new Array(graphData.timeSlots.length).fill(null);
+
+        const eventRows: Array<Array<typeof laidOutEvents[0]>> = [];
+        laidOutEvents.forEach(event => {
+          if (!eventRows[event.rowIndex]) {
+            eventRows[event.rowIndex] = [];
+          }
+          eventRows[event.rowIndex].push(event);
+        });
+
+        const getRowLabel = (row: Array<typeof laidOutEvents[0]>) => {
+          const typeLabel = getWeatherEventLabel(row[0].weather);
+          return typeLabel;
+        };
 
         return (
           <div className="mt-4">
             <div className="flex justify-between items-center mb-2">
               <h3 className="text-xs font-semibold text-gray-300">Weather Events</h3>
+              {maxRows > maxVisibleRows && (
+                <span className="text-[10px] text-gray-500">
+                  {maxRows} rows (scrollable)
+                </span>
+              )}
             </div>
-            <div className="relative rounded p-2" style={{ minHeight: `${timelineHeight}px` }}>
-              <div className="flex">
-                <div className="flex-shrink-0" style={{ width: '70px' }}>
-                  {validEvents.slice(0, maxRows).map((event, idx) => (
-                    <div
-                      key={`label-${idx}`}
-                      className="flex items-center justify-end pr-2"
-                      style={{ height: `${rowHeight - 4}px`, marginBottom: '4px' }}
-                    >
-                      <span className="text-[10px] text-gray-400 truncate w-full text-right font-medium">
-                        {getWeatherEventLabel(event.weather)}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <div className="flex-1 relative" style={{ minWidth: 0 }}>
-                  <div className="h-20 pointer-events-none">
-                    <Line
-                      data={{
-                        labels: chartLabels,
-                        datasets: [{
-                          data: emptyData,
-                          borderColor: 'transparent',
-                          backgroundColor: 'transparent',
-                          pointRadius: 0,
-                          pointHoverRadius: 0,
-                        }],
-                      }}
-                      options={{
-                        responsive: true,
-                        maintainAspectRatio: false,
-                        animation: { duration: 0 },
-                        plugins: {
-                          legend: { display: false },
-                          tooltip: { enabled: false },
-                        },
-                        scales: {
-                          x: {
-                            display: true,
-                            grid: {
-                              display: true,
-                              color: 'rgba(255, 255, 255, 0.1)',
-                              drawBorder: true,
-                            },
-                            ticks: {
-                              display: true,
-                              color: 'rgba(255, 255, 255, 0.6)',
-                              maxRotation: 0,
-                              autoSkip: true,
-                              maxTicksLimit: 8,
-                              callback: function(value: any, index: number) {
-                                const label = this.getLabelForValue(value);
-                                return label || undefined;
-                              },
-                            },
-                          },
-                          y: {
-                            display: false,
-                          },
-                        },
-                      }}
-                    />
-                  </div>
-                  <div className="absolute top-0 left-0 right-0 bottom-6 pointer-events-none">
-                    {validEvents.slice(0, maxRows).map((event, idx) => {
-                      const startTime = graphData.timeSlots[event.startIndex];
-                      const endTime = graphData.timeSlots[event.endIndex];
-                      const startPercent = (event.startIndex / (graphData.timeSlots.length - 1)) * 100;
-                      const endPercent = ((event.endIndex + 1) / (graphData.timeSlots.length - 1)) * 100;
-                      const widthPercent = endPercent - startPercent;
-                      
+            <div className="relative rounded p-2 bg-gray-900/50">
+              <div 
+                className="relative overflow-y-auto"
+                style={{ 
+                  maxHeight: `${visibleHeight}px`,
+                }}
+              >
+                <div className="flex relative" style={{ height: `${totalHeight}px` }}>
+                  <div className="flex-shrink-0 relative" style={{ width: '70px', height: `${totalHeight}px` }}>
+                    {eventRows.map((row, rowIdx) => {
+                      const topPosition = headerHeight + (rowIdx * rowHeight);
                       return (
                         <div
-                          key={idx}
-                          className="absolute"
+                          key={`label-row-${rowIdx}`}
+                          className="absolute flex items-center justify-end pr-2"
                           style={{ 
-                            height: `${rowHeight - 4}px`,
-                            top: `${idx * rowHeight}px`,
-                            left: `${startPercent}%`,
-                            width: `${widthPercent}%`,
-                            minWidth: '3px',
+                            top: `${topPosition}px`,
+                            height: `${rowHeight}px`,
+                            width: '100%',
                           }}
                         >
-                          <div
-                            className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 hover:opacity-100 transition-opacity border border-gray-600 shadow-sm`}
-                            title={`${getWeatherEventLabel(event.weather)} - ${startTime} to ${endTime}`}
-                          />
+                          <span className="text-[10px] text-gray-400 truncate w-full text-right font-medium">
+                            {getRowLabel(row)}
+                          </span>
                         </div>
                       );
                     })}
                   </div>
-                  {validEvents.length > maxRows && (
-                    <div className="text-[10px] text-gray-500 mt-2 ml-1">
-                      +{validEvents.length - maxRows} more events
+                  <div className="flex-1 relative" style={{ minWidth: 0, height: `${totalHeight}px` }}>
+                    <div className="absolute inset-0 pointer-events-none z-0" style={{ paddingTop: `${headerHeight}px`, paddingBottom: '0px', paddingLeft: '0px', paddingRight: '0px' }}>
+                      <Line
+                        data={{
+                          labels: chartLabels,
+                          datasets: [{
+                            data: emptyData,
+                            borderColor: 'transparent',
+                            backgroundColor: 'transparent',
+                            pointRadius: 0,
+                            pointHoverRadius: 0,
+                          }],
+                        }}
+                        options={{
+                          responsive: true,
+                          maintainAspectRatio: false,
+                          animation: { duration: 0 },
+                          plugins: {
+                            legend: { display: false },
+                            tooltip: { enabled: false },
+                          },
+                          layout: {
+                            padding: {
+                              top: 0,
+                              bottom: 0,
+                              left: 0,
+                              right: 0,
+                            },
+                          },
+                          scales: {
+                            x: {
+                              display: true,
+                              position: 'bottom',
+                              offset: false,
+                              grid: {
+                                display: true,
+                                color: 'rgba(255, 255, 255, 0.1)',
+                                drawBorder: true,
+                                drawOnChartArea: true,
+                              },
+                              ticks: {
+                                display: true,
+                                color: 'rgba(255, 255, 255, 0.6)',
+                                maxRotation: 0,
+                                autoSkip: true,
+                                maxTicksLimit: 8,
+                                callback: function(value: any, index: number) {
+                                  const label = this.getLabelForValue(value);
+                                  return label || undefined;
+                                },
+                              },
+                            },
+                            y: {
+                              display: false,
+                            },
+                          },
+                        }}
+                      />
                     </div>
-                  )}
+                    <div className="absolute inset-0 pointer-events-none z-10" style={{ paddingBottom: `${bottomPadding}px` }}>
+                      {laidOutEvents.map((event, idx) => {
+                        const startTime = graphData.timeSlots[event.startIndex];
+                        const endTime = graphData.timeSlots[event.endIndex];
+                        const startPercent = (event.startIndex / (graphData.timeSlots.length - 1)) * 100;
+                        const endPercent = ((event.endIndex + 1) / (graphData.timeSlots.length - 1)) * 100;
+                        const widthPercent = endPercent - startPercent;
+                        const topPosition = headerHeight + (event.rowIndex * rowHeight);
+                        
+                        return (
+                          <div
+                            key={`event-${idx}`}
+                            className="absolute pointer-events-auto"
+                            style={{ 
+                              height: `${rowHeight - 4}px`,
+                              top: `${topPosition + 1}px`,
+                              left: `${startPercent}%`,
+                              width: `${widthPercent}%`,
+                              minWidth: '3px',
+                            }}
+                          >
+                            <div
+                              className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 hover:opacity-100 transition-opacity border border-gray-600 shadow-sm`}
+                              title={`${getWeatherEventLabel(event.weather)} - ${startTime} to ${endTime}`}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
