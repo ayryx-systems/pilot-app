@@ -54,7 +54,8 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
     }
     
     const newPositions = new Map<number, { left: number; width: number }>();
-    const containerLeft = chart.chartArea.left;
+    // Hacky offset
+    const containerLeft = chart.chartArea.left - 12;
     
     events.forEach((event) => {
       try {
