@@ -513,7 +513,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                           },
                         },
                         y: {
-                          min: isVisibility ? 0 : undefined,
+                          min: isVisibility ? 0 : isCeiling ? 0 : undefined,
                           max: isVisibility ? 10 : undefined,
                           border: {
                             display: false,
