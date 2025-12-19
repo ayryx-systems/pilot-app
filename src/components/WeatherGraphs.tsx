@@ -540,7 +540,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                 </span>
               )}
             </div>
-            <div className="relative rounded p-2 bg-gray-900/50">
+            <div className="relative rounded p-2">
               <div 
                 className="relative overflow-y-auto"
                 style={{ 
