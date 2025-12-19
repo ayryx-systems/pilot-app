@@ -15,6 +15,123 @@ import {
 import { Line } from 'react-chartjs-2';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 
+/**
+ * Component to render weather event bars aligned with Chart.js x-axis
+ * Uses Chart.js scale API to get exact pixel positions for alignment
+ */
+const EventBarsOverlay = memo(function EventBarsOverlay({
+  events,
+  graphData,
+  chartRef,
+  headerHeight,
+  rowHeight,
+  bottomPadding,
+  getWeatherEventColor,
+  getWeatherEventLabel,
+}: {
+  events: Array<{ startIndex: number; endIndex: number; rowIndex: number; weather: string; category: string }>;
+  graphData: { timeSlots: string[] };
+  chartRef: React.RefObject<ChartJS<'line'> | null>;
+  headerHeight: number;
+  rowHeight: number;
+  bottomPadding: number;
+  getWeatherEventColor: (category: string) => string;
+  getWeatherEventLabel: (weather: string) => string;
+}) {
+  const [positions, setPositions] = useState<Map<number, { left: number; width: number }>>(new Map());
+  
+  const calculatePositions = React.useCallback(() => {
+    if (!chartRef.current || !graphData) {
+      setPositions(new Map());
+      return;
+    }
+    
+    const chart = chartRef.current;
+    const xScale = chart.scales.x;
+    if (!xScale || !chart.chartArea) {
+      setPositions(new Map());
+      return;
+    }
+    
+    const newPositions = new Map<number, { left: number; width: number }>();
+    const containerLeft = chart.chartArea.left;
+    
+    events.forEach((event) => {
+      try {
+        const startPixel = xScale.getPixelForValue(event.startIndex);
+        const endIndexForPixel = Math.min(event.endIndex + 1, graphData.timeSlots.length - 1);
+        const endPixel = xScale.getPixelForValue(endIndexForPixel);
+        
+        const left = startPixel - containerLeft;
+        const width = endPixel - startPixel;
+        
+        if (width > 0 && left >= 0) {
+          newPositions.set(event.startIndex * 10000 + event.endIndex, { left, width });
+        }
+      } catch (e) {
+        console.warn('Error calculating event position:', e, event);
+      }
+    });
+    
+    setPositions(newPositions);
+  }, [events, graphData, chartRef]);
+  
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      calculatePositions();
+    }, 100);
+    
+    return () => clearTimeout(timer);
+  }, [calculatePositions]);
+  
+  useEffect(() => {
+    if (!chartRef.current) return;
+    
+    const chart = chartRef.current;
+    const handleResize = () => {
+      calculatePositions();
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [calculatePositions]);
+  
+  return (
+    <div className="absolute inset-0 pointer-events-none z-10" style={{ paddingBottom: `${bottomPadding}px` }}>
+      {events.map((event, idx) => {
+        const startTime = graphData.timeSlots[event.startIndex];
+        const endTime = graphData.timeSlots[event.endIndex];
+        const positionKey = event.startIndex * 10000 + event.endIndex;
+        const position = positions.get(positionKey);
+        const topPosition = headerHeight + (event.rowIndex * rowHeight);
+        
+        if (!position || position.width <= 0) {
+          return null;
+        }
+        
+        return (
+          <div
+            key={`event-${idx}`}
+            className="absolute pointer-events-auto"
+            style={{ 
+              height: `${rowHeight - 4}px`,
+              top: `${topPosition + 1}px`,
+              left: `${position.left}px`,
+              width: `${position.width}px`,
+              minWidth: '3px',
+            }}
+          >
+            <div
+              className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 hover:opacity-100 transition-opacity border border-gray-600 shadow-sm`}
+              title={`${getWeatherEventLabel(event.weather)} - ${startTime} to ${endTime}`}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -125,32 +242,33 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   }, [graphData?.timeSlots]);
 
   // Memoize selected index calculation
+  // Backend provides timeSlots as local time strings (e.g., "08:00", "08:15", "NOW")
+  // Slots are aligned to 15-minute boundaries in UTC, then converted to local time for labels
+  // We calculate the slot index based on minutes from current UTC time
   const selectedIndex = useMemo(() => {
     if (!graphData) return -1;
     
     const { timeSlots } = graphData;
-    const now = getCurrentUTCTime();
-    const selectedMinutes = Math.floor((selectedTime.getTime() - now.getTime()) / (1000 * 60));
-    
-    let idx = -1;
     const nowIndex = timeSlots.indexOf('NOW');
     
     if (isNow && nowIndex >= 0) {
-      idx = nowIndex;
-    } else {
-      const slotIntervalMinutes = 15;
-      const targetSlot = Math.round(selectedMinutes / slotIntervalMinutes);
-      
-      if (targetSlot >= 0 && targetSlot < timeSlots.length) {
-        idx = targetSlot;
-      } else if (targetSlot < 0) {
-        idx = nowIndex >= 0 ? nowIndex : 0;
-      } else {
-        idx = timeSlots.length - 1;
-      }
+      return nowIndex;
     }
     
-    return idx;
+    // Calculate slot index based on time difference from now
+    // Backend aligns slots to 15-min boundaries, so we use the same calculation
+    const slotIntervalMinutes = 15;
+    const now = getCurrentUTCTime();
+    const selectedMinutes = Math.floor((selectedTime.getTime() - now.getTime()) / (1000 * 60));
+    const targetSlot = Math.round(selectedMinutes / slotIntervalMinutes);
+    
+    if (targetSlot >= 0 && targetSlot < timeSlots.length) {
+      return targetSlot;
+    } else if (targetSlot < 0) {
+      return nowIndex >= 0 ? nowIndex : 0;
+    } else {
+      return timeSlots.length - 1;
+    }
   }, [graphData, selectedTime, isNow]);
 
   useEffect(() => {
@@ -433,7 +551,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         const validEvents = weatherEvents.filter((event) => 
           graphData.timeSlots && 
           event.startIndex >= 0 && 
-          event.endIndex < graphData.timeSlots.length
+          event.endIndex < graphData.timeSlots.length &&
+          event.startIndex <= event.endIndex
         );
 
         if (validEvents.length === 0) return null;
@@ -517,6 +636,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         const visibleHeight = Math.min(totalHeight, headerHeight + (maxVisibleRows * rowHeight) + bottomPadding);
         const chartLabels = formattedLabels || graphData.timeSlots;
         const emptyData = new Array(graphData.timeSlots.length).fill(null);
+        
+        const eventChartRef = React.useRef<ChartJS<'line'>>(null);
 
         const eventRows: Array<Array<typeof laidOutEvents[0]>> = [];
         laidOutEvents.forEach(event => {
@@ -572,6 +693,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   <div className="flex-1 relative" style={{ minWidth: 0, height: `${totalHeight}px` }}>
                     <div className="absolute pointer-events-none z-0" style={{ top: `${headerHeight}px`, bottom: '0px', left: '0px', right: '0px', paddingBottom: '0px' }}>
                       <Line
+                        ref={eventChartRef}
                         data={{
                           labels: chartLabels,
                           datasets: [{
@@ -606,8 +728,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                               grid: {
                                 display: true,
                                 color: 'rgba(255, 255, 255, 0.1)',
-                                drawBorder: true,
-                                drawOnChartArea: true,
                               },
                               ticks: {
                                 display: true,
@@ -628,35 +748,16 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                         }}
                       />
                     </div>
-                    <div className="absolute inset-0 pointer-events-none z-10" style={{ paddingBottom: `${bottomPadding}px` }}>
-                      {laidOutEvents.map((event, idx) => {
-                        const startTime = graphData.timeSlots[event.startIndex];
-                        const endTime = graphData.timeSlots[event.endIndex];
-                        const startPercent = (event.startIndex / (graphData.timeSlots.length - 1)) * 100;
-                        const endPercent = ((event.endIndex + 1) / (graphData.timeSlots.length - 1)) * 100;
-                        const widthPercent = endPercent - startPercent;
-                        const topPosition = headerHeight + (event.rowIndex * rowHeight);
-                        
-                        return (
-                          <div
-                            key={`event-${idx}`}
-                            className="absolute pointer-events-auto"
-                            style={{ 
-                              height: `${rowHeight - 4}px`,
-                              top: `${topPosition + 1}px`,
-                              left: `${startPercent}%`,
-                              width: `${widthPercent}%`,
-                              minWidth: '3px',
-                            }}
-                          >
-                            <div
-                              className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 hover:opacity-100 transition-opacity border border-gray-600 shadow-sm`}
-                              title={`${getWeatherEventLabel(event.weather)} - ${startTime} to ${endTime}`}
-                            />
-                          </div>
-                        );
-                      })}
-                    </div>
+                    <EventBarsOverlay
+                      events={laidOutEvents}
+                      graphData={graphData}
+                      chartRef={eventChartRef}
+                      headerHeight={headerHeight}
+                      rowHeight={rowHeight}
+                      bottomPadding={bottomPadding}
+                      getWeatherEventColor={getWeatherEventColor}
+                      getWeatherEventLabel={getWeatherEventLabel}
+                    />
                   </div>
                 </div>
               </div>
