@@ -28,24 +28,97 @@ export function TimeSlider({
   // Convert UTC now to airport local time (for display/calculation)
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
   
-  // Calculate min/max times in airport local time
-  const minTimeLocal = new Date(airportNowLocal.getTime() + minHoursAhead * 60 * 60 * 1000);
-  const maxTimeLocal = new Date(airportNowLocal.getTime() + maxHoursAhead * 60 * 60 * 1000);
+  // Leftmost position is NOW (current time)
+  const minTimeLocal = new Date(airportNowLocal);
+  
+  // Get start of today (00:00:00) in airport local time for calculating max time
+  const todayStartLocal = new Date(airportNowLocal);
+  todayStartLocal.setUTCHours(0, 0, 0, 0);
+  
+  // Calculate max time based on round hours from start of day
+  const maxTimeLocal = new Date(todayStartLocal);
+  maxTimeLocal.setTime(maxTimeLocal.getTime() + maxHoursAhead * 60 * 60 * 1000);
+  
+  // Ensure max is after NOW
+  if (maxTimeLocal.getTime() <= minTimeLocal.getTime()) {
+    maxTimeLocal.setTime(minTimeLocal.getTime() + maxHoursAhead * 60 * 60 * 1000);
+  }
   
   // Convert selectedTime (UTC) to airport local time for display/calculation
   const selectedTimeLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
   
+  // Check if selected time is within 1 minute of airport's current time
+  const isNow = Math.abs(selectedTimeLocal.getTime() - airportNowLocal.getTime()) <= 60000;
+  
+  // Calculate total time range
   const totalMinutes = (maxTimeLocal.getTime() - minTimeLocal.getTime()) / (1000 * 60);
-  const selectedMinutes = (selectedTimeLocal.getTime() - minTimeLocal.getTime()) / (1000 * 60);
-  const sliderValue = Math.max(0, Math.min(100, (selectedMinutes / totalMinutes) * 100));
+  
+  // Calculate which slot the selected time is in (or NOW position)
+  let sliderValue: number;
+  if (isNow) {
+    // Position NOW at 0% (leftmost position)
+    sliderValue = 0;
+  } else {
+    // Round selected time to nearest 15-minute boundary (00:00, 00:15, 00:30, 00:45, etc.)
+    const selectedHours = selectedTimeLocal.getUTCHours();
+    const selectedMinutes = selectedTimeLocal.getUTCMinutes();
+    const roundedMinutes = Math.floor(selectedMinutes / 15) * 15;
+    const roundedLocalTime = new Date(selectedTimeLocal);
+    roundedLocalTime.setUTCHours(selectedHours, roundedMinutes, 0, 0);
+    
+    // Ensure rounded time is not before NOW
+    if (roundedLocalTime.getTime() < minTimeLocal.getTime()) {
+      roundedLocalTime.setTime(roundedLocalTime.getTime() + 15 * 60 * 1000);
+    }
+    
+    const selectedMinutesFromMin = (roundedLocalTime.getTime() - minTimeLocal.getTime()) / (1000 * 60);
+    sliderValue = Math.max(0, Math.min(100, (selectedMinutesFromMin / totalMinutes) * 100));
+  }
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
+    
+    // If at 0% or very close, use NOW
+    if (value <= 0.5) {
+      const newUTCTime = getCurrentUTCTime();
+      onTimeChange(newUTCTime);
+      return;
+    }
+    
+    // Calculate minutes from NOW
     const minutes = (value / 100) * totalMinutes;
-    const newLocalTime = new Date(minTimeLocal.getTime() + minutes * 60 * 1000);
+    
+    // Round to nearest 15-minute increment
+    const slotNumber = Math.round(minutes / 15);
+    
+    // Find the next 15-minute boundary after NOW
+    const nowHours = airportNowLocal.getUTCHours();
+    const nowMinutes = airportNowLocal.getUTCMinutes();
+    const next15MinBoundary = Math.ceil(nowMinutes / 15) * 15;
+    
+    // Calculate target time: start from next 15-min boundary, then add (slotNumber - 1) * 15 minutes
+    let targetLocalTime: Date;
+    
+    if (next15MinBoundary >= 60) {
+      // Next boundary is in the next hour (00:00 of next hour)
+      targetLocalTime = new Date(airportNowLocal);
+      targetLocalTime.setUTCHours(nowHours + 1, 0, 0, 0);
+      // Add additional 15-minute slots if needed
+      if (slotNumber > 1) {
+        targetLocalTime.setTime(targetLocalTime.getTime() + (slotNumber - 1) * 15 * 60 * 1000);
+      }
+    } else {
+      // Next boundary is in current hour
+      targetLocalTime = new Date(airportNowLocal);
+      targetLocalTime.setUTCHours(nowHours, next15MinBoundary, 0, 0);
+      // Add additional 15-minute slots if needed
+      if (slotNumber > 1) {
+        targetLocalTime.setTime(targetLocalTime.getTime() + (slotNumber - 1) * 15 * 60 * 1000);
+      }
+    }
     
     // Convert airport local time back to UTC for storage
-    const newUTCTime = airportLocalToUTC(newLocalTime, airportCode, baseline);
+    const newUTCTime = airportLocalToUTC(targetLocalTime, airportCode, baseline);
     onTimeChange(newUTCTime);
   };
 
@@ -77,9 +150,6 @@ export function TimeSlider({
     }
   };
 
-  // Check if selected time is within 1 minute of airport's current time
-  const isNow = Math.abs(selectedTimeLocal.getTime() - airportNowLocal.getTime()) <= 60000;
-  
   // Track if we're in "NOW" mode to update in real-time
   const isNowRef = useRef(isNow);
   const onTimeChangeRef = useRef(onTimeChange);
@@ -121,7 +191,7 @@ export function TimeSlider({
             type="range"
             min="0"
             max="100"
-            step="0.1"
+            step={0.1}
             value={sliderValue}
             onChange={handleSliderChange}
             className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer time-slider"
