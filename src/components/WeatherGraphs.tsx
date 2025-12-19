@@ -493,10 +493,12 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                       scales: {
                         x: {
                           display: true,
+                          border: {
+                            display: isBottom,
+                          },
                           grid: {
                             display: true,
                             color: 'rgba(255, 255, 255, 0.1)',
-                            drawBorder: isBottom,
                           },
                           ticks: {
                             display: isBottom,
@@ -513,9 +515,11 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                         y: {
                           min: isVisibility ? 0 : undefined,
                           max: isVisibility ? 10 : undefined,
+                          border: {
+                            display: false,
+                          },
                           grid: {
                             color: 'rgba(255, 255, 255, 0.1)',
-                            drawBorder: false,
                           },
                           ticks: {
                             color: 'rgba(255, 255, 255, 0.6)',
