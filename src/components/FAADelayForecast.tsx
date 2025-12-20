@@ -13,6 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
+import { formatAirportLocalTimeShort } from '@/utils/airportTime';
 
 ChartJS.register(
   CategoryScale,
@@ -48,11 +49,15 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
 
     delayForecast.forEach((forecast) => {
       const forecastTime = new Date(startTime);
-      forecastTime.setMinutes(forecastTime.getMinutes() + ((forecast.sequence - 1) * 15));
+      forecastTime.setUTCMinutes(forecastTime.getUTCMinutes() + ((forecast.sequence - 1) * 15));
       
-      const hours = forecastTime.getHours();
-      const minutes = forecastTime.getMinutes();
-      labels.push(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+      if (airportCode) {
+        labels.push(formatAirportLocalTimeShort(forecastTime.toISOString(), airportCode));
+      } else {
+        const hours = forecastTime.getUTCHours();
+        const minutes = forecastTime.getUTCMinutes();
+        labels.push(`${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`);
+      }
       delays.push(forecast.delayMinutes);
     });
 

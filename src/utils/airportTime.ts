@@ -40,13 +40,11 @@ export function getAirportTimezone(airportCode: string): string {
 
 /**
  * Determine if a date is in summer (DST) or winter (standard time)
- * date should be a Date object representing airport local time (from utcToAirportLocal)
  * Uses DST dates from baseline data if available, otherwise estimates
  */
 export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): 'summer' | 'winter' {
   if (baseline?.dstDatesByYear) {
-    // Extract year from the date (using UTC methods since date represents local time)
-    const year = date.getUTCFullYear().toString();
+    const year = date.getFullYear().toString();
     const dstDates = baseline.dstDatesByYear[year];
     
     if (dstDates) {
@@ -55,11 +53,7 @@ export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<strin
       const dstStart = new Date(dstStartYear, dstStartMonth - 1, dstStartDay);
       const dstEnd = new Date(dstEndYear, dstEndMonth - 1, dstEndDay);
       
-      // Extract date components using UTC methods (since date represents local time)
-      const dateYear = date.getUTCFullYear();
-      const dateMonth = date.getUTCMonth();
-      const dateDay = date.getUTCDate();
-      const dateOnly = new Date(dateYear, dateMonth, dateDay);
+      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
       const dstStartOnly = new Date(dstStart.getFullYear(), dstStart.getMonth(), dstStart.getDate());
       const dstEndOnly = new Date(dstEnd.getFullYear(), dstEnd.getMonth(), dstEnd.getDate());
       
@@ -71,8 +65,7 @@ export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<strin
   
   // Fallback: estimate based on month (rough approximation)
   // DST typically: March-November in US
-  // Use UTC methods since date represents local time
-  const month = date.getUTCMonth() + 1; // 1-12
+  const month = date.getMonth() + 1; // 1-12
   if (month >= 3 && month < 11) {
     return 'summer';
   }
@@ -88,6 +81,17 @@ export function getAirportUTCOffset(airportCode: string, date: Date, baseline?: 
   const season = getSeason(date, baseline);
   const offset = UTC_OFFSETS[timezone] || { winter: -6, summer: -5 };
   const offsetHours = season === 'summer' ? offset.summer : offset.winter;
+  
+  // Debug logging (can be removed in production)
+  if (process.env.NODE_ENV === 'development') {
+    console.log('[airportTime] getAirportUTCOffset:', {
+      airportCode,
+      dateUTC: date.toISOString(),
+      timezone,
+      season,
+      offsetHours
+    });
+  }
   
   return offsetHours;
 }
@@ -131,7 +135,7 @@ export function getAirportLocalTime(airportCode: string, baseline?: { dstDatesBy
 }
 
 /**
- * Convert a UTC Date to airport local time string
+ * Convert a UTC Date to airport local time string (time only, HH:MM)
  * date should be a UTC Date object representing a moment in time
  */
 export function formatAirportLocalTime(date: Date, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): string {
@@ -140,14 +144,52 @@ export function formatAirportLocalTime(date: Date, airportCode: string, baseline
   // Get UTC components
   const utcHours = date.getUTCHours();
   const utcMinutes = date.getUTCMinutes();
+  const utcSeconds = date.getUTCSeconds();
   
   // Convert to local time by adding offset
   // Note: offset is negative for US timezones (e.g., -6 for Chicago)
   // So we add the negative offset, which effectively subtracts
   let localHours = utcHours + offsetHours;
   let localMinutes = utcMinutes;
+  let localSeconds = utcSeconds;
   
   // Handle day rollover
+  while (localHours < 0) {
+    localHours += 24;
+  }
+  while (localHours >= 24) {
+    localHours -= 24;
+  }
+  
+  const month = date.getUTCMonth() + 1;
+  const day = date.getUTCDate();
+  
+  return `${month}/${day} ${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}:${String(localSeconds).padStart(2, '0')}`;
+}
+
+/**
+ * Format a UTC date/time string to airport local time (with date)
+ * Overload: accepts string (ISO format) instead of Date object
+ */
+export function formatAirportLocalTimeFromString(utcTimeString: string, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): string {
+  const date = new Date(utcTimeString);
+  return formatAirportLocalTime(date, airportCode, baseline);
+}
+
+
+/**
+ * Format a UTC date/time string to airport local time (short format, no seconds)
+ */
+export function formatAirportLocalTimeShort(utcTimeString: string, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): string {
+  const date = new Date(utcTimeString);
+  const offsetHours = getAirportUTCOffset(airportCode, date, baseline);
+  
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  
+  let localHours = utcHours + offsetHours;
+  let localMinutes = utcMinutes;
+  
   while (localHours < 0) {
     localHours += 24;
   }
@@ -169,19 +211,6 @@ export function formatLocalTimeDate(localTimeDate: Date): string {
 }
 
 /**
- * Get the airport local date string (YYYY-MM-DD) from a UTC Date
- * This ensures we use the airport's local date, not UTC date
- */
-export function getAirportLocalDateString(utcDate: Date, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): string {
-  const localDate = utcToAirportLocal(utcDate, airportCode, baseline);
-  // Extract the date components from the local time representation
-  const year = localDate.getUTCFullYear();
-  const month = localDate.getUTCMonth() + 1;
-  const day = localDate.getUTCDate();
-  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-}
-
-/**
  * Convert airport local time to UTC Date
  */
 export function airportLocalTimeToUTC(localTime: Date, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): Date {
@@ -189,4 +218,16 @@ export function airportLocalTimeToUTC(localTime: Date, airportCode: string, base
   const localTimeMs = localTime.getTime();
   const utcTime = new Date(localTimeMs - offsetHours * 60 * 60 * 1000);
   return utcTime;
+}
+
+/**
+ * Get airport local date string in YYYY-MM-DD format
+ * Converts a UTC Date to airport local date
+ */
+export function getAirportLocalDateString(utcDate: Date, airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): string {
+  const localDate = utcToAirportLocal(utcDate, airportCode, baseline);
+  const year = localDate.getUTCFullYear();
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(localDate.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

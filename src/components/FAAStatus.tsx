@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, Plane, XCircle, Cloud } from 'lucide-react';
 import { pilotApi } from '@/services/api';
 import { FAADelayForecast } from './FAADelayForecast';
+import { formatAirportLocalTimeFromString } from '@/utils/airportTime';
 
 interface FAAStatus {
   airportId: string;
@@ -156,7 +157,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </div>
           <p className="text-slate-300 text-xs">{status.groundStop.impactingCondition}</p>
           <p className="text-slate-400 text-xs mt-1">
-            Until: {new Date(status.groundStop.endTime).toLocaleString()}
+            Until: {airportId ? formatAirportLocalTimeFromString(status.groundStop.endTime, airportId) : new Date(status.groundStop.endTime).toLocaleString()}
           </p>
         </div>
       )}
@@ -239,7 +240,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             <span className="font-semibold text-cyan-400">Deicing Active</span>
           </div>
           <p className="text-slate-400 text-xs">
-            Until: {new Date(status.deicing.expTime).toLocaleString()}
+            Until: {airportId ? formatAirportLocalTimeFromString(status.deicing.expTime, airportId) : new Date(status.deicing.expTime).toLocaleString()}
           </p>
         </div>
       )}
