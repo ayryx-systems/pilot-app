@@ -165,7 +165,10 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             <span className="font-semibold text-yellow-400">Ground Delay</span>
           </div>
           <p className="text-slate-300 text-xs">
-            Avg: {Math.round(status.groundDelay.avgDelay)} min | Max: {status.groundDelay.maxDelay} min
+            Avg: {Math.round(status.groundDelay.avgDelay)} min
+            {status.groundDelay.maxDelay && status.groundDelay.maxDelay < 1000 && (
+              <> | Max: {status.groundDelay.maxDelay} min</>
+            )}
           </p>
           <p className="text-slate-400 text-xs mt-1">{status.groundDelay.impactingCondition}</p>
         </div>
