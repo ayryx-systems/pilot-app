@@ -154,11 +154,19 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="h-3 w-3 text-red-400" />
             <span className="font-semibold text-red-400">Ground Stop</span>
+            {status.groundStop.center && (
+              <span className="text-xs text-slate-400">({status.groundStop.center})</span>
+            )}
           </div>
           <p className="text-slate-300 text-xs">{status.groundStop.impactingCondition}</p>
           <p className="text-slate-400 text-xs mt-1">
             Until: {airportId ? formatAirportLocalTimeFromString(status.groundStop.endTime, airportId) : new Date(status.groundStop.endTime).toLocaleString()}
           </p>
+          {status.groundStop.probabilityOfExtension && status.groundStop.probabilityOfExtension !== 'NONE' && (
+            <p className="text-slate-400 text-xs">
+              Extension: {status.groundStop.probabilityOfExtension}
+            </p>
+          )}
         </div>
       )}
 
@@ -167,6 +175,9 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           <div className="flex items-center gap-2 mb-1">
             <Clock className="h-3 w-3 text-yellow-400" />
             <span className="font-semibold text-yellow-400">Ground Delay</span>
+            {status.groundDelay.center && (
+              <span className="text-xs text-slate-400">({status.groundDelay.center})</span>
+            )}
           </div>
           <p className="text-slate-300 text-xs">
             Avg: {Math.round(status.groundDelay.avgDelay)} min
@@ -175,6 +186,11 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             )}
           </p>
           <p className="text-slate-400 text-xs mt-1">{status.groundDelay.impactingCondition}</p>
+          {status.groundDelay.startTime && (
+            <p className="text-slate-400 text-xs">
+              Started: {airportId ? formatAirportLocalTimeFromString(status.groundDelay.startTime, airportId) : new Date(status.groundDelay.startTime).toLocaleString()}
+            </p>
+          )}
           {status.groundDelay.delayForecast && status.groundDelay.delayForecast.length > 0 && (
             <FAADelayForecast
               delayForecast={status.groundDelay.delayForecast}
@@ -201,6 +217,11 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           {status.departureDelay.trend && (
             <p className="text-slate-400 text-xs">Trend: {status.departureDelay.trend}</p>
           )}
+          {status.departureDelay.updateTime && (
+            <p className="text-slate-400 text-xs">
+              Updated: {airportId ? formatAirportLocalTimeFromString(status.departureDelay.updateTime, airportId) : new Date(status.departureDelay.updateTime).toLocaleString()}
+            </p>
+          )}
         </div>
       )}
 
@@ -220,6 +241,11 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           {status.arrivalDelay.trend && (
             <p className="text-slate-400 text-xs">Trend: {status.arrivalDelay.trend}</p>
           )}
+          {status.arrivalDelay.updateTime && (
+            <p className="text-slate-400 text-xs">
+              Updated: {airportId ? formatAirportLocalTimeFromString(status.arrivalDelay.updateTime, airportId) : new Date(status.arrivalDelay.updateTime).toLocaleString()}
+            </p>
+          )}
         </div>
       )}
 
@@ -228,8 +254,27 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           <div className="flex items-center gap-2 mb-1">
             <XCircle className="h-3 w-3 text-red-400" />
             <span className="font-semibold text-red-400">Closure</span>
+            {status.airportClosure.notamNumber && (
+              <span className="text-xs text-slate-400">(NOTAM {status.airportClosure.notamNumber})</span>
+            )}
           </div>
           <p className="text-slate-300 text-xs">{status.airportClosure.text}</p>
+          <p className="text-slate-400 text-xs mt-1">
+            {airportId ? formatAirportLocalTimeFromString(status.airportClosure.startTime, airportId) : new Date(status.airportClosure.startTime).toLocaleString()} - {airportId ? formatAirportLocalTimeFromString(status.airportClosure.endTime, airportId) : new Date(status.airportClosure.endTime).toLocaleString()}
+          </p>
+        </div>
+      )}
+
+      {status.freeForm && (
+        <div className="p-2 bg-blue-900/20 border border-blue-700 rounded text-sm">
+          <div className="flex items-center gap-2 mb-1">
+            <AlertTriangle className="h-3 w-3 text-blue-400" />
+            <span className="font-semibold text-blue-400">Notice</span>
+            {status.freeForm.notamNumber && (
+              <span className="text-xs text-slate-400">(NOTAM {status.freeForm.notamNumber})</span>
+            )}
+          </div>
+          <p className="text-slate-300 text-xs">{status.freeForm.text}</p>
         </div>
       )}
 
