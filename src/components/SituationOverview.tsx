@@ -157,6 +157,21 @@ export const SituationOverview = memo(function SituationOverview({
     }
   };
 
+  // Function to determine overall alert level from all conditions
+  const getOverallAlertLevel = (): 'normal' | 'caution' | 'warning' => {
+    if (!summary?.conditions) return 'normal';
+
+    const statuses = Object.values(summary.conditions)
+      .map(condition => condition?.status)
+      .filter((status): status is 'normal' | 'caution' | 'warning' => 
+        status === 'normal' || status === 'caution' || status === 'warning'
+      );
+
+    if (statuses.some(s => s === 'warning')) return 'warning';
+    if (statuses.some(s => s === 'caution')) return 'caution';
+    return 'normal';
+  };
+
 
   if (loading) {
     return (
@@ -186,7 +201,7 @@ export const SituationOverview = memo(function SituationOverview({
     <div className="relative space-y-4" style={{ zIndex: 2147483647 }}>
       {/* Current Situation Summary */}
       {summary && (
-        <div className="p-2 rounded-lg border-2 bg-slate-700/50 border-slate-500/50 text-gray-200">
+        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(getOverallAlertLevel())} text-gray-200`}>
           <div className="text-sm leading-relaxed">
             {summary.situation_overview}
           </div>

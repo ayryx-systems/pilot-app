@@ -130,23 +130,25 @@ export function TimeSlider({
 
   const formatDate = (date: Date) => {
     const dateLocal = utcToAirportLocal(date, airportCode, baseline);
-    const todayLocal = airportNowLocal;
+    const todayLocal = utcToAirportLocal(utcNow, airportCode, baseline);
+    
+    // Compare local dates (not UTC dates)
+    const dateLocalStr = `${dateLocal.getUTCFullYear()}-${String(dateLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(dateLocal.getUTCDate()).padStart(2, '0')}`;
+    const todayLocalStr = `${todayLocal.getUTCFullYear()}-${String(todayLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(todayLocal.getUTCDate()).padStart(2, '0')}`;
+    
     const tomorrowLocal = new Date(todayLocal);
-    tomorrowLocal.setDate(tomorrowLocal.getDate() + 1);
+    tomorrowLocal.setUTCDate(tomorrowLocal.getUTCDate() + 1);
+    const tomorrowLocalStr = `${tomorrowLocal.getUTCFullYear()}-${String(tomorrowLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrowLocal.getUTCDate()).padStart(2, '0')}`;
     
-    // Compare dates (just date part, not time) - use UTC dates for comparison
-    const dateStr = date.toISOString().split('T')[0];
-    const todayStr = utcNow.toISOString().split('T')[0];
-    const tomorrowDate = new Date(utcNow);
-    tomorrowDate.setDate(tomorrowDate.getDate() + 1);
-    const tomorrowStr = tomorrowDate.toISOString().split('T')[0];
-    
-    if (dateStr === todayStr) {
+    if (dateLocalStr === todayLocalStr) {
       return 'Today';
-    } else if (dateStr === tomorrowStr) {
+    } else if (dateLocalStr === tomorrowLocalStr) {
       return 'Tomorrow';
     } else {
-      return dateLocal.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      const month = dateLocal.getUTCMonth();
+      const day = dateLocal.getUTCDate();
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[month]} ${day}`;
     }
   };
 

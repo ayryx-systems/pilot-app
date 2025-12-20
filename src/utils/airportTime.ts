@@ -146,25 +146,47 @@ export function formatAirportLocalTime(date: Date, airportCode: string, baseline
   const utcMinutes = date.getUTCMinutes();
   const utcSeconds = date.getUTCSeconds();
   
-  // Convert to local time by adding offset
-  // Note: offset is negative for US timezones (e.g., -6 for Chicago)
-  // So we add the negative offset, which effectively subtracts
+  // Calculate local time by adding offset
   let localHours = utcHours + offsetHours;
   let localMinutes = utcMinutes;
   let localSeconds = utcSeconds;
   
-  // Handle day rollover
-  while (localHours < 0) {
+  // Calculate local date - start with UTC date and adjust for timezone
+  let localYear = date.getUTCFullYear();
+  let localMonth = date.getUTCMonth();
+  let localDay = date.getUTCDate();
+  
+  // Handle day rollover when hours go negative or exceed 24
+  if (localHours < 0) {
     localHours += 24;
-  }
-  while (localHours >= 24) {
+    localDay -= 1;
+    // Handle month/year rollover
+    if (localDay < 1) {
+      localMonth -= 1;
+      if (localMonth < 0) {
+        localMonth = 11;
+        localYear -= 1;
+      }
+      // Get days in previous month
+      const daysInMonth = new Date(localYear, localMonth + 1, 0).getDate();
+      localDay = daysInMonth;
+    }
+  } else if (localHours >= 24) {
     localHours -= 24;
+    localDay += 1;
+    // Handle month/year rollover
+    const daysInMonth = new Date(localYear, localMonth + 1, 0).getDate();
+    if (localDay > daysInMonth) {
+      localDay = 1;
+      localMonth += 1;
+      if (localMonth > 11) {
+        localMonth = 0;
+        localYear += 1;
+      }
+    }
   }
   
-  const month = date.getUTCMonth() + 1;
-  const day = date.getUTCDate();
-  
-  return `${month}/${day} ${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}:${String(localSeconds).padStart(2, '0')}`;
+  return `${localMonth + 1}/${localDay} ${String(localHours).padStart(2, '0')}:${String(localMinutes).padStart(2, '0')}:${String(localSeconds).padStart(2, '0')}`;
 }
 
 /**
