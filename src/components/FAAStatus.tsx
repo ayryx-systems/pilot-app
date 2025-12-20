@@ -179,8 +179,14 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </div>
           <p className="text-slate-300 text-xs">
             {status.departureDelay.arrivalDeparture.min} - {status.departureDelay.arrivalDeparture.max}
+            {status.departureDelay.averageDelay && (
+              <span className="text-slate-400 ml-2">(avg: ~{status.departureDelay.averageDelay} min)</span>
+            )}
           </p>
           <p className="text-slate-400 text-xs mt-1">{status.departureDelay.reason}</p>
+          {status.departureDelay.trend && (
+            <p className="text-slate-400 text-xs">Trend: {status.departureDelay.trend}</p>
+          )}
         </div>
       )}
 
@@ -192,8 +198,14 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </div>
           <p className="text-slate-300 text-xs">
             {status.arrivalDelay.arrivalDeparture.min} - {status.arrivalDelay.arrivalDeparture.max}
+            {status.arrivalDelay.averageDelay && (
+              <span className="text-slate-400 ml-2">(avg: ~{status.arrivalDelay.averageDelay} min)</span>
+            )}
           </p>
           <p className="text-slate-400 text-xs mt-1">{status.arrivalDelay.reason}</p>
+          {status.arrivalDelay.trend && (
+            <p className="text-slate-400 text-xs">Trend: {status.arrivalDelay.trend}</p>
+          )}
         </div>
       )}
 
