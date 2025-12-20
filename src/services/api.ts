@@ -127,6 +127,28 @@ class PilotApiService {
   }
 
   /**
+   * Get FAA NAS status for an airport
+   */
+  async getFAAStatus(airportId: string): Promise<any> {
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/faa-status/${airportId}?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      }, 8000);
+      return await this.handleResponse<any>(response);
+    } catch (error) {
+      console.error(`Failed to fetch FAA status for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+      if (error instanceof ApiError && error.status === 404) {
+        return { status: null };
+      }
+      throw error;
+    }
+  }
+
+  /**
    * Get airport overview (weather, runways, operational data)
    */
   async getAirportOverview(airportId: string): Promise<AirportOverview> {

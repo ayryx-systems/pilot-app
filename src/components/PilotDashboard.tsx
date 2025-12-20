@@ -5,6 +5,7 @@ import { PilotMap } from './PilotMap';
 import { AirportSelector } from './AirportSelector';
 import { ConnectionStatus } from './ConnectionStatus';
 import { SituationOverview } from './SituationOverview';
+import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { MapControls } from './MapControls';
 import { TimeSlider } from './TimeSlider';
@@ -405,6 +406,11 @@ export function PilotDashboard() {
                 isDemo={selectedAirport === 'KDEN'}
                 selectedTime={selectedTime}
               />
+
+              {/* FAA NAS Status */}
+              {selectedAirport && (
+                <FAAStatus airportId={selectedAirport} />
+              )}
 
               {/* Time-Based Graphs - Traffic Forecast */}
               {selectedAirport && baseline && (
