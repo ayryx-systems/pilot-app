@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { AlertTriangle, Clock, Plane, XCircle, Cloud } from 'lucide-react';
 import { pilotApi } from '@/services/api';
+import { FAADelayForecast } from './FAADelayForecast';
 
 interface FAAStatus {
   airportId: string;
@@ -28,6 +29,8 @@ interface FAAStatus {
     endTime: string;
     center: string;
     advisoryUrl: string;
+    delayForecast: Array<{ sequence: number; delayMinutes: number }> | null;
+    forecastStartTime: string | null;
   } | null;
   airportClosure: {
     id: string;
@@ -171,6 +174,13 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             )}
           </p>
           <p className="text-slate-400 text-xs mt-1">{status.groundDelay.impactingCondition}</p>
+          {status.groundDelay.delayForecast && status.groundDelay.delayForecast.length > 0 && (
+            <FAADelayForecast
+              delayForecast={status.groundDelay.delayForecast}
+              forecastStartTime={status.groundDelay.forecastStartTime}
+              airportCode={airportId || undefined}
+            />
+          )}
         </div>
       )}
 
