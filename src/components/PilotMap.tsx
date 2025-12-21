@@ -118,6 +118,7 @@ interface PilotMapProps {
   isDemo?: boolean;
   loading?: boolean;
   selectedAirport?: string | null;
+  selectedTrackId?: string | null;
 }
 
 export function PilotMap({
@@ -129,7 +130,8 @@ export function PilotMap({
   onFullscreenChange,
   isDemo,
   loading,
-  selectedAirport
+  selectedAirport,
+  selectedTrackId
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -874,9 +876,14 @@ export function PilotMap({
             return;
           }
 
+          // Check if this track is selected
+          const isSelected = selectedTrackId === track.id;
+
           // Determine track color based on status and callsign
           let color = '#a855f7'; // Purple for active ground tracks (distinct from runways/approaches)
-          if (track.status === 'COMPLETED') {
+          if (isSelected) {
+            color = '#fbbf24'; // Bright yellow/amber for selected track
+          } else if (track.status === 'COMPLETED') {
             color = '#64748b'; // Muted slate for completed flights
           } else if (track.status === 'EMERGENCY') {
             color = '#ef4444'; // Red for emergency
@@ -895,8 +902,9 @@ export function PilotMap({
           }
 
           // Calculate opacity based on track age (fade out over 30 minutes)
-          let opacity = 0.8; // Default opacity
-          if (trackAge > 20) {
+          // Selected tracks always have full opacity
+          let opacity = isSelected ? 1.0 : 0.8; // Default opacity
+          if (!isSelected && trackAge > 20) {
             // Start fading at 20 minutes, completely transparent at 30 minutes
             const fadeStart = 20; // minutes
             const fadeEnd = 30; // minutes
@@ -915,14 +923,15 @@ export function PilotMap({
           });
 
           // Create visible thin dashed line for display
+          // Selected tracks are thicker and solid
           const visibleLine = L.polyline(latLngs, {
             color: color,
-            weight: 1.5, // Thin visual line
+            weight: isSelected ? 3 : 1.5, // Thicker for selected track
             opacity: opacity, // Keep the existing fade-out logic intact
-            dashArray: '8, 4', // Dashed for all tracks to make them less prominent
+            dashArray: isSelected ? undefined : '8, 4', // Solid for selected, dashed for others
             interactive: false, // Not clickable, just visual
             pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
-            zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
+            zIndexOffset: isSelected ? Z_INDEX_LAYERS.GROUND_TRACKS + 100 : Z_INDEX_LAYERS.GROUND_TRACKS // Selected tracks on top
           });
 
           // Helper functions to format landing time
@@ -1072,7 +1081,7 @@ export function PilotMap({
     };
 
     updateTracks();
-  }, [mapInstance, tracks, displayOptions.showGroundTracks]);
+  }, [mapInstance, tracks, displayOptions.showGroundTracks, selectedTrackId]);
 
   // Update weather radar display - FIXED with conservative approach
   useEffect(() => {

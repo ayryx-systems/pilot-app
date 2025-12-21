@@ -7,6 +7,8 @@ import { ConnectionStatus } from './ConnectionStatus';
 import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
+import { ArrivalScatterPlot } from './ArrivalScatterPlot';
+import { Arrival } from '@/types';
 import { MapControls } from './MapControls';
 import { TimeSlider } from './TimeSlider';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
@@ -35,6 +37,7 @@ export function PilotDashboard() {
     airportOverview,
     pireps,
     tracks,
+    arrivals,
     summary,
     baseline,
     baselineLoading,
@@ -100,6 +103,7 @@ export function PilotDashboard() {
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   // Save map display options to localStorage whenever they change
@@ -362,6 +366,7 @@ export function PilotDashboard() {
             isDemo={selectedAirport === 'KDEN'}
             loading={loading}
             selectedAirport={selectedAirport}
+            selectedTrackId={selectedTrackId}
           />
 
           {/* Map Controls - Top Right of Map Area */}
@@ -392,6 +397,37 @@ export function PilotDashboard() {
                 }
               }}
             >
+              {/* Arrival Scatter Plot */}
+              {arrivals && arrivals.length > 0 && selectedAirport && (
+                <ArrivalScatterPlot
+                  arrivals={arrivals}
+                  airportCode={selectedAirport}
+                  onPointClick={(arrival) => {
+                    // Find matching track by callsign and landing time
+                    const landingTime = new Date(arrival.timestampLanding);
+                    const matchingTrack = tracks.find(track => {
+                      const trackLandingTime = track.createdAt ? new Date(track.createdAt) : null;
+                      return track.callsign === arrival.callsign && 
+                             trackLandingTime && 
+                             Math.abs(trackLandingTime.getTime() - landingTime.getTime()) < 60000; // Within 1 minute
+                    });
+                    
+                    if (matchingTrack) {
+                      setSelectedTrackId(matchingTrack.id);
+                      // Scroll to map if needed
+                      setTimeout(() => {
+                        const mapElement = document.querySelector('[data-map-container]');
+                        if (mapElement) {
+                          mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        }
+                      }, 100);
+                    } else {
+                      console.log('[PilotDashboard] No matching track found for arrival:', arrival);
+                    }
+                  }}
+                />
+              )}
+
               {/* Situation Overview */}
               <SituationOverview
                 key={`situation-${selectedAirport}`}

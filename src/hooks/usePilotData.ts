@@ -27,6 +27,7 @@ export function usePilotData() {
       airportOverview: null,
       pireps: [],
       tracks: [],
+      arrivals: [],
       summary: null,
       connectionStatus: {
         connected: false,
@@ -36,6 +37,7 @@ export function usePilotData() {
       error: null,
       pirepsMetadata: undefined,
       tracksMetadata: undefined,
+      arrivalsMetadata: undefined,
       summaryMetadata: undefined,
       baseline: null,
       baselineLoading: false,
@@ -143,6 +145,7 @@ export function usePilotData() {
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
         pilotApi.getGroundTracks(airportId),
+        pilotApi.getArrivals(airportId),
         pilotApi.getSituationSummary(airportId),
       ];
       
@@ -151,8 +154,10 @@ export function usePilotData() {
       }
 
       const responses = await Promise.allSettled(promises);
-      const [overviewResponse, pirepsResponse, tracksResponse, summaryResponse, baselineResponse] = responses.length === 5
+      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse, baselineResponse] = responses.length === 6
         ? responses
+        : responses.length === 5
+        ? [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }]
         : [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }];
 
       const updates: Partial<PilotAppState> = { loading: false };
@@ -199,6 +204,23 @@ export function usePilotData() {
         };
       }
 
+      if (arrivalsResponse.status === 'fulfilled') {
+        updates.arrivals = arrivalsResponse.value.arrivals;
+        updates.arrivalsMetadata = {
+          active: arrivalsResponse.value.active ?? true,
+          message: arrivalsResponse.value.message
+        };
+      } else {
+        console.error('Failed to load arrivals:', arrivalsResponse.reason);
+        updates.arrivals = [];
+        updates.arrivalsMetadata = {
+          active: false,
+          message: arrivalsResponse.reason instanceof Error && arrivalsResponse.reason.message.includes('offline')
+            ? 'Arrivals unavailable - check internet connection'
+            : 'Failed to load arrivals'
+        };
+      }
+
       if (summaryResponse.status === 'fulfilled') {
         updates.summary = summaryResponse.value.summary;
         updates.summaryMetadata = {
@@ -235,10 +257,10 @@ export function usePilotData() {
       // This prevents unnecessary state changes and re-renders
 
       // Set error message based on failed requests
-      const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
+      const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
         .filter(response => response.status === 'rejected');
 
-      const successfulRequests = [overviewResponse, pirepsResponse, tracksResponse, summaryResponse]
+      const successfulRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
         .filter(response => response.status === 'fulfilled');
 
       const hasNoData = successfulRequests.length === 0;
@@ -264,6 +286,7 @@ export function usePilotData() {
         overview: !!updates.airportOverview,
         pireps: updates.pireps?.length || 0,
         tracks: updates.tracks?.length || 0,
+        arrivals: updates.arrivals?.length || 0,
         summary: !!updates.summary,
         errors: failedRequests.length,
         baselineUpdated: 'baseline' in updates,
@@ -278,6 +301,7 @@ export function usePilotData() {
           updates.airportOverview !== undefined ||
           updates.pireps !== undefined ||
           updates.tracks !== undefined ||
+          updates.arrivals !== undefined ||
           updates.summary !== undefined ||
           updates.baseline !== undefined ||
           updates.baselineLoading !== undefined ||
@@ -285,6 +309,7 @@ export function usePilotData() {
           updates.error !== undefined ||
           updates.pirepsMetadata !== undefined ||
           updates.tracksMetadata !== undefined ||
+          updates.arrivalsMetadata !== undefined ||
           updates.summaryMetadata !== undefined
         );
         
@@ -374,6 +399,7 @@ export function usePilotData() {
     airportOverview: state.airportOverview,
     pireps: state.pireps,
     tracks: state.tracks,
+    arrivals: state.arrivals,
     summary: state.summary,
     baseline: state.baseline,
     baselineLoading: state.baselineLoading,
@@ -382,6 +408,7 @@ export function usePilotData() {
     error: state.error,
     pirepsMetadata: state.pirepsMetadata,
     tracksMetadata: state.tracksMetadata,
+    arrivalsMetadata: state.arrivalsMetadata,
     summaryMetadata: state.summaryMetadata,
     refreshData,
   };

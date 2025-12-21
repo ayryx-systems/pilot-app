@@ -141,6 +141,18 @@ export interface GroundTrack {
   endTime?: string;
 }
 
+export interface Arrival {
+  icao: string;
+  callsign: string;
+  aircraftType: string | null;
+  timestamp50nm: string;
+  timestampLanding: string;
+  durationSeconds: number;
+  durationMinutes: number;
+  runway: string | null;
+  airportId: string;
+}
+
 export interface SituationSummary {
   situation_overview: string;
   conditions: {
@@ -205,6 +217,7 @@ export interface PilotAppState {
   airportOverview: AirportOverview | null;
   pireps: PiRep[];
   tracks: GroundTrack[];
+  arrivals: Arrival[];
   summary: SituationSummary | null;
   connectionStatus: ConnectionStatus;
   loading: boolean;
@@ -214,6 +227,10 @@ export interface PilotAppState {
     message?: string;
   };
   tracksMetadata?: {
+    active: boolean;
+    message?: string;
+  };
+  arrivalsMetadata?: {
     active: boolean;
     message?: string;
   };
@@ -308,6 +325,17 @@ export interface PirepsResponse {
 export interface TracksResponse {
   airportId: string;
   tracks: GroundTrack[];
+  count: number;
+  timestamp: string;
+  cacheMaxAge: number;
+  source: string;
+  active?: boolean;
+  message?: string;
+}
+
+export interface ArrivalsResponse {
+  airportId: string;
+  arrivals: Arrival[];
   count: number;
   timestamp: string;
   cacheMaxAge: number;

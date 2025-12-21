@@ -7,6 +7,7 @@ import {
   AirportOverview,
   PirepsResponse,
   TracksResponse,
+  ArrivalsResponse,
   SummaryResponse,
   BaselineResponse
 } from '@/types';
@@ -233,6 +234,45 @@ class PilotApiService {
 
       if (error instanceof ApiError && error.status === 0) {
         throw new ApiError('Cannot connect to server - ground tracks unavailable while offline', 0);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get arrivals for an airport (last hour)
+   */
+  async getArrivals(airportId: string): Promise<ArrivalsResponse> {
+    // Check if demo mode should be used for this airport
+    if (demoService.shouldUseDemo(airportId)) {
+      demoService.enableDemo();
+      return {
+        airportId,
+        arrivals: [],
+        count: 0,
+        timestamp: new Date().toISOString(),
+        cacheMaxAge: 30,
+        source: 'demo',
+        active: false,
+        message: 'Demo mode - no arrival data available'
+      };
+    }
+
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/arrivals?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      return await this.handleResponse<ArrivalsResponse>(response);
+    } catch (error) {
+      console.error(`Failed to fetch arrivals for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - arrivals unavailable while offline', 0);
       }
 
       throw error;
