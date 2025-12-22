@@ -436,8 +436,10 @@ export function PilotMap({
       const waypointsPane = waypointsGroup.getPane?.();
       const weatherPane = weatherGroup.getPane?.();
       const pirepsPane = pirepsGroup.getPane?.();
+      const extendedCenterlinesPane = layerGroupsRef.current.extendedCenterlines.getPane?.();
       
       // GROUND_TRACKS: 30, waypoints go above at 35
+      // Extended centerlines should be below tracks (z-index 610 = 10 + markerPane base 600)
       if (tracksPane && tracksPane.style) {
         tracksPane.style.zIndex = '630'; // GROUND_TRACKS (30) + markerPane base (600)
       }
@@ -450,8 +452,11 @@ export function PilotMap({
       if (pirepsPane && pirepsPane.style) {
         pirepsPane.style.zIndex = '700'; // PIREPs above waypoints and tracks
       }
+      if (extendedCenterlinesPane && extendedCenterlinesPane.style) {
+        extendedCenterlinesPane.style.zIndex = '610'; // Extended centerlines below tracks (10 + markerPane base 600)
+      }
       
-      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=620, tracks=630, waypoints=635, pireps=700');
+      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=620, extendedCenterlines=610, tracks=630, waypoints=635, pireps=700');
 
       // Add scale control (similar to ATC dashboard)
       L.control
@@ -922,13 +927,13 @@ export function PilotMap({
             zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
           });
 
-          // Create visible thin dashed line for display
-          // Selected tracks are thicker and solid
+          // Create visible continuous line for display
+          // Selected tracks are thicker
           const visibleLine = L.polyline(latLngs, {
             color: color,
-            weight: isSelected ? 3 : 1.5, // Thicker for selected track
+            weight: isSelected ? 3.5 : 2, // Thicker for selected track, slightly thicker for all tracks
             opacity: opacity, // Keep the existing fade-out logic intact
-            dashArray: isSelected ? undefined : '8, 4', // Solid for selected, dashed for others
+            dashArray: undefined, // Continuous line for all tracks
             interactive: false, // Not clickable, just visual
             pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
             zIndexOffset: isSelected ? Z_INDEX_LAYERS.GROUND_TRACKS + 100 : Z_INDEX_LAYERS.GROUND_TRACKS // Selected tracks on top
@@ -1008,7 +1013,7 @@ export function PilotMap({
           const createHighlightOverlay = () => {
             const highlightLine = L.polyline(latLngs, {
               color: color,
-              weight: 4, // Thicker than the original 1.5
+              weight: 4, // Thicker than the base track weight of 2
               opacity: 1.0, // Full opacity
               dashArray: undefined, // Continuous line (no dashes)
               interactive: false,
@@ -1071,6 +1076,9 @@ export function PilotMap({
           if (layerGroupsRef.current.tracks) {
             layerGroupsRef.current.tracks.addLayer(clickableLine);
             layerGroupsRef.current.tracks.addLayer(visibleLine);
+            // Ensure tracks appear above runways by bringing them to front
+            visibleLine.bringToFront();
+            clickableLine.bringToFront();
           }
 
           // Start markers removed - track line will be clickable instead
@@ -2402,11 +2410,11 @@ export function PilotMap({
           weight: runwayWeight,
           opacity: 1.0,
           interactive: false,
-          pane: 'overlayPane'
+          pane: 'markerPane',
+          zIndexOffset: 10 // Set z-index to 610 (10 + markerPane base 600), below tracks at 630
         });
         (runway as any)._runwayPolyline = true;
         runway.addTo(mapInstance);
-        runway.bringToFront();
 
         if (currentZoom >= 11) {
           const runwayRef = way.tags?.ref;
@@ -2517,6 +2525,8 @@ export function PilotMap({
               opacity: 0.8,
               dashArray: "8,4",
               interactive: false,
+              pane: 'markerPane',
+              zIndexOffset: 10 // Set z-index to 610 (10 + markerPane base 600), below tracks at 630
             }
           );
 
@@ -2531,6 +2541,8 @@ export function PilotMap({
               opacity: 0.8,
               dashArray: "8,4",
               interactive: false,
+              pane: 'markerPane',
+              zIndexOffset: 10 // Set z-index to 610 (10 + markerPane base 600), below tracks at 630
             }
           );
 
