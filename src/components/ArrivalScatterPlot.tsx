@@ -135,7 +135,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       }
     });
 
-    return { datasets, timeRange: { min: -2, max: 0.1 } }; // -2 hours to +6 minutes (slight padding)
+    return { datasets, timeRange: { min: -2, max: 0 } }; // -2 hours to now
   }, [arrivals, airportCode]);
 
   const options = useMemo(() => {
@@ -145,7 +145,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       scales: {
         x: {
           min: chartData?.timeRange?.min ?? -2,
-          max: chartData?.timeRange?.max ?? 0.1,
+          max: chartData?.timeRange?.max ?? 0,
           title: {
             display: true,
             text: 'Landing Time (relative to now)',
@@ -159,21 +159,25 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
             callback: function(value: any) {
               if (typeof value !== 'number') return '';
               // Value is in hours (negative = past, positive = future)
-              if (value === 0) return 'Now';
+              if (Math.abs(value) < 0.01) return 'Now';
               if (value < 0) {
-                const hours = Math.abs(Math.floor(value));
-                const minutes = Math.abs(Math.floor((value % 1) * 60));
-                if (hours > 0) {
+                const absValue = Math.abs(value);
+                const hours = Math.floor(absValue);
+                const minutes = Math.round((absValue % 1) * 60);
+                if (hours > 0 && minutes === 0) {
                   return `${hours}h ago`;
+                } else if (hours > 0 && minutes > 0) {
+                  return `${hours}h ${minutes}m ago`;
                 } else {
                   return `${minutes}m ago`;
                 }
               } else {
-                const minutes = Math.floor(value * 60);
+                const minutes = Math.round(value * 60);
                 return `+${minutes}m`;
               }
             },
-            stepSize: 0.5, // Every 30 minutes
+            stepSize: 1, // Every hour
+            maxTicksLimit: 5, // Limit to prevent overcrowding
           },
           grid: {
             color: 'rgba(148, 163, 184, 0.1)',
