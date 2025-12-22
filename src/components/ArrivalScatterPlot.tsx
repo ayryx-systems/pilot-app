@@ -74,6 +74,10 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       return null;
     }
 
+    // Calculate time range: last 2 hours from now
+    const now = new Date();
+    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
+
     // Group arrivals by category
     const categoryData: Record<string, Arrival[]> = {};
     arrivals.forEach(arrival => {
@@ -92,16 +96,14 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       const categoryArrivals = categoryData[category];
       if (categoryArrivals && categoryArrivals.length > 0) {
         const scatterData = categoryArrivals.map(arrival => {
-          // Calculate hours since midnight in local time
+          // Calculate minutes ago from now (negative = in the past)
           const landingTime = new Date(arrival.timestampLanding);
-          const localTime = utcToAirportLocal(landingTime, airportCode);
-          const hours = localTime.getUTCHours();
-          const minutes = localTime.getUTCMinutes();
-          const seconds = localTime.getUTCSeconds();
-          const hoursSinceMidnight = hours + minutes / 60 + seconds / 3600;
+          const minutesAgo = (landingTime.getTime() - now.getTime()) / (1000 * 60);
+          // Convert to hours (negative = past, positive = future)
+          const hoursAgo = minutesAgo / 60;
 
           return {
-            x: hoursSinceMidnight,
+            x: hoursAgo,
             y: arrival.durationMinutes,
             arrival: arrival, // Store full arrival object for click handling
           };
@@ -119,7 +121,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       }
     });
 
-    return { datasets };
+    return { datasets, timeRange: { min: -2, max: 0.1 } }; // -2 hours to +6 minutes (slight padding)
   }, [arrivals, airportCode]);
 
   const options = useMemo(() => {
@@ -128,11 +130,11 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       maintainAspectRatio: false,
       scales: {
         x: {
-          min: 0,
-          max: 24,
+          min: chartData?.timeRange?.min ?? -2,
+          max: chartData?.timeRange?.max ?? 0.1,
           title: {
             display: true,
-            text: 'Landing Time (Local)',
+            text: 'Landing Time (relative to now)',
             color: '#e2e8f0',
             font: {
               size: 12,
@@ -142,12 +144,22 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
             color: '#94a3b8',
             callback: function(value: any) {
               if (typeof value !== 'number') return '';
-              if (value >= 24) return '24:00';
-              const hours = Math.floor(value);
-              const minutes = Math.floor((value - hours) * 60);
-              return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+              // Value is in hours (negative = past, positive = future)
+              if (value === 0) return 'Now';
+              if (value < 0) {
+                const hours = Math.abs(Math.floor(value));
+                const minutes = Math.abs(Math.floor((value % 1) * 60));
+                if (hours > 0) {
+                  return `${hours}h ago`;
+                } else {
+                  return `${minutes}m ago`;
+                }
+              } else {
+                const minutes = Math.floor(value * 60);
+                return `+${minutes}m`;
+              }
             },
-            stepSize: 1,
+            stepSize: 0.5, // Every 30 minutes
           },
           grid: {
             color: 'rgba(148, 163, 184, 0.1)',
@@ -157,7 +169,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
           beginAtZero: true,
           title: {
             display: true,
-            text: 'Time from 50nm (minutes)',
+            text: 'Flight Duration: 50nm to Landing (minutes)',
             color: '#e2e8f0',
             font: {
               size: 12,
@@ -201,8 +213,9 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
                 const hours = Math.floor(arrival.durationMinutes / 60);
                 const minutes = Math.round(arrival.durationMinutes % 60);
                 return [
-                  `Duration from 50nm: ${hours}h ${minutes}m (${arrival.durationMinutes.toFixed(1)} min)`,
-                  `Aircraft: ${arrival.aircraftType || 'Unknown'}`,
+                  `Flight Duration: ${hours}h ${minutes}m (${arrival.durationMinutes.toFixed(1)} min)`,
+                  `Time from 50nm boundary to landing`,
+                  `Aircraft Type: ${arrival.aircraftType || 'Unknown'}`,
                   `Callsign: ${arrival.callsign}`,
                   `ICAO: ${arrival.icao}`,
                 ];
@@ -232,7 +245,8 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
   if (!chartData || chartData.datasets.length === 0) {
     return (
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
-        <h3 className="text-sm font-semibold text-slate-200 mb-2">Arrival Times (Last Hour)</h3>
+        <h3 className="text-sm font-semibold text-slate-200 mb-2">Arrival Duration: 50nm Boundary to Landing</h3>
+        <p className="text-xs text-slate-400 mb-3">Shows how long each aircraft took from crossing 50nm to landing (last 2 hours)</p>
         <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
           No arrival data available
         </div>
@@ -247,7 +261,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
         <Scatter ref={chartRef} data={chartData} options={options} />
       </div>
       <p className="text-xs text-slate-400 mt-2">
-        Click on any point to view the ground track on the map
+        Each point represents one landing. Click to view the ground track on the map. Colors indicate aircraft category.
       </p>
     </div>
   );
