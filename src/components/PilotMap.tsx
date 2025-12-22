@@ -1759,20 +1759,20 @@ export function PilotMap({
 
             // Icing-specific colors (blue tones)
             let color = '#60a5fa'; // Light blue for moderate
-            let strokeWidth = 2.5;
+            let strokeWidth = 4;
             let fillOpacity = 0.08;
-            let strokeOpacity = 0.85;
+            let strokeOpacity = 0.15; // Much less opacity for less distracting contour lines
             
             if (icing.severity === 'SEVERE' || icing.severity === 'EXTREME') {
               color = '#3b82f6'; // Blue
-              strokeWidth = 3.5;
+              strokeWidth = 5;
               fillOpacity = 0.1;
-              strokeOpacity = 0.95;
+              strokeOpacity = 0.2; // Slightly more visible for severe/extreme
             } else if (icing.severity === 'MODERATE') {
               color = '#60a5fa'; // Lighter blue
-              strokeWidth = 3;
+              strokeWidth = 4.5;
               fillOpacity = 0.08;
-              strokeOpacity = 0.9;
+              strokeOpacity = 0.18;
             }
 
             // Create polygon: non-interactive fill + clickable border
@@ -1864,20 +1864,20 @@ export function PilotMap({
 
             // Turbulence-specific colors (purple tones)
             let color = '#a78bfa'; // Light purple for moderate
-            let strokeWidth = 2.5;
+            let strokeWidth = 4;
             let fillOpacity = 0.08;
-            let strokeOpacity = 0.85;
+            let strokeOpacity = 0.15; // Much less opacity for less distracting contour lines
             
             if (turbulence.severity === 'SEVERE' || turbulence.severity === 'EXTREME') {
               color = '#8b5cf6'; // Purple
-              strokeWidth = 3.5;
+              strokeWidth = 5;
               fillOpacity = 0.1;
-              strokeOpacity = 0.95;
+              strokeOpacity = 0.2; // Slightly more visible for severe/extreme
             } else if (turbulence.severity === 'MODERATE') {
               color = '#a78bfa'; // Lighter purple
-              strokeWidth = 3;
+              strokeWidth = 4.5;
               fillOpacity = 0.08;
-              strokeOpacity = 0.9;
+              strokeOpacity = 0.15;
             }
 
             // Create polygon: non-interactive fill + clickable border
