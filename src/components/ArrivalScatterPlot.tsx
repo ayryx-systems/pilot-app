@@ -49,9 +49,9 @@ const getAircraftCategory = (arrival: Arrival): string => {
   const widebodyTypes = ['A306', 'A332', 'A333', 'A339', 'A343', 'A346', 'A359', 'A35K', 'B762', 'B763', 'B772', 'B77L', 'B77W', 'B788', 'B789', 'B78X', 'B744', 'B748', 'MD11'];
   
   if (smallTypes.includes(arrival.aircraftType)) return 'small';
-  if (regionalTypes.includes(arrival.aircraftType)) return 'regional';
-  if (narrowbodyTypes.includes(arrival.aircraftType)) return 'narrowbody';
-  if (widebodyTypes.includes(arrival.aircraftType)) return 'widebody';
+  if (regionalTypes.includes(arrival.aircraftType)) return 'small'; // Map regional to small
+  if (narrowbodyTypes.includes(arrival.aircraftType)) return 'large'; // Map narrowbody to large
+  if (widebodyTypes.includes(arrival.aircraftType)) return 'heavy'; // Map widebody to heavy
   return 'other';
 };
 
