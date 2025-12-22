@@ -33,36 +33,50 @@ interface ArrivalScatterPlotProps {
   onPointClick?: (arrival: Arrival) => void;
 }
 
-// Aircraft category colors (matching stats-viewer.html)
-const getAircraftCategory = (aircraftType: string | null): string => {
-  if (!aircraftType) return 'other';
+// Aircraft category mapping - use OpenSky category if available, otherwise fallback to aircraftType
+const getAircraftCategory = (arrival: Arrival): string => {
+  // Prefer aircraftCategory from OpenSky category codes (more reliable)
+  if (arrival.aircraftCategory) {
+    return arrival.aircraftCategory;
+  }
+  
+  // Fallback to aircraftType-based categorization (only works for US registrations)
+  if (!arrival.aircraftType) return 'other';
   
   const smallTypes = ['C208', 'C25A', 'C25B', 'C310', 'C525', 'C550', 'C560', 'C56X', 'C680', 'C68A', 'C700', 'C750', 'BE20', 'BE40', 'BE9L', 'PC12', 'SF50', 'LJ31', 'LJ35', 'LJ45', 'LJ60', 'CL30', 'CL35', 'CL60', 'E545', 'E550', 'E55P', 'FA20', 'FA50', 'FA7X', 'FA8X', 'F2TH', 'F900', 'G280', 'GA5C', 'GA6C', 'GALX', 'GL5T', 'GL7T', 'GLEX', 'GLF4', 'GLF5', 'GLF6', 'H25B', 'HA4T', 'HDJT', 'B350'];
   const regionalTypes = ['CRJ2', 'CRJ7', 'CRJ9', 'E135', 'E145', 'E170', 'E190', 'E35L', 'E45X', 'E75L', 'E75S', 'BCS1', 'BCS3'];
   const narrowbodyTypes = ['A20N', 'A21N', 'A319', 'A320', 'A321', 'B712', 'B734', 'B737', 'B738', 'B739', 'B38M', 'B39M', 'B752', 'B753'];
   const widebodyTypes = ['A306', 'A332', 'A333', 'A339', 'A343', 'A346', 'A359', 'A35K', 'B762', 'B763', 'B772', 'B77L', 'B77W', 'B788', 'B789', 'B78X', 'B744', 'B748', 'MD11'];
   
-  if (smallTypes.includes(aircraftType)) return 'small';
-  if (regionalTypes.includes(aircraftType)) return 'regional';
-  if (narrowbodyTypes.includes(aircraftType)) return 'narrowbody';
-  if (widebodyTypes.includes(aircraftType)) return 'widebody';
+  if (smallTypes.includes(arrival.aircraftType)) return 'small';
+  if (regionalTypes.includes(arrival.aircraftType)) return 'regional';
+  if (narrowbodyTypes.includes(arrival.aircraftType)) return 'narrowbody';
+  if (widebodyTypes.includes(arrival.aircraftType)) return 'widebody';
   return 'other';
 };
 
 const categoryColors: Record<string, string> = {
-  small: 'rgba(201, 203, 207, 1)',
+  light: 'rgba(201, 203, 207, 1)',      // Light aircraft
+  small: 'rgba(54, 162, 235, 1)',        // Small aircraft
+  large: 'rgba(255, 159, 64, 1)',        // Large aircraft (including high vortex large)
+  heavy: 'rgba(75, 192, 192, 1)',        // Heavy aircraft
+  other: 'rgba(153, 102, 255, 1)',       // Other/Unknown
+  // Legacy categories for fallback
   regional: 'rgba(54, 162, 235, 1)',
   narrowbody: 'rgba(255, 159, 64, 1)',
   widebody: 'rgba(75, 192, 192, 1)',
-  other: 'rgba(153, 102, 255, 1)',
 };
 
 const categoryNames: Record<string, string> = {
-  small: 'Small/Light',
+  light: 'Light',
+  small: 'Small',
+  large: 'Large',
+  heavy: 'Heavy',
+  other: 'Other',
+  // Legacy categories for fallback
   regional: 'Regional',
   narrowbody: 'Narrow-body',
   widebody: 'Wide-body',
-  other: 'Other',
 };
 
 export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: ArrivalScatterPlotProps) {
@@ -81,7 +95,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
     // Group arrivals by category
     const categoryData: Record<string, Arrival[]> = {};
     arrivals.forEach(arrival => {
-      const category = getAircraftCategory(arrival.aircraftType);
+      const category = getAircraftCategory(arrival);
       if (!categoryData[category]) {
         categoryData[category] = [];
       }
@@ -90,7 +104,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
 
     // Create datasets for each category
     const datasets: any[] = [];
-    const categoryOrder = ['narrowbody', 'widebody', 'regional', 'small', 'other'];
+    const categoryOrder = ['heavy', 'large', 'small', 'light', 'other']; // Order by size
 
     categoryOrder.forEach(category => {
       const categoryArrivals = categoryData[category];
