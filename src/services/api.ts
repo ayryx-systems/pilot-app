@@ -141,10 +141,10 @@ class PilotApiService {
       }, 8000);
       return await this.handleResponse<any>(response);
     } catch (error) {
-      console.error(`Failed to fetch FAA status for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
       if (error instanceof ApiError && error.status === 404) {
         return { status: null };
       }
+      console.error(`Failed to fetch FAA status for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
       throw error;
     }
   }
