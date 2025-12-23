@@ -402,6 +402,7 @@ export function PilotDashboard() {
                 <ArrivalScatterPlot
                   arrivals={arrivals}
                   airportCode={selectedAirport}
+                  baseline={baseline}
                   onPointClick={(arrival) => {
                     // Find matching track by callsign and landing time
                     const landingTime = new Date(arrival.timestampLanding);

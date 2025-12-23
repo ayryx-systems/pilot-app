@@ -13,8 +13,8 @@ import {
   ScatterController,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { Arrival } from '@/types';
-import { utcToAirportLocal } from '@/utils/airportTime';
+import { Arrival, BaselineData } from '@/types';
+import { utcToAirportLocal, getSeason, getAirportUTCOffset } from '@/utils/airportTime';
 
 ChartJS.register(
   CategoryScale,
@@ -30,6 +30,7 @@ ChartJS.register(
 interface ArrivalScatterPlotProps {
   arrivals: Arrival[];
   airportCode: string;
+  baseline?: BaselineData | null;
   onPointClick?: (arrival: Arrival) => void;
 }
 
@@ -79,7 +80,60 @@ const categoryNames: Record<string, string> = {
   widebody: 'Wide-body',
 };
 
-export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: ArrivalScatterPlotProps) {
+function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string): { season: string; byTimeSlot: Record<string, { medianTimeFrom50nm?: number }> } | null {
+  if (!baseline) return null;
+  
+  const now = new Date();
+  const season = getSeason(now, baseline);
+  const seasonData = season === 'summer' ? baseline.summer : baseline.winter;
+  
+  if (!seasonData) return null;
+  
+  const byTimeSlot = (seasonData as any).byTimeSlotLocal || seasonData.seasonalTimeSlots;
+  if (!byTimeSlot) return null;
+  
+  return { season, byTimeSlot };
+}
+
+function convertBaselineToHoursAgo(
+  baseline: Record<string, { medianTimeFrom50nm?: number }>,
+  airportCode: string,
+  baselineData?: BaselineData | null
+): Array<{ x: number; y: number }> {
+  const now = new Date();
+  const nowLocal = utcToAirportLocal(now, airportCode, baselineData);
+  const nowLocalHours = nowLocal.getUTCHours();
+  const nowLocalMinutes = nowLocal.getUTCMinutes();
+  const nowLocalHoursSinceMidnight = nowLocalHours + nowLocalMinutes / 60;
+  
+  const baselinePoints: Array<{ x: number; y: number }> = [];
+  
+  for (const [slot, slotData] of Object.entries(baseline)) {
+    if (!slotData.medianTimeFrom50nm) continue;
+    
+    const [hours, minutes] = slot.split(':').map(Number);
+    const slotHoursSinceMidnight = hours + minutes / 60;
+    
+    let hoursAgo: number;
+    
+    if (slotHoursSinceMidnight <= nowLocalHoursSinceMidnight) {
+      hoursAgo = slotHoursSinceMidnight - nowLocalHoursSinceMidnight;
+    } else {
+      hoursAgo = slotHoursSinceMidnight - nowLocalHoursSinceMidnight - 24;
+    }
+    
+    if (hoursAgo >= -2 && hoursAgo <= 0) {
+      baselinePoints.push({
+        x: hoursAgo,
+        y: slotData.medianTimeFrom50nm / 60,
+      });
+    }
+  }
+  
+  return baselinePoints.sort((a, b) => a.x - b.x);
+}
+
+export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointClick }: ArrivalScatterPlotProps) {
   const chartRef = useRef<ChartJS<'scatter'>>(null);
 
   // Process arrivals into scatter plot data
@@ -135,8 +189,31 @@ export function ArrivalScatterPlot({ arrivals, airportCode, onPointClick }: Arri
       }
     });
 
+    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
+    if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
+      const baselineLineData = convertBaselineToHoursAgo(seasonalBaseline.byTimeSlot, airportCode, baseline);
+      
+      if (baselineLineData.length > 0) {
+        const seasonLabel = seasonalBaseline.season === 'summer' ? 'Summer Average' : 'Winter Average';
+        datasets.push({
+          label: seasonLabel,
+          data: baselineLineData,
+          type: 'line',
+          borderColor: 'rgba(0, 0, 0, 1)',
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 2,
+          borderDash: [10, 5],
+          pointRadius: 2,
+          pointHoverRadius: 4,
+          fill: false,
+          tension: 0.1,
+          showLine: true,
+        });
+      }
+    }
+
     return { datasets, timeRange: { min: -2, max: 0 } }; // -2 hours to now
-  }, [arrivals, airportCode]);
+  }, [arrivals, airportCode, baseline]);
 
   const options = useMemo(() => {
     return {
