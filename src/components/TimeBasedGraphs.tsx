@@ -13,7 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { BaselineData } from '@/types';
+import { BaselineData, ArrivalForecast } from '@/types';
 import { utcToAirportLocal, getAirportUTCOffset, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
 
 ChartJS.register(
@@ -29,6 +29,7 @@ ChartJS.register(
 
 interface TimeBasedGraphsProps {
   baseline: BaselineData | null;
+  arrivalForecast?: ArrivalForecast | null;
   airportCode: string;
   selectedTime: Date;
   loading?: boolean;
@@ -108,6 +109,7 @@ function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData
 
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   baseline,
+  arrivalForecast,
   airportCode,
   selectedTime,
   loading,
@@ -221,50 +223,140 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const matchedTimeSlot = dayTimeSlots.find(ts => ts === timeSlot) || dayTimeSlots[0];
     const currentTimeSlotIndex = alignment.alignedTimeSlots.indexOf(matchedTimeSlot);
 
+    // Align forecast data with baseline time slots if available
+    let alignedForecastCounts: (number | null)[] = [];
+    if (arrivalForecast && arrivalForecast.timeSlots && arrivalForecast.arrivalCounts) {
+      // Validate data structure
+      if (arrivalForecast.timeSlots.length !== arrivalForecast.arrivalCounts.length) {
+        console.error('[TimeBasedGraphs] Forecast data mismatch:', {
+          timeSlotsLength: arrivalForecast.timeSlots.length,
+          arrivalCountsLength: arrivalForecast.arrivalCounts.length
+        });
+      }
+      
+      const forecastMap = new Map<string, number>();
+      arrivalForecast.timeSlots.forEach((slot, idx) => {
+        const count = arrivalForecast.arrivalCounts[idx];
+        if (count !== undefined && count !== null) {
+          forecastMap.set(slot, count);
+        }
+      });
+      
+      // Debug: log sample of forecast data
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[TimeBasedGraphs] Forecast alignment:', {
+          forecastSlots: arrivalForecast.timeSlots.slice(0, 5),
+          forecastCounts: arrivalForecast.arrivalCounts.slice(0, 5),
+          baselineSlots: alignment.alignedTimeSlots.slice(0, 5),
+          forecastMapSize: forecastMap.size
+        });
+      }
+      
+      alignedForecastCounts = alignment.alignedTimeSlots.map(slot => {
+        const count = forecastMap.get(slot);
+        return count !== undefined ? count : null;
+      });
+      
+      // Debug: log aligned result
+      if (process.env.NODE_ENV === 'development') {
+        const nonNullCount = alignedForecastCounts.filter(c => c !== null).length;
+        console.log('[TimeBasedGraphs] Aligned forecast:', {
+          totalSlots: alignedForecastCounts.length,
+          nonNullSlots: nonNullCount,
+          sampleAligned: alignedForecastCounts.slice(0, 10),
+          firstNonNull: alignedForecastCounts.findIndex(c => c !== null)
+        });
+      }
+    }
+
+    const datasets: any[] = [
+      {
+        label: `${dayOfWeekDisplay} Average`,
+        data: alignedDayCounts,
+        borderColor: '#3b82f6',
+        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: (ctx: any) => {
+          if (alignedDayCounts[ctx.dataIndex] === null) return 0;
+          return ctx.dataIndex === currentTimeSlotIndex ? 8 : 2;
+        },
+        pointBackgroundColor: (ctx: any) => {
+          if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
+          return ctx.dataIndex === currentTimeSlotIndex ? '#ffffff' : '#3b82f6';
+        },
+        pointBorderColor: (ctx: any) => {
+          if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
+          return ctx.dataIndex === currentTimeSlotIndex ? '#60a5fa' : '#3b82f6';
+        },
+        pointBorderWidth: (ctx: any) => {
+          if (alignedDayCounts[ctx.dataIndex] === null) return 0;
+          return ctx.dataIndex === currentTimeSlotIndex ? 3 : 1;
+        },
+        spanGaps: true
+      },
+      {
+        label: `${seasonDisplay} Seasonal Average`,
+        data: alignedSeasonalCounts,
+        borderColor: '#10b981',
+        backgroundColor: 'rgba(16, 185, 129, 0.05)',
+        borderWidth: 2,
+        borderDash: [5, 5],
+        fill: false,
+        tension: 0.4,
+        pointRadius: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? 1 : 0,
+        pointBackgroundColor: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? '#10b981' : 'transparent',
+        pointBorderColor: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? '#10b981' : 'transparent',
+        spanGaps: true
+      }
+    ];
+
+    // Add FAA forecast dataset if available
+    if (alignedForecastCounts.length > 0 && arrivalForecast) {
+      // Ensure we're using the aligned counts, not the raw data
+      const forecastData = alignedForecastCounts.map(count => count !== null ? count : null);
+      
+      // Debug: verify data before adding to chart
+      if (process.env.NODE_ENV === 'development') {
+        const nonNullValues = forecastData.filter(v => v !== null);
+        console.log('[TimeBasedGraphs] Adding forecast dataset:', {
+          totalPoints: forecastData.length,
+          nonNullPoints: nonNullValues.length,
+          first10Values: forecastData.slice(0, 10),
+          maxValue: Math.max(...nonNullValues.map(v => v as number)),
+          minValue: Math.min(...nonNullValues.map(v => v as number))
+        });
+      }
+      
+      datasets.push({
+        label: 'FAA Arrival Forecast',
+        data: forecastData,
+        borderColor: '#f59e0b',
+        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+        borderWidth: 2,
+        borderDash: [3, 3],
+        fill: false,
+        tension: 0.4,
+        pointRadius: (ctx: any) => {
+          const value = forecastData[ctx.dataIndex];
+          return value !== null && value !== undefined ? 2 : 0;
+        },
+        pointBackgroundColor: (ctx: any) => {
+          const value = forecastData[ctx.dataIndex];
+          return value !== null && value !== undefined ? '#f59e0b' : 'transparent';
+        },
+        pointBorderColor: (ctx: any) => {
+          const value = forecastData[ctx.dataIndex];
+          return value !== null && value !== undefined ? '#f59e0b' : 'transparent';
+        },
+        spanGaps: true
+      });
+    }
+
     const newChartData = {
       labels: alignment.alignedTimeSlots,
-      datasets: [
-        {
-          label: `${dayOfWeekDisplay} Average`,
-          data: alignedDayCounts,
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2.5,
-          fill: true,
-          tension: 0.4,
-          pointRadius: (ctx: any) => {
-            if (alignedDayCounts[ctx.dataIndex] === null) return 0;
-            return ctx.dataIndex === currentTimeSlotIndex ? 8 : 2;
-          },
-          pointBackgroundColor: (ctx: any) => {
-            if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-            return ctx.dataIndex === currentTimeSlotIndex ? '#ffffff' : '#3b82f6';
-          },
-          pointBorderColor: (ctx: any) => {
-            if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-            return ctx.dataIndex === currentTimeSlotIndex ? '#60a5fa' : '#3b82f6';
-          },
-          pointBorderWidth: (ctx: any) => {
-            if (alignedDayCounts[ctx.dataIndex] === null) return 0;
-            return ctx.dataIndex === currentTimeSlotIndex ? 3 : 1;
-          },
-          spanGaps: true
-        },
-        {
-          label: `${seasonDisplay} Seasonal Average`,
-          data: alignedSeasonalCounts,
-          borderColor: '#10b981',
-          backgroundColor: 'rgba(16, 185, 129, 0.05)',
-          borderWidth: 2,
-          borderDash: [5, 5],
-          fill: false,
-          tension: 0.4,
-          pointRadius: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? 1 : 0,
-          pointBackgroundColor: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? '#10b981' : 'transparent',
-          pointBorderColor: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? '#10b981' : 'transparent',
-          spanGaps: true
-        }
-      ],
+      datasets,
       daySampleSizes,
       seasonalSampleSizes: seasonalAvg.sampleSizes,
       dayIndices: alignment.dayIndices,
@@ -455,6 +547,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   
   // Baseline reference changed - need to re-render
   if (prevProps.baseline !== nextProps.baseline) return false;
+  
+  // Forecast reference changed - need to re-render
+  if (prevProps.arrivalForecast !== nextProps.arrivalForecast) return false;
   
   // Airport changed - need to re-render
   if (prevProps.airportCode !== nextProps.airportCode) return false;

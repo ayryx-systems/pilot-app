@@ -9,7 +9,8 @@ import {
   TracksResponse,
   ArrivalsResponse,
   SummaryResponse,
-  BaselineResponse
+  BaselineResponse,
+  ArrivalForecastResponse
 } from '@/types';
 import { demoService } from './demoService';
 
@@ -329,6 +330,30 @@ class PilotApiService {
 
       if (error instanceof ApiError && error.status === 0) {
         throw new ApiError('Cannot connect to server - baseline data unavailable while offline', 0);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get FAA arrival forecast for an airport
+   */
+  async getArrivalForecast(airportId: string): Promise<ArrivalForecastResponse> {
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/arrival-forecast?t=${Date.now()}`, {
+        cache: 'no-cache',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      });
+      return await this.handleResponse<ArrivalForecastResponse>(response);
+    } catch (error) {
+      console.error(`Failed to fetch arrival forecast for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - arrival forecast unavailable while offline', 0);
       }
 
       throw error;

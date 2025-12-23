@@ -241,6 +241,8 @@ export interface PilotAppState {
   };
   baseline?: BaselineData | null;
   baselineLoading?: boolean;
+  arrivalForecast?: ArrivalForecast | null;
+  arrivalForecastLoading?: boolean;
 }
 
 // Map display options
@@ -416,6 +418,25 @@ export interface BaselineData {
 export interface BaselineResponse {
   airportId: string;
   baseline: BaselineData;
+  timestamp: string;
+  cacheMaxAge: number;
+  source: string;
+}
+
+export interface ArrivalForecast {
+  airportCode: string;
+  timestamp: string;
+  timeSlots: string[]; // Array of time slots in HH:MM format
+  arrivalCounts: number[]; // Array of arrival counts per time slot
+  totalArrivals: number;
+  source: string;
+  error?: string;
+  unavailable?: boolean;
+}
+
+export interface ArrivalForecastResponse {
+  airportId: string;
+  forecast: ArrivalForecast;
   timestamp: string;
   cacheMaxAge: number;
   source: string;

@@ -41,6 +41,8 @@ export function PilotDashboard() {
     summary,
     baseline,
     baselineLoading,
+    arrivalForecast,
+    arrivalForecastLoading,
     connectionStatus,
     loading,
     error,
@@ -454,9 +456,10 @@ export function PilotDashboard() {
                 <TimeBasedGraphs
                   key={`traffic-${selectedAirport}`}
                   baseline={baseline}
+                  arrivalForecast={arrivalForecast}
                   airportCode={selectedAirport}
                   selectedTime={selectedTime}
-                  loading={baselineLoading || loading}
+                  loading={baselineLoading || arrivalForecastLoading || loading}
                   onTimeClick={setSelectedTime}
                 />
               )}

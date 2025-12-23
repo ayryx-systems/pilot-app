@@ -11,7 +11,9 @@ import {
   ConnectionStatus,
   PilotAppState,
   BaselineData,
-  BaselineResponse
+  BaselineResponse,
+  ArrivalForecast,
+  ArrivalForecastResponse
 } from '@/types';
 
 export function usePilotData() {
@@ -41,6 +43,8 @@ export function usePilotData() {
       summaryMetadata: undefined,
       baseline: null,
       baselineLoading: false,
+      arrivalForecast: null,
+      arrivalForecastLoading: false,
     };
   });
 
@@ -120,14 +124,18 @@ export function usePilotData() {
     console.log(`[usePilotData] Loading data for airport: ${airportId}`);
     
     let currentBaseline: BaselineData | null = null;
+    let currentForecast: ArrivalForecast | null = null;
     setState(prev => {
       currentBaseline = prev.baseline;
+      currentForecast = prev.arrivalForecast;
       // Only set baselineLoading if we're actually going to fetch baseline
       const willFetchBaseline = !options?.skipBaseline && !prev.baseline;
+      const willFetchForecast = !prev.arrivalForecast;
       return { 
         ...prev, 
         loading: true, 
-        baselineLoading: willFetchBaseline, 
+        baselineLoading: willFetchBaseline,
+        arrivalForecastLoading: willFetchForecast,
         error: null 
       };
     });
@@ -140,7 +148,12 @@ export function usePilotData() {
         ? pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Baseline not available') }))
         : null;
 
-      // Load all data in parallel (only include baseline if we're actually fetching it)
+      const shouldFetchForecast = !currentForecast;
+      const forecastPromise = shouldFetchForecast
+        ? pilotApi.getArrivalForecast(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Forecast not available') }))
+        : null;
+
+      // Load all data in parallel (only include baseline/forecast if we're actually fetching them)
       const promises = [
         pilotApi.getAirportOverview(airportId),
         pilotApi.getPireps(airportId),
@@ -152,13 +165,16 @@ export function usePilotData() {
       if (baselinePromise) {
         promises.push(baselinePromise);
       }
+      if (forecastPromise) {
+        promises.push(forecastPromise);
+      }
 
       const responses = await Promise.allSettled(promises);
-      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse, baselineResponse] = responses.length === 6
-        ? responses
-        : responses.length === 5
-        ? [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }]
-        : [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }];
+      const responseCount = responses.length;
+      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse, baselineResponse, forecastResponse] = 
+        responseCount === 7 ? responses :
+        responseCount === 6 ? [...responses, { status: 'fulfilled' as const, value: { forecast: currentForecast } }] :
+        [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }, { status: 'fulfilled' as const, value: { forecast: currentForecast } }];
 
       const updates: Partial<PilotAppState> = { loading: false };
 
@@ -256,6 +272,26 @@ export function usePilotData() {
       // If we skipped baseline, don't touch baseline or baselineLoading in updates
       // This prevents unnecessary state changes and re-renders
 
+      // Only process forecast response if we actually fetched it
+      if (shouldFetchForecast) {
+        if (forecastResponse.status === 'fulfilled') {
+          const newForecast = forecastResponse.value.forecast;
+          if (newForecast !== undefined && newForecast !== currentForecast) {
+            updates.arrivalForecast = newForecast;
+          }
+          updates.arrivalForecastLoading = false;
+        } else {
+          // Forecast fetch failed
+          if (!currentForecast) {
+            console.warn('Arrival forecast not available:', forecastResponse.reason);
+            updates.arrivalForecast = null;
+          }
+          updates.arrivalForecastLoading = false;
+        }
+      }
+      // If we skipped forecast, don't touch forecast or forecastLoading in updates
+      // This prevents unnecessary state changes and re-renders
+
       // Set error message based on failed requests
       const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
         .filter(response => response.status === 'rejected');
@@ -305,6 +341,8 @@ export function usePilotData() {
           updates.summary !== undefined ||
           updates.baseline !== undefined ||
           updates.baselineLoading !== undefined ||
+          updates.arrivalForecast !== undefined ||
+          updates.arrivalForecastLoading !== undefined ||
           updates.loading !== undefined ||
           updates.error !== undefined ||
           updates.pirepsMetadata !== undefined ||
@@ -343,7 +381,7 @@ export function usePilotData() {
     setState(prev => ({
       ...prev,
       selectedAirport: airportId,
-      // Clear previous airport data (but keep baseline if same airport)
+      // Clear previous airport data (but keep baseline/forecast if same airport)
       airportOverview: null,
       pireps: [],
       tracks: [],
@@ -354,6 +392,9 @@ export function usePilotData() {
       // Only clear baseline if switching to a different airport
       baseline: airportId === prev.selectedAirport ? prev.baseline : null,
       baselineLoading: false,
+      // Only clear forecast if switching to a different airport
+      arrivalForecast: airportId === prev.selectedAirport ? prev.arrivalForecast : null,
+      arrivalForecastLoading: false,
     }));
   }, []);
 
@@ -403,6 +444,8 @@ export function usePilotData() {
     summary: state.summary,
     baseline: state.baseline,
     baselineLoading: state.baselineLoading,
+    arrivalForecast: state.arrivalForecast,
+    arrivalForecastLoading: state.arrivalForecastLoading,
     connectionStatus: state.connectionStatus,
     loading: state.loading,
     error: state.error,
