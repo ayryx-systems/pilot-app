@@ -9,6 +9,7 @@ import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
 import { Z_INDEX_LAYERS } from '@/types/zIndexLayers';
+import { getAircraftCategoryFromType, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
 
 // Helper function to calculate bearing between two points
 function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
@@ -867,26 +868,19 @@ export function PilotMap({
           // Check if this track is selected
           const isSelected = selectedTrackId === track.id;
 
-          // Determine track color based on status and callsign
-          let color = '#a855f7'; // Purple for active ground tracks (distinct from runways/approaches)
+          // Determine track color based on status and aircraft category
+          let color: string;
           if (isSelected) {
             color = '#fbbf24'; // Bright yellow/amber for selected track
           } else if (track.status === 'COMPLETED') {
             color = '#64748b'; // Muted slate for completed flights
           } else if (track.status === 'EMERGENCY') {
             color = '#ef4444'; // Red for emergency
-          } else if (track.callsign?.includes('UAL')) {
-            color = '#8b5cf6'; // Violet for United
-          } else if (track.callsign?.includes('AAL')) {
-            color = '#10b981'; // Emerald for American
           } else {
-            // Use a hash of the callsign for consistent coloring per flight
-            const hash = track.callsign ? track.callsign.split('').reduce((a, b) => {
-              a = ((a << 5) - a) + b.charCodeAt(0);
-              return a & a;
-            }, 0) : 0;
-            const colors = ['#a855f7', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444', '#06b6d4'];
-            color = colors[Math.abs(hash) % colors.length];
+            // Use aircraft category color (matches arrival times graph)
+            const category = getAircraftCategoryFromType(track.aircraft);
+            const rgbaColor = getAircraftColor(category);
+            color = rgbaToHex(rgbaColor);
           }
 
           // Calculate opacity based on track age (fade out over 30 minutes)
