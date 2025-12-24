@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import * as L from 'leaflet';
-import { Airport, AirportOverview, PiRep, GroundTrack, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
+import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
 import { weatherService, type SigmetAirmet, type WeatherForecast } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
@@ -114,6 +114,7 @@ interface PilotMapProps {
   airportData?: AirportOverview;
   pireps: PiRep[];
   tracks: GroundTrack[];
+  arrivals?: Arrival[];
   displayOptions: MapDisplayOptions;
   onFullscreenChange?: (isFullscreen: boolean) => void;
   isDemo?: boolean;
@@ -127,6 +128,7 @@ export function PilotMap({
   airportData,
   pireps,
   tracks,
+  arrivals,
   displayOptions,
   onFullscreenChange,
   isDemo,
@@ -960,10 +962,31 @@ export function PilotMap({
           // Get landing time (prefer createdAt, fallback to startTime)
           const landingTime = track.createdAt || track.startTime;
           
+          // Find matching arrival to get duration from 50nm
+          const matchingArrival = arrivals?.find(arrival => {
+            if (arrival.callsign !== track.callsign) return false;
+            const arrivalLandingTime = new Date(arrival.timestampLanding);
+            const trackLandingTime = landingTime ? new Date(landingTime) : null;
+            if (!trackLandingTime) return false;
+            return Math.abs(arrivalLandingTime.getTime() - trackLandingTime.getTime()) < 60000; // Within 1 minute
+          });
+          
+          // Format duration from 50nm to landing
+          const formatDuration = (minutes: number): string => {
+            const hours = Math.floor(minutes / 60);
+            const mins = Math.round(minutes % 60);
+            if (hours > 0) {
+              return `${hours}h ${mins}m`;
+            }
+            return `${mins}m`;
+          };
+          
           // Create a function to generate popup content with current relative time
           const createTrackPopupContent = () => {
             const zuluTimeStr = landingTime ? formatZulu(landingTime) : 'Unknown time';
             const currentRelativeTime = landingTime ? formatRelativeTime(landingTime) : 'Unknown';
+            
+            const durationFrom50nm = matchingArrival?.durationMinutes ? formatDuration(matchingArrival.durationMinutes) : null;
             
             return `
               <div style="
@@ -981,6 +1004,11 @@ export function PilotMap({
               ">
                 <div style="color: ${color}; font-weight: 600; margin-bottom: 4px;">AIRCRAFT</div>
                 <div style="color: #e5e7eb; font-size: 12px; margin-bottom: 4px;">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
+                ${durationFrom50nm ? `
+                  <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+                    <div style="color: #e5e7eb; font-weight: 500;">Time from 50nm: ${durationFrom50nm}</div>
+                  </div>
+                ` : ''}
                 ${landingTime ? `
                   <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
                     <div style="color: #e5e7eb; font-weight: 500;">Landed: ${zuluTimeStr}</div>
@@ -1100,7 +1128,7 @@ export function PilotMap({
     };
 
     updateTracks();
-  }, [mapInstance, tracks, displayOptions.showGroundTracks, selectedTrackId]);
+  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, selectedTrackId]);
 
   // Update weather radar display - FIXED with conservative approach
   useEffect(() => {

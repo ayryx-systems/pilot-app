@@ -363,6 +363,7 @@ export function PilotDashboard() {
             airportData={airportOverview || undefined}
             pireps={pireps}
             tracks={tracks}
+            arrivals={arrivals}
             displayOptions={mapDisplayOptions}
             onFullscreenChange={setMapFullscreen}
             isDemo={selectedAirport === 'KDEN'}
