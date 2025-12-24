@@ -427,7 +427,7 @@ export interface ArrivalForecast {
   airportCode: string;
   timestamp: string;
   timeSlots: string[]; // Array of time slots in HH:MM format
-  arrivalCounts: number[]; // Array of arrival counts per time slot
+  arrivalCounts: (number | null)[]; // Array of arrival counts per time slot (null for slots without FAA data)
   totalArrivals: number;
   source: string;
   error?: string;

@@ -224,6 +224,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const currentTimeSlotIndex = alignment.alignedTimeSlots.indexOf(matchedTimeSlot);
 
     // Align forecast data with baseline time slots if available
+    // Filter forecast slots to only include those for the selected date
     let alignedForecastCounts: (number | null)[] = [];
     if (arrivalForecast && arrivalForecast.timeSlots && arrivalForecast.arrivalCounts) {
       // Validate data structure
@@ -234,21 +235,58 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         });
       }
       
-      const forecastMap = new Map<string, number>();
+      // Get current local time and selected date to filter forecast slots
+      const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
+      const selectedLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
+      const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
+      const todayDateStr = getAirportLocalDateString(new Date(), airportCode, baseline);
+      const isToday = selectedDateStr === todayDateStr;
+      
+      // Filter forecast slots based on selected date
+      // Backend sends: today's slots first (17:00-23:45), then tomorrow's slots (00:00-08:45)
+      const filteredForecastSlots: string[] = [];
+      const filteredForecastCounts: number[] = [];
+      
       arrivalForecast.timeSlots.forEach((slot, idx) => {
         const count = arrivalForecast.arrivalCounts[idx];
-        if (count !== undefined && count !== null) {
-          forecastMap.set(slot, count);
+        if (count === undefined || count === null) return;
+        
+        const [hours, minutes] = slot.split(':').map(Number);
+        const slotMinutes = hours * 60 + minutes;
+        const currentMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
+        const fourHoursAgoMinutes = currentMinutes - 4 * 60;
+        
+        if (isToday) {
+          // For today: include slots >= (current time - 4 hours)
+          // This naturally excludes tomorrow's early morning slots (00:00-08:00) since they're < fourHoursAgo
+          if (slotMinutes >= fourHoursAgoMinutes) {
+            filteredForecastSlots.push(slot);
+            filteredForecastCounts.push(count);
+          }
+        } else {
+          // For tomorrow: only include early morning slots (00:00-09:45)
+          // Backend sends tomorrow's slots as 00:00-08:45
+          if (hours >= 0 && hours <= 9) {
+            filteredForecastSlots.push(slot);
+            filteredForecastCounts.push(count);
+          }
         }
       });
       
-      // Debug: log sample of forecast data
+      const forecastMap = new Map<string, number>();
+      filteredForecastSlots.forEach((slot, idx) => {
+        forecastMap.set(slot, filteredForecastCounts[idx]);
+      });
+      
+      // Debug: log filtering
       if (process.env.NODE_ENV === 'development') {
-        console.log('[TimeBasedGraphs] Forecast alignment:', {
-          forecastSlots: arrivalForecast.timeSlots.slice(0, 5),
-          forecastCounts: arrivalForecast.arrivalCounts.slice(0, 5),
-          baselineSlots: alignment.alignedTimeSlots.slice(0, 5),
-          forecastMapSize: forecastMap.size
+        console.log('[TimeBasedGraphs] Forecast filtering:', {
+          selectedDate: selectedDateStr,
+          isToday,
+          totalForecastSlots: arrivalForecast.timeSlots.length,
+          filteredSlots: filteredForecastSlots.length,
+          filteredSample: filteredForecastSlots.slice(0, 10),
+          filteredCountsSample: filteredForecastCounts.slice(0, 10)
         });
       }
       
