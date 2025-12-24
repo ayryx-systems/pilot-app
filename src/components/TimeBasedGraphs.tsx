@@ -203,41 +203,48 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         });
       }
       
-      // Get current local time and selected date to filter forecast slots
-      const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
-      const selectedLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
+      // Get selected date to filter forecast slots
       const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
       const todayDateStr = getAirportLocalDateString(new Date(), airportCode, baseline);
-      const isToday = selectedDateStr === todayDateStr;
       
-      // Filter forecast slots based on selected date
-      // Backend sends: today's slots first (17:00-23:45), then tomorrow's slots (00:00-08:45)
+      // Filter forecast slots based on selected date using slotDates if available
+      // If slotDates is not available, fall back to hour-based filtering (legacy behavior)
       const filteredForecastSlots: string[] = [];
       const filteredForecastCounts: number[] = [];
+      
+      const hasSlotDates = arrivalForecast.slotDates && arrivalForecast.slotDates.length === arrivalForecast.timeSlots.length;
       
       arrivalForecast.timeSlots.forEach((slot, idx) => {
         const count = arrivalForecast.arrivalCounts[idx];
         if (count === undefined || count === null) return;
         
-        const [hours, minutes] = slot.split(':').map(Number);
-        const slotMinutes = hours * 60 + minutes;
-        const currentMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
-        const fourHoursAgoMinutes = currentMinutes - 4 * 60;
+        let shouldInclude = false;
         
-        if (isToday) {
-          // For today: include slots >= (current time - 4 hours)
-          // This naturally excludes tomorrow's early morning slots (00:00-08:00) since they're < fourHoursAgo
-          if (slotMinutes >= fourHoursAgoMinutes) {
-            filteredForecastSlots.push(slot);
-            filteredForecastCounts.push(count);
-          }
+        if (hasSlotDates) {
+          // Use date information from backend to filter slots
+          const slotDate = arrivalForecast.slotDates![idx];
+          shouldInclude = slotDate === selectedDateStr;
         } else {
-          // For tomorrow: only include early morning slots (00:00-09:45)
-          // Backend sends tomorrow's slots as 00:00-08:45
-          if (hours >= 0 && hours <= 9) {
-            filteredForecastSlots.push(slot);
-            filteredForecastCounts.push(count);
+          // Fallback to hour-based filtering (legacy behavior)
+          const [hours] = slot.split(':').map(Number);
+          const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
+          const currentMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
+          const fourHoursAgoMinutes = currentMinutes - 4 * 60;
+          const [slotHours, slotMinutes] = slot.split(':').map(Number);
+          const slotTotalMinutes = slotHours * 60 + slotMinutes;
+          
+          if (selectedDateStr === todayDateStr) {
+            // For today: include slots >= (current time - 4 hours)
+            shouldInclude = slotTotalMinutes >= fourHoursAgoMinutes;
+          } else {
+            // For future dates: only include early morning slots (00:00-09:45)
+            shouldInclude = hours >= 0 && hours <= 9;
           }
+        }
+        
+        if (shouldInclude) {
+          filteredForecastSlots.push(slot);
+          filteredForecastCounts.push(count);
         }
       });
       

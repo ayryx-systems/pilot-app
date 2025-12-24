@@ -428,6 +428,7 @@ export interface ArrivalForecast {
   timestamp: string;
   timeSlots: string[]; // Array of time slots in HH:MM format
   arrivalCounts: (number | null)[]; // Array of arrival counts per time slot (null for slots without FAA data)
+  slotDates?: string[]; // Array of date strings (YYYY-MM-DD) corresponding to each time slot
   totalArrivals: number;
   source: string;
   error?: string;
