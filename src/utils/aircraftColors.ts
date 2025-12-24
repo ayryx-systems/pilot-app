@@ -39,3 +39,12 @@ export function rgbaToHex(rgba: string): string {
   return `#${r}${g}${b}`;
 }
 
+export function brightenColor(hex: string, percent: number = 30): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, ((num >> 16) & 0xff) + Math.round(255 * percent / 100));
+  const g = Math.min(255, ((num >> 8) & 0xff) + Math.round(255 * percent / 100));
+  const b = Math.min(255, (num & 0xff) + Math.round(255 * percent / 100));
+  
+  return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+}
+
