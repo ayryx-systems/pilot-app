@@ -405,6 +405,7 @@ export interface BaselineTimeSlot {
 export interface BaselineSeason {
   seasonalTimeSlots?: Record<string, BaselineTimeSlot>;
   dayOfWeekTimeSlots?: Record<string, Record<string, BaselineTimeSlot>>;
+  holidayTimeSlots?: Record<string, Record<string, BaselineTimeSlot>>;
 }
 
 export interface BaselineData {

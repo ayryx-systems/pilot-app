@@ -13,7 +13,7 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { BaselineData } from '@/types';
+import { BaselineData, BaselineTimeSlot } from '@/types';
 
 ChartJS.register(
   CategoryScale,
@@ -45,7 +45,7 @@ function getSeason(dateStr: string, baseline: BaselineData | null, year: string)
     return 'summer';
   }
 
-  const yearStr = typeof year === 'string' ? year : year.toString();
+  const yearStr = year;
   const dstDates = baseline.dstDatesByYear[yearStr];
 
   if (!dstDates) {
@@ -110,6 +110,75 @@ function getTimeSlotKey(date: Date): string {
   return `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
 }
 
+function getThanksgivingDate(year: number): Date {
+  const november = new Date(year, 10, 1);
+  const dayOfWeek = november.getDay();
+  const daysUntilFirstThursday = (4 - dayOfWeek + 7) % 7;
+  const firstThursday = 1 + daysUntilFirstThursday;
+  const fourthThursday = firstThursday + 21;
+  return new Date(year, 10, fourthThursday);
+}
+
+function getIndependenceDay(year: number): Date {
+  return new Date(year, 6, 4);
+}
+
+function normalizeDate(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function getHolidayKey(dateStr: string): string | null {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = normalizeDate(new Date(year, month - 1, day));
+  
+  if (month === 12) {
+    const christmasDay = normalizeDate(new Date(year, 11, 25));
+    const daysDiff = Math.floor((date.getTime() - christmasDay.getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysDiff === -1) return 'christmas_-1';
+    if (daysDiff === 0) return 'christmas_0';
+    if (daysDiff === 1) return 'christmas_1';
+  }
+  
+  if (month === 1 && day === 1) return 'new_years_day_0';
+  if (month === 1 && day === 2) return 'new_years_day_1';
+  if (month === 1 && day === 3) return 'new_years_day_2';
+  
+  const thanksgiving = normalizeDate(getThanksgivingDate(year));
+  const thanksgivingDaysDiff = Math.floor((date.getTime() - thanksgiving.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (thanksgivingDaysDiff === -1) return 'thanksgiving_-1';
+  if (thanksgivingDaysDiff === 0) return 'thanksgiving_0';
+  if (thanksgivingDaysDiff === 1) return 'thanksgiving_1';
+  
+  const independenceDay = normalizeDate(getIndependenceDay(year));
+  const independenceDaysDiff = Math.floor((date.getTime() - independenceDay.getTime()) / (1000 * 60 * 60 * 24));
+  
+  if (independenceDaysDiff === -1) return 'independence_day_-1';
+  if (independenceDaysDiff === 0) return 'independence_day_0';
+  if (independenceDaysDiff === 1) return 'independence_day_1';
+  
+  return null;
+}
+
+function getHolidayDisplayName(holidayKey: string): string {
+  const names: Record<string, string> = {
+    'christmas_-1': 'Christmas Eve',
+    'christmas_0': 'Christmas Day',
+    'christmas_1': 'Boxing Day',
+    'thanksgiving_-1': 'Thanksgiving Eve',
+    'thanksgiving_0': 'Thanksgiving Day',
+    'thanksgiving_1': 'Day After Thanksgiving',
+    'independence_day_-1': 'Independence Day Eve',
+    'independence_day_0': 'Independence Day',
+    'independence_day_1': 'Day After Independence Day',
+    'new_years_day_0': 'New Year\'s Day',
+    'new_years_day_1': 'Day After New Year\'s',
+    'new_years_day_2': '2 Days After New Year\'s',
+  };
+  return names[holidayKey] || holidayKey;
+}
+
 export function TrafficTimeline({ baseline, airportCode, date, currentTime, loading }: TrafficTimelineProps) {
   const chartRef = useRef<ChartJS<'line'>>(null);
   const [chartData, setChartData] = useState<any>(null);
@@ -130,17 +199,31 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
     const season = getSeason(dateStr, baseline, year);
     const seasonDisplay = season.charAt(0).toUpperCase() + season.slice(1);
 
-    const dayData = baseline[season]?.dayOfWeekTimeSlots?.[dayOfWeek];
+    const holidayKey = getHolidayKey(dateStr);
+    const seasonalData = baseline[season];
+    
+    let dayData: Record<string, BaselineTimeSlot> | undefined;
+    let dayLabel: string;
+    let isHoliday = false;
+
+    if (holidayKey && seasonalData?.holidayTimeSlots?.[holidayKey]) {
+      dayData = seasonalData.holidayTimeSlots[holidayKey];
+      dayLabel = getHolidayDisplayName(holidayKey);
+      isHoliday = true;
+    } else {
+      dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
+      dayLabel = `${dayOfWeekDisplay} Average`;
+    }
 
     if (!dayData) {
-      console.warn(`No data found for ${dayOfWeek} in ${season}`);
+      console.warn(`No data found for ${isHoliday ? holidayKey : dayOfWeek} in ${season}`);
       setChartData(null);
       return;
     }
 
     const dayTimeSlots = Object.keys(dayData).sort();
-    const dayCounts = dayTimeSlots.map(ts => dayData[ts].averageCount || dayData[ts].averageArrivals || 0);
-    const daySampleSizes = dayTimeSlots.map(ts => dayData[ts].sampleSize?.days || 0);
+    const dayCounts = dayTimeSlots.map(ts => dayData![ts].averageCount || dayData![ts].averageArrivals || 0);
+    const daySampleSizes = dayTimeSlots.map(ts => dayData![ts].sampleSize?.days || 0);
 
     const seasonalAvg = getSeasonalAverageData(baseline, season);
     if (!seasonalAvg) {
@@ -168,7 +251,7 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
       labels: alignment.alignedTimeSlots,
       datasets: [
         {
-          label: `${dayOfWeekDisplay} Average`,
+          label: dayLabel,
           data: alignedDayCounts,
           borderColor: '#3b82f6',
           backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -212,7 +295,7 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
       seasonalSampleSizes: seasonalAvg.sampleSizes,
       dayIndices: alignment.dayIndices,
       seasonalIndices: alignment.seasonalIndices,
-      title: `Aircraft Passing 50nm Threshold - ${dayOfWeekDisplay} vs ${seasonDisplay} Average`
+      title: `Aircraft Passing 50nm Threshold - ${dayLabel} vs ${seasonDisplay} Average`
     });
   }, [baseline, airportCode, date, currentTime, loading]);
 
@@ -267,7 +350,7 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
         callbacks: {
           label: (context: any) => {
             const value = context.parsed.y;
-            if (value === null) return null;
+            if (value === null) return undefined;
             let label = `${context.dataset.label}: ${value.toFixed(1)} aircraft`;
 
             if (context.datasetIndex === 0) {
