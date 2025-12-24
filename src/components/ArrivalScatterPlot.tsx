@@ -15,7 +15,7 @@ import {
 import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData } from '@/types';
 import { utcToAirportLocal, getSeason, getAirportUTCOffset } from '@/utils/airportTime';
-import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
+import { getAircraftCategoryFromType, categoryColors, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
 
 ChartJS.register(
   CategoryScale,
@@ -193,6 +193,86 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
     return { datasets, timeRange: { min: -2, max: 0 } }; // -2 hours to now
   }, [arrivals, airportCode, baseline]);
 
+  // Helper functions for popup formatting
+  const formatZulu = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown time';
+    const hours = date.getUTCHours().toString().padStart(2, '0');
+    const minutes = date.getUTCMinutes().toString().padStart(2, '0');
+    const day = date.getUTCDate().toString().padStart(2, '0');
+    const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
+    const year = date.getUTCFullYear();
+    return `${year}-${month}-${day} ${hours}${minutes}Z`;
+  };
+
+  const formatRelativeTime = (dateString: string) => {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    
+    if (diffMinutes < 0) return 'Future';
+    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    if (minutes === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
+  };
+
+  const formatDuration = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    if (hours > 0) {
+      return `${hours}h ${mins}m`;
+    }
+    return `${mins}m`;
+  };
+
+  const createArrivalPopupContent = (arrival: Arrival): string => {
+    const category = getAircraftCategory(arrival);
+    const rgbaColor = getAircraftColor(category);
+    const color = rgbaToHex(rgbaColor);
+    
+    const landingTime = arrival.timestampLanding;
+    const zuluTimeStr = landingTime ? formatZulu(landingTime) : 'Unknown time';
+    const currentRelativeTime = landingTime ? formatRelativeTime(landingTime) : 'Unknown';
+    const durationFrom50nm = arrival.durationMinutes ? formatDuration(arrival.durationMinutes) : null;
+    const aircraftType = arrival.aircraftType || 'Unknown';
+    
+    return `
+      <div style="
+        background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(20,20,20,0.95));
+        border: 1px solid ${color};
+        border-radius: 8px;
+        padding: 8px 12px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
+        backdrop-filter: blur(4px);
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 500;
+        text-align: center;
+        min-width: 150px;
+      ">
+        <div style="color: ${color}; font-weight: 600; margin-bottom: 4px;">AIRCRAFT</div>
+        <div style="color: #e5e7eb; font-size: 12px; margin-bottom: 4px;">${aircraftType}</div>
+        ${durationFrom50nm ? `
+          <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+            <div style="color: #e5e7eb; font-weight: 500;">Time from 50nm: ${durationFrom50nm}</div>
+          </div>
+        ` : ''}
+        ${landingTime ? `
+          <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
+            <div style="color: #e5e7eb; font-weight: 500;">Landed: ${zuluTimeStr}</div>
+            <div style="color: #9ca3af; font-size: 10px;">${currentRelativeTime}</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  };
+
   const options = useMemo(() => {
     return {
       responsive: true,
@@ -270,31 +350,59 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
           },
         },
         tooltip: {
-          callbacks: {
-            title: function(context: any) {
-              const point = context[0];
-              const arrival = point.raw?.arrival as Arrival | undefined;
-              if (arrival) {
-                const landingTime = new Date(arrival.timestampLanding);
-                return landingTime.toISOString().replace('T', ' ').substring(0, 19) + ' UTC';
+          enabled: false,
+          external: function(context: any) {
+            const tooltipEl = document.getElementById('chartjs-tooltip');
+            const chart = chartRef.current;
+            
+            if (!chart) return;
+            
+            let tooltipModel = context.tooltip;
+            if (!tooltipModel.opacity) {
+              if (tooltipEl) {
+                tooltipEl.style.opacity = '0';
               }
-              return '';
-            },
-            label: function(context: any) {
-              const arrival = context.raw?.arrival as Arrival | undefined;
-              if (arrival) {
-                const hours = Math.floor(arrival.durationMinutes / 60);
-                const minutes = Math.round(arrival.durationMinutes % 60);
-                return [
-                  `Flight Duration: ${hours}h ${minutes}m (${arrival.durationMinutes.toFixed(1)} min)`,
-                  `Time from 50nm boundary to landing`,
-                  `Aircraft Type: ${arrival.aircraftType || 'Unknown'}`,
-                  `Callsign: ${arrival.callsign}`,
-                  `ICAO: ${arrival.icao}`,
-                ];
+              return;
+            }
+            
+            if (tooltipModel.body) {
+              const point = tooltipModel.dataPoints?.[0];
+              const arrival = point?.raw?.arrival as Arrival | undefined;
+              
+              if (!arrival) {
+                if (tooltipEl) {
+                  tooltipEl.style.opacity = '0';
+                }
+                return;
               }
-              return '';
-            },
+              
+              const popupContent = createArrivalPopupContent(arrival);
+              
+              if (!tooltipEl) {
+                const newTooltip = document.createElement('div');
+                newTooltip.id = 'chartjs-tooltip';
+                newTooltip.innerHTML = popupContent;
+                document.body.appendChild(newTooltip);
+              } else {
+                tooltipEl.innerHTML = popupContent;
+              }
+              
+              const tooltip = document.getElementById('chartjs-tooltip');
+              if (tooltip) {
+                const position = chart.canvas.getBoundingClientRect();
+                const left = position.left + tooltipModel.caretX;
+                const top = position.top + tooltipModel.caretY;
+                
+                tooltip.style.opacity = '1';
+                tooltip.style.position = 'absolute';
+                tooltip.style.left = left + 'px';
+                tooltip.style.top = top + 'px';
+                tooltip.style.pointerEvents = 'none';
+                tooltip.style.zIndex = '10000';
+                tooltip.style.transform = 'translate(-50%, -100%)';
+                tooltip.style.marginTop = '-10px';
+              }
+            }
           },
         },
       },
@@ -315,6 +423,16 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
     };
   }, [chartData, onPointClick]);
 
+  // Cleanup tooltip on unmount
+  useEffect(() => {
+    return () => {
+      const tooltipEl = document.getElementById('chartjs-tooltip');
+      if (tooltipEl) {
+        tooltipEl.remove();
+      }
+    };
+  }, []);
+
   if (!chartData || chartData.datasets.length === 0) {
     return (
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
@@ -326,6 +444,16 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
       </div>
     );
   }
+
+  // Cleanup tooltip on unmount
+  useEffect(() => {
+    return () => {
+      const tooltipEl = document.getElementById('chartjs-tooltip');
+      if (tooltipEl) {
+        tooltipEl.remove();
+      }
+    };
+  }, []);
 
   return (
     <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
