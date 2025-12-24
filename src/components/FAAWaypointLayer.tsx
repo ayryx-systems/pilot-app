@@ -30,7 +30,6 @@ export function FAAWaypointLayer({
     try {
       const waypointData = await waypointService.getWaypointsForAirport(airportCode);
       setWaypoints(waypointData.waypoints);
-      console.log(`[FAAWaypointLayer] Loaded ${waypointData.waypointCount} FAA waypoints for ${airportCode}`);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load waypoints';
       setError(errorMessage);
@@ -52,14 +51,12 @@ export function FAAWaypointLayer({
 
     // Only show waypoints at zoom 12+ to prevent clutter
     if (currentZoom < 10) {
-      console.log(`[FAAWaypointLayer] Zoom level ${currentZoom} too low, hiding waypoints`);
       return;
     }
 
     // Dynamically import Leaflet to avoid SSR issues
     const L = await import('leaflet');
 
-    console.log(`[FAAWaypointLayer] Drawing ${waypoints.length} FAA waypoints for ${airportCode} at zoom ${currentZoom}`);
 
     waypoints.forEach((waypoint) => {
       try {
@@ -174,7 +171,6 @@ export function FAAWaypointLayer({
 
   // Debug info
   if (loading) {
-    console.log(`[FAAWaypointLayer] Loading waypoints for ${airportCode}...`);
   }
   
   if (error) {

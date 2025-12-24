@@ -121,8 +121,6 @@ export function usePilotData() {
   const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean }) => {
     if (!airportId) return;
 
-    console.log(`[usePilotData] Loading data for airport: ${airportId}`);
-    
     let currentBaseline: BaselineData | null = null;
     let currentForecast: ArrivalForecast | null = null;
     setState(prev => {
@@ -317,17 +315,6 @@ export function usePilotData() {
       } else {
         updates.error = null;
       }
-
-      console.log(`[usePilotData] Data load completed for ${airportId}:`, {
-        overview: !!updates.airportOverview,
-        pireps: updates.pireps?.length || 0,
-        tracks: updates.tracks?.length || 0,
-        arrivals: updates.arrivals?.length || 0,
-        summary: !!updates.summary,
-        errors: failedRequests.length,
-        baselineUpdated: 'baseline' in updates,
-        baselineLoadingUpdated: 'baselineLoading' in updates
-      });
 
       // Only update state if there are actual changes
       // This prevents unnecessary re-renders when data hasn't changed

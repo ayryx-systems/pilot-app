@@ -263,7 +263,6 @@ class WeatherService {
       const sigmetAirmets: SigmetAirmet[] = data.sigmetAirmets || [];
 
       this.setCachedData(cacheKey, sigmetAirmets, 2);
-      console.log('[WeatherService] Retrieved', sigmetAirmets.length, 'SIGMETs/AIRMETs from backend (all active)');
       return sigmetAirmets;
 
     } catch (error) {
@@ -349,7 +348,6 @@ class WeatherService {
       const pireps = data.data || [];
       
       this.setCachedData(cacheKey, pireps, 5);
-      console.log('[WeatherService] Retrieved', pireps.length, 'weather PIREPs from backend');
       return pireps;
     } catch (error) {
       console.error('[WeatherService] Failed to fetch weather PIREPs:', error);
@@ -381,7 +379,6 @@ class WeatherService {
       const metars = data.data || [];
       
       this.setCachedData(cacheKey, metars, 15);
-      console.log('[WeatherService] Retrieved', metars.length, 'METARs from backend');
       return metars;
     } catch (error) {
       console.error('[WeatherService] Failed to fetch METARs:', error);

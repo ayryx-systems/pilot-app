@@ -92,18 +92,6 @@ function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData
   const slotMinutes = Math.floor(minutes / 15) * 15;
   const timeSlot = `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
   
-  // Debug logging (can be removed in production)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[TimeBasedGraphs] getTimeSlotKey:', {
-      inputUTC: date.toISOString(),
-      localDateUTC: localDate.toISOString(),
-      hours,
-      minutes,
-      slotMinutes,
-      timeSlot
-    });
-  }
-  
   return timeSlot;
 }
 
@@ -129,23 +117,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   }, [selectedTime]);
 
   useEffect(() => {
-    // Debug: Log what's triggering this effect
     const baselineChanged = prevBaselineRef.current !== baseline;
     const timeChanged = !prevSelectedTimeRef.current || 
       Math.abs(prevSelectedTimeRef.current.getTime() - selectedTime.getTime()) > 1000;
     const loadingChanged = loading !== undefined;
-    
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[TimeBasedGraphs] useEffect triggered:', {
-        baselineChanged,
-        timeChanged,
-        loading,
-        baselineRef: baseline !== null,
-        prevBaselineRef: prevBaselineRef.current !== null,
-        selectedTime: selectedTime.toISOString(),
-        prevSelectedTime: prevSelectedTimeRef.current?.toISOString(),
-      });
-    }
 
     // Don't clear chart data if we're just loading other data (not baseline)
     // Only clear if baseline is missing or we're actually loading baseline
@@ -165,14 +140,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       Math.abs(prevSelectedTimeRef.current.getTime() - selectedTimeKey) > 60000; // 1 minute threshold
     
     if (!baselineChanged && !timeKeyChanged && chartData) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[TimeBasedGraphs] Skipping recalculation - no meaningful changes');
-      }
       return; // No need to recalculate - data hasn't meaningfully changed
-    }
-
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[TimeBasedGraphs] Recalculating chart data');
     }
 
     prevBaselineRef.current = baseline;
@@ -278,33 +246,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         forecastMap.set(slot, filteredForecastCounts[idx]);
       });
       
-      // Debug: log filtering
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[TimeBasedGraphs] Forecast filtering:', {
-          selectedDate: selectedDateStr,
-          isToday,
-          totalForecastSlots: arrivalForecast.timeSlots.length,
-          filteredSlots: filteredForecastSlots.length,
-          filteredSample: filteredForecastSlots.slice(0, 10),
-          filteredCountsSample: filteredForecastCounts.slice(0, 10)
-        });
-      }
-      
       alignedForecastCounts = alignment.alignedTimeSlots.map(slot => {
         const count = forecastMap.get(slot);
         return count !== undefined ? count : null;
       });
-      
-      // Debug: log aligned result
-      if (process.env.NODE_ENV === 'development') {
-        const nonNullCount = alignedForecastCounts.filter(c => c !== null).length;
-        console.log('[TimeBasedGraphs] Aligned forecast:', {
-          totalSlots: alignedForecastCounts.length,
-          nonNullSlots: nonNullCount,
-          sampleAligned: alignedForecastCounts.slice(0, 10),
-          firstNonNull: alignedForecastCounts.findIndex(c => c !== null)
-        });
-      }
     }
 
     const datasets: any[] = [
@@ -355,18 +300,6 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       // Ensure we're using the aligned counts, not the raw data
       const forecastData = alignedForecastCounts.map(count => count !== null ? count : null);
       
-      // Debug: verify data before adding to chart
-      if (process.env.NODE_ENV === 'development') {
-        const nonNullValues = forecastData.filter(v => v !== null);
-        console.log('[TimeBasedGraphs] Adding forecast dataset:', {
-          totalPoints: forecastData.length,
-          nonNullPoints: nonNullValues.length,
-          first10Values: forecastData.slice(0, 10),
-          maxValue: Math.max(...nonNullValues.map(v => v as number)),
-          minValue: Math.min(...nonNullValues.map(v => v as number))
-        });
-      }
-      
       datasets.push({
         label: 'FAA Arrival Forecast',
         data: forecastData,
@@ -414,10 +347,6 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     if (shouldUpdate) {
       setChartData(newChartData);
       prevChartDataRef.current = newChartData;
-    } else {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('[TimeBasedGraphs] Chart data unchanged, skipping update');
-      }
     }
   }, [baseline, airportCode, selectedTimeKey]);
 

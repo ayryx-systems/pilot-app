@@ -22,7 +22,6 @@ export class WaypointService {
     
     // Check cache first
     if (cached && Date.now() - cached.timestamp < this.CACHE_DURATION) {
-      console.log(`[WaypointService] Using cached waypoints for ${airportId}`);
       return cached.data;
     }
 
@@ -41,7 +40,6 @@ export class WaypointService {
       // Cache the result
       this.cache.set(cacheKey, { data, timestamp: Date.now() });
       
-      console.log(`[WaypointService] Loaded ${data.waypointCount} waypoints for ${airportId}`);
       return data;
       
     } catch (error) {
@@ -62,7 +60,6 @@ export class WaypointService {
       }
 
       const data: WaypointAirportsResponse = await response.json();
-      console.log(`[WaypointService] Found ${data.airports.length} airports with waypoint data`);
       return data.airports;
       
     } catch (error) {
@@ -77,10 +74,8 @@ export class WaypointService {
   clearCache(airportId?: string): void {
     if (airportId) {
       this.cache.delete(airportId.toUpperCase());
-      console.log(`[WaypointService] Cleared cache for ${airportId}`);
     } else {
       this.cache.clear();
-      console.log('[WaypointService] Cleared all waypoint cache');
     }
   }
 

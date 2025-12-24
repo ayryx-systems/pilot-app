@@ -157,19 +157,13 @@ export function PilotMap({
   const refreshWeatherLayer = () => {
     const radarLayer = activeWeatherLayers.get('radar');
     if (radarLayer && mapInstance) {
-      console.log('[🌦️ WEATHER API] 🔄 MANUAL REFRESH TRIGGERED - Refreshing static weather image');
-      console.log('[🌦️ WEATHER API] 🎉 STATIC MODE: Only 1 API call per refresh (not hundreds!)');
-
       // For image overlay, we need to update the URL with a cache-busting parameter
       const imageOverlay = radarLayer as any;
       if (imageOverlay._url && imageOverlay.setUrl) {
         const baseUrl = imageOverlay._url.split('&t=')[0]; // Remove old timestamp
         const freshUrl = `${baseUrl}&t=${Date.now()}`; // Add new timestamp
         imageOverlay.setUrl(freshUrl);
-        console.log('[🌦️ WEATHER API] 📡 Static weather image URL refreshed');
       }
-    } else {
-      console.log('[🌦️ WEATHER API] Manual refresh ignored - no active weather layer');
     }
   };
 
@@ -304,7 +298,6 @@ export function PilotMap({
         });
 
         setLeafletLoaded(true);
-        console.log('[PilotMap] Leaflet loaded');
       } catch (error) {
         console.error('[PilotMap] Failed to load Leaflet:', error);
       }
@@ -319,7 +312,6 @@ export function PilotMap({
       try {
         const layers = weatherService.getWeatherLayers();
         setWeatherLayers(layers);
-        console.log('[PilotMap] Weather layers loaded:', layers.length);
       } catch (error) {
         console.error('[PilotMap] Failed to load weather layers:', error);
       }
@@ -340,12 +332,6 @@ export function PilotMap({
       try {
         const data = await pilotOSMService.getAirportOSMData(airport.id);
         setOsmData(data);
-        console.log('[PilotMap] OSM data loaded for', airport.id, data ? `${Object.values(data).flat().length} features` : 'no data');
-        if (data?.runways) {
-          console.log('[PilotMap] OSM runways found:', data.runways.length, data.runways.map(r => r.tags?.ref));
-          console.log('[PilotMap] First runway structure:', data.runways[0]);
-        }
-        console.log('[PilotMap] Full OSM data structure:', data);
       } catch (error) {
         console.error('[PilotMap] Failed to load OSM data:', error);
         setOsmData(null);
@@ -456,8 +442,6 @@ export function PilotMap({
         extendedCenterlinesPane.style.zIndex = '610'; // Extended centerlines below tracks (10 + markerPane base 600)
       }
       
-      console.log('[PilotMap] Layer groups initialized with proper z-indexes: weather=620, extendedCenterlines=610, tracks=630, waypoints=635, pireps=700');
-
       // Add scale control (similar to ATC dashboard)
       L.control
         .scale({
@@ -481,7 +465,6 @@ export function PilotMap({
 
       setMapInstance(map);
       setMapReady(true);
-      console.log('[PilotMap] Map created successfully');
     };
 
     createMap();
@@ -1102,7 +1085,6 @@ export function PilotMap({
       // Clear existing radar layer from weather layer group
       const existingRadarLayer = activeWeatherLayers.get('radar');
       if (existingRadarLayer && layerGroupsRef.current.weather) {
-        console.log('[🌦️ WEATHER API] 🛑 Weather radar DISABLED - Stopping all weather API calls');
         layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
         setActiveWeatherLayers(prev => {
           const newMap = new Map(prev);
@@ -1112,25 +1094,16 @@ export function PilotMap({
       }
 
       if (displayOptions.showWeatherRadar) {
-        console.log('[🌦️ WEATHER API] 🎯 WEATHER RADAR TOGGLE: ON - Starting weather overlay');
-        console.log('[🌦️ WEATHER API] 📋 Available weather layers:', weatherLayers.length);
-
         let radarLayer = weatherLayers.find(layer => layer.id === 'radar');
 
         // Fallback to composite radar if primary not available
         if (!radarLayer) {
           radarLayer = weatherLayers.find(layer => layer.id === 'radar_composite');
-          console.log('[PilotMap] Using composite radar as fallback');
         }
 
         if (radarLayer) {
           try {
-            console.log('[🌦️ WEATHER API] ✅ Weather radar ENABLED - STATIC OVERLAY MODE');
-            console.log('[🌦️ WEATHER API] 🎯 STATIC MODE: ONE image for entire US, cached in 10min buckets');
-            console.log('[🌦️ WEATHER API] 🚀 UNLIMITED ZOOM: No additional requests when zooming!');
-
             // STATIC WEATHER OVERLAY - Single image for entire CONUS
-            console.log('[🌦️ WEATHER API] 🗺️  Using STATIC weather overlay - ONE request for entire US');
 
             // Get a single static weather image for the entire CONUS at fixed zoom
             const conus_bbox = "-130,20,-60,50"; // Entire Continental US
@@ -1142,8 +1115,6 @@ export function PilotMap({
 
             // Iowa Mesonet uses WMS 1.1.1, different parameter format
             const staticWeatherUrl = `${radarLayer.url}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${radarLayer.layers}&BBOX=${conus_bbox}&WIDTH=${image_width}&HEIGHT=${image_height}&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${cacheTimestamp}`;
-
-            console.log('[🌦️ WEATHER API] 📡 Single weather request URL (Iowa Mesonet):', staticWeatherUrl);
 
             // Create image overlay instead of tiled layer
             const bounds: [[number, number], [number, number]] = [
@@ -1162,10 +1133,7 @@ export function PilotMap({
 
             // Add event listeners for the single image request
             imageOverlay.on('load', () => {
-              console.log('[🌦️ WEATHER API] ✅ Static weather image loaded successfully - NO MORE REQUESTS NEEDED!');
-              console.log('[🌦️ WEATHER API] 🎯 Weather overlay should now be VISIBLE across entire US');
-              console.log('[🌦️ WEATHER API] 📊 Image bounds:', bounds);
-              console.log('[🌦️ WEATHER API] 🎨 Opacity:', 0.3);
+              // Weather overlay loaded successfully
             });
 
             imageOverlay.on('error', (e) => {
@@ -1183,15 +1151,6 @@ export function PilotMap({
 
             // Force the weather layer to the top
             imageOverlay.bringToFront();
-
-            console.log('[🌦️ WEATHER API] 🎉 Static weather overlay added - ZERO additional requests on zoom/pan!');
-            console.log('[🌦️ WEATHER API] 🔍 DEBUG: Weather layer group has', layerGroupsRef.current.weather.getLayers().length, 'layers');
-            console.log('[🌦️ WEATHER API] 🔍 DEBUG: Image overlay bounds:', imageOverlay.getBounds());
-
-            // Add browser caching headers to the single image request
-            if (staticWeatherUrl) {
-              console.log('[🌦️ WEATHER API] 💾 Browser will cache the static weather image');
-            }
           } catch (error) {
             console.error('[PilotMap] Failed to add static weather overlay:', error);
           }
@@ -1225,26 +1184,19 @@ export function PilotMap({
         
         const imageOverlay = radarLayer as any;
         if (imageOverlay && imageOverlay._url && imageOverlay.setUrl) {
-          console.log('[🌦️ WEATHER API] 🔄 Auto-refresh triggered - 10min cache bucket expired');
-          
           // Get the base URL and radar layer info
           const urlMatch = imageOverlay._url.match(/^([^?]+)\?/);
           if (urlMatch) {
             const baseUrl = urlMatch[1];
             const staticWeatherUrl = `${baseUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=nexrad-n0r&BBOX=-130,20,-60,50&WIDTH=1024&HEIGHT=512&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${Date.now()}`;
-            
-            console.log('[🌦️ WEATHER API] 📡 Updating weather image URL with new timestamp');
             imageOverlay.setUrl(staticWeatherUrl);
           }
         }
       }
     }, 2 * 60 * 1000); // Check every 2 minutes
 
-    console.log('[🌦️ WEATHER API] ⏰ Auto-refresh started - will update when 10min cache expires');
-
     return () => {
       clearInterval(checkInterval);
-      console.log('[🌦️ WEATHER API] ⏰ Auto-refresh stopped');
     };
   }, [mapInstance, displayOptions.showWeatherRadar, activeWeatherLayers]);
 
@@ -1366,8 +1318,6 @@ export function PilotMap({
         try {
           // Fetch ALL SIGMETs/AIRMETs (no bounds filtering - show all active advisories)
           const sigmetAirmets = await weatherService.getSigmetAirmet();
-          
-          console.log('[PilotMap] Loaded', sigmetAirmets.length, 'SIGMETs/AIRMETs (all active)');
           
           // Render each SIGMET/AIRMET as a polygon
           sigmetAirmets.forEach(sigmet => {
@@ -1512,14 +1462,12 @@ export function PilotMap({
         
         // Only show winds aloft at zoom level 8 or higher
         if (currentZoom < 8) {
-          console.log('[PilotMap] Winds Aloft hidden - zoom level too low:', currentZoom);
           return;
         }
         
         try {
           // For now, get all wind data without airport filtering
           const windsData = await weatherService.getWindsAloft();
-          console.log('[PilotMap] Loaded', windsData.length, 'wind stations for', airport?.code || 'all airports');
           
           // Group winds by station to avoid superimposition
           const stationGroups = new Map();
@@ -1629,7 +1577,6 @@ export function PilotMap({
           
           // Only show winds aloft at zoom level 8 or higher
           if (currentZoom < 8) {
-            console.log('[PilotMap] Winds Aloft hidden on zoom change - zoom level too low:', currentZoom);
             return;
           }
           
@@ -1750,7 +1697,6 @@ export function PilotMap({
       if (displayOptions.showIcing) {
         try {
           const icingForecasts = await weatherService.getIcing();
-          console.log('[PilotMap] Loaded', icingForecasts.length, 'Icing forecasts');
           
           icingForecasts.forEach((icing) => {
             if (!icing.geometry || icing.geometry.length < 3) return;
@@ -1855,7 +1801,6 @@ export function PilotMap({
       if (displayOptions.showTurbulence) {
         try {
           const turbulenceForecasts = await weatherService.getTurbulence();
-          console.log('[PilotMap] Loaded', turbulenceForecasts.length, 'Turbulence forecasts');
           
           turbulenceForecasts.forEach((turbulence) => {
             if (!turbulence.geometry || turbulence.geometry.length < 3) return;
@@ -1963,12 +1908,10 @@ export function PilotMap({
       if (displayOptions.showWeatherPireps) {
         // Only show weather PIREPs at zoom level 10 or higher (same as waypoints)
         if (currentZoom < 7) {
-          console.log('[PilotMap] Weather PIREPs hidden - zoom level too low:', currentZoom);
           return;
         }
         try {
           const weatherPireps = await weatherService.getWeatherPireps();
-          console.log('[PilotMap] Loaded', weatherPireps.length, 'weather PIREPs');
           
           weatherPireps.forEach((pirep: any) => {
             if (!pirep.lat || !pirep.lon || isNaN(pirep.lat) || isNaN(pirep.lon)) return;
@@ -2200,13 +2143,11 @@ export function PilotMap({
       if (displayOptions.showMetars) {
         // Only show METARs at zoom level 8 or higher to prevent clutter
         if (currentZoom < 8) {
-          console.log('[PilotMap] METARs hidden - zoom level too low:', currentZoom);
           return;
         }
 
         try {
           const metars = await weatherService.getMetars();
-          console.log('[PilotMap] Loaded', metars.length, 'METAR stations');
           
           metars.forEach((metar: any) => {
             if (!metar.lat || !metar.lon || isNaN(metar.lat) || isNaN(metar.lon)) return;
@@ -2376,8 +2317,6 @@ export function PilotMap({
   }, [mapInstance, displayOptions.showMetars]);
 
   const renderRunways = (mapInstance: L.Map, osmData: any, currentZoom: number, Leaflet: typeof L) => {
-    console.log('[PilotMap] Rendering runways (always visible, on top):', osmData.runways.length);
-    
     mapInstance.eachLayer((layer: any) => {
       if (layer._runwayLabel || layer._runwayPolyline) {
         mapInstance.removeLayer(layer);
@@ -2573,18 +2512,6 @@ export function PilotMap({
 
       // 1. Render other airport features FIRST (if toggle is enabled)
       if (displayOptions.showOSMFeatures) {
-        console.log('[PilotMap] Rendering airport features (toggle-controlled, zoom-based):', {
-          taxiways: osmData.taxiways.length,
-          terminals: osmData.terminals.length,
-          gates: osmData.gates.length,
-          aprons: osmData.aprons.length,
-          hangars: osmData.hangars.length,
-          controlTowers: osmData.controlTowers.length,
-          parkingPositions: osmData.parkingPositions.length,
-          other: osmData.other.length,
-          currentZoom
-        });
-
         // Taxiways - show at zoom 10+, major taxiways at zoom 10+, all at zoom 12+
         if (currentZoom >= 10) {
           osmData.taxiways.forEach(way => {

@@ -42,13 +42,11 @@ class PilotOSMService {
     if (this.cache.has(cacheKey)) {
       const cached = this.cache.get(cacheKey)!;
       if (Date.now() - cached.timestamp < this.CACHE_DURATION) {
-        console.log(`[PilotOSMService] Using cached OSM data for ${airportId}`);
         return cached.data;
       }
     }
 
     try {
-      console.log(`[PilotOSMService] Fetching OSM data for ${airportId} from backend API`);
       
       const response = await fetch(`${this.BACKEND_API_URL}/api/airports/${airportId}/osm`, {
         method: 'GET',
@@ -86,19 +84,6 @@ class PilotOSMService {
         timestamp: Date.now()
       });
 
-      console.log(`[PilotOSMService] Retrieved OSM data for ${airportId}:`, {
-        taxiways: features.taxiways.length,
-        terminals: features.terminals.length,
-        gates: features.gates.length,
-        aprons: features.aprons.length,
-        hangars: features.hangars.length,
-        controlTowers: features.controlTowers.length,
-        parkingPositions: features.parkingPositions.length,
-        runways: features.runways.length,
-        other: features.other.length,
-        total: data.osm.featureCount
-      });
-
       return features;
 
     } catch (error) {
@@ -113,10 +98,8 @@ class PilotOSMService {
   clearCache(airportId?: string): void {
     if (airportId) {
       this.cache.delete(airportId);
-      console.log(`[PilotOSMService] Cleared cache for ${airportId}`);
     } else {
       this.cache.clear();
-      console.log(`[PilotOSMService] Cleared all cache`);
     }
   }
 
