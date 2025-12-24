@@ -82,17 +82,6 @@ export function getAirportUTCOffset(airportCode: string, date: Date, baseline?: 
   const offset = UTC_OFFSETS[timezone] || { winter: -6, summer: -5 };
   const offsetHours = season === 'summer' ? offset.summer : offset.winter;
   
-  // Debug logging (can be removed in production)
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[airportTime] getAirportUTCOffset:', {
-      airportCode,
-      dateUTC: date.toISOString(),
-      timezone,
-      season,
-      offsetHours
-    });
-  }
-  
   return offsetHours;
 }
 
