@@ -438,7 +438,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
         <h3 className="text-sm font-semibold text-slate-200 mb-2">Arrival Duration: 50nm Boundary to Landing</h3>
         <p className="text-xs text-slate-400 mb-3">Shows how long each aircraft took from crossing 50nm to landing (last 2 hours)</p>
-        <div className="h-64 flex items-center justify-center text-slate-400 text-sm">
+        <div className="h-48 flex items-center justify-center text-slate-400 text-sm">
           No arrival data available
         </div>
       </div>
@@ -458,7 +458,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
   return (
     <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
       <h3 className="text-sm font-semibold text-slate-200 mb-2">Arrival Times (Last Hour)</h3>
-      <div className="h-64">
+      <div className="h-48">
         <Scatter ref={chartRef} data={chartData} options={options} />
       </div>
       <p className="text-xs text-slate-400 mt-2">
