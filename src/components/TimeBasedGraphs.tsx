@@ -45,6 +45,80 @@ function getDayOfWeekName(dateStr: string): string {
   return days[date.getDay()];
 }
 
+function getThanksgivingDate(year: number): Date {
+  const november = new Date(year, 10, 1);
+  const dayOfWeek = november.getDay();
+  const daysUntilFirstThursday = (4 - dayOfWeek + 7) % 7;
+  const firstThursday = 1 + daysUntilFirstThursday;
+  const fourthThursday = firstThursday + 21;
+  return new Date(year, 10, fourthThursday);
+}
+
+function getIndependenceDay(year: number): Date {
+  return new Date(year, 6, 4);
+}
+
+function getDaysDifference(date1: { year: number; month: number; day: number }, date2: { year: number; month: number; day: number }): number {
+  const d1 = new Date(Date.UTC(date1.year, date1.month - 1, date1.day));
+  const d2 = new Date(Date.UTC(date2.year, date2.month - 1, date2.day));
+  const diffMs = d1.getTime() - d2.getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
+}
+
+function getHolidayKey(dateStr: string): string | null {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const date = { year, month, day };
+  
+  if (month === 12) {
+    const christmasDay = { year, month: 12, day: 25 };
+    const daysDiff = getDaysDifference(date, christmasDay);
+    
+    if (daysDiff === -1) return 'christmas_-1';
+    if (daysDiff === 0) return 'christmas_0';
+    if (daysDiff === 1) return 'christmas_1';
+  }
+  
+  if (month === 1 && day === 1) return 'new_years_day_0';
+  if (month === 1 && day === 2) return 'new_years_day_1';
+  if (month === 1 && day === 3) return 'new_years_day_2';
+  
+  const thanksgiving = getThanksgivingDate(year);
+  const thanksgivingDate = { year, month: 11, day: thanksgiving.getDate() };
+  const thanksgivingDaysDiff = getDaysDifference(date, thanksgivingDate);
+  
+  if (thanksgivingDaysDiff === -1) return 'thanksgiving_-1';
+  if (thanksgivingDaysDiff === 0) return 'thanksgiving_0';
+  if (thanksgivingDaysDiff === 1) return 'thanksgiving_1';
+  
+  const independenceDay = getIndependenceDay(year);
+  const independenceDate = { year, month: 7, day: independenceDay.getDate() };
+  const independenceDaysDiff = getDaysDifference(date, independenceDate);
+  
+  if (independenceDaysDiff === -1) return 'independence_day_-1';
+  if (independenceDaysDiff === 0) return 'independence_day_0';
+  if (independenceDaysDiff === 1) return 'independence_day_1';
+  
+  return null;
+}
+
+function getHolidayDisplayName(holidayKey: string): string {
+  const names: Record<string, string> = {
+    'christmas_-1': 'Christmas Eve',
+    'christmas_0': 'Christmas Day',
+    'christmas_1': 'Boxing Day',
+    'thanksgiving_-1': 'Thanksgiving Eve',
+    'thanksgiving_0': 'Thanksgiving Day',
+    'thanksgiving_1': 'Day After Thanksgiving',
+    'independence_day_-1': 'Independence Day Eve',
+    'independence_day_0': 'Independence Day',
+    'independence_day_1': 'Day After Independence Day',
+    'new_years_day_0': 'New Year\'s Day',
+    'new_years_day_1': 'Day After New Year\'s',
+    'new_years_day_2': '2 Days After New Year\'s',
+  };
+  return names[holidayKey] || holidayKey;
+}
+
 function getSeasonalAverageData(baseline: BaselineData | null, season: 'summer' | 'winter') {
   if (!baseline) return null;
   
@@ -157,10 +231,37 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const season = getAirportSeason(localDateForSeason, baseline);
     const seasonDisplay = season.charAt(0).toUpperCase() + season.slice(1);
 
-    const dayData = baseline[season]?.dayOfWeekTimeSlots?.[dayOfWeek];
+    const holidayKey = getHolidayKey(dateStr);
+    const seasonalData = baseline[season];
+    
+    let dayData: Record<string, any> | undefined;
+    let dayLabel: string;
+    let isHoliday = false;
+
+    if (holidayKey) {
+      const currentSeasonData = baseline[season];
+      const otherSeason = season === 'summer' ? 'winter' : 'summer';
+      const otherSeasonData = baseline[otherSeason];
+      
+      if (currentSeasonData?.holidayTimeSlots?.[holidayKey]) {
+        dayData = currentSeasonData.holidayTimeSlots[holidayKey];
+        dayLabel = getHolidayDisplayName(holidayKey);
+        isHoliday = true;
+      } else if (otherSeasonData?.holidayTimeSlots?.[holidayKey]) {
+        dayData = otherSeasonData.holidayTimeSlots[holidayKey];
+        dayLabel = getHolidayDisplayName(holidayKey);
+        isHoliday = true;
+      } else {
+        dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
+        dayLabel = `${dayOfWeekDisplay} Average`;
+      }
+    } else {
+      dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
+      dayLabel = `${dayOfWeekDisplay} Average`;
+    }
 
     if (!dayData) {
-      console.warn(`No data found for ${dayOfWeek} in ${season}`);
+      console.warn(`No data found for ${isHoliday ? holidayKey : dayOfWeek} in ${season}`);
       setChartData(null);
       return;
     }
@@ -261,7 +362,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
     const datasets: any[] = [
       {
-        label: `${dayOfWeekDisplay} Average`,
+        label: dayLabel,
         data: alignedDayCounts,
         borderColor: '#3b82f6',
         backgroundColor: 'rgba(59, 130, 246, 0.1)',
@@ -339,7 +440,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       seasonalSampleSizes: seasonalAvg.sampleSizes,
       dayIndices: alignment.dayIndices,
       seasonalIndices: alignment.seasonalIndices,
-      title: `Traffic Forecast - ${dayOfWeekDisplay}`,
+      title: `Traffic Forecast - ${dayLabel}`,
       currentTimeSlotIndex,
       alignedTimeSlots: alignment.alignedTimeSlots,
     };

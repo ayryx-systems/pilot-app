@@ -14,6 +14,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { BaselineData, BaselineTimeSlot } from '@/types';
+import { getAirportLocalDateString, utcToAirportLocal, getCurrentUTCTime } from '@/utils/airportTime';
 
 ChartJS.register(
   CategoryScale,
@@ -123,17 +124,20 @@ function getIndependenceDay(year: number): Date {
   return new Date(year, 6, 4);
 }
 
-function normalizeDate(date: Date): Date {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+function getDaysDifference(date1: { year: number; month: number; day: number }, date2: { year: number; month: number; day: number }): number {
+  const d1 = new Date(Date.UTC(date1.year, date1.month - 1, date1.day));
+  const d2 = new Date(Date.UTC(date2.year, date2.month - 1, date2.day));
+  const diffMs = d1.getTime() - d2.getTime();
+  return Math.floor(diffMs / (1000 * 60 * 60 * 24));
 }
 
 function getHolidayKey(dateStr: string): string | null {
   const [year, month, day] = dateStr.split('-').map(Number);
-  const date = normalizeDate(new Date(year, month - 1, day));
+  const date = { year, month, day };
   
   if (month === 12) {
-    const christmasDay = normalizeDate(new Date(year, 11, 25));
-    const daysDiff = Math.floor((date.getTime() - christmasDay.getTime()) / (1000 * 60 * 60 * 24));
+    const christmasDay = { year, month: 12, day: 25 };
+    const daysDiff = getDaysDifference(date, christmasDay);
     
     if (daysDiff === -1) return 'christmas_-1';
     if (daysDiff === 0) return 'christmas_0';
@@ -144,15 +148,17 @@ function getHolidayKey(dateStr: string): string | null {
   if (month === 1 && day === 2) return 'new_years_day_1';
   if (month === 1 && day === 3) return 'new_years_day_2';
   
-  const thanksgiving = normalizeDate(getThanksgivingDate(year));
-  const thanksgivingDaysDiff = Math.floor((date.getTime() - thanksgiving.getTime()) / (1000 * 60 * 60 * 24));
+  const thanksgiving = getThanksgivingDate(year);
+  const thanksgivingDate = { year, month: 11, day: thanksgiving.getDate() };
+  const thanksgivingDaysDiff = getDaysDifference(date, thanksgivingDate);
   
   if (thanksgivingDaysDiff === -1) return 'thanksgiving_-1';
   if (thanksgivingDaysDiff === 0) return 'thanksgiving_0';
   if (thanksgivingDaysDiff === 1) return 'thanksgiving_1';
   
-  const independenceDay = normalizeDate(getIndependenceDay(year));
-  const independenceDaysDiff = Math.floor((date.getTime() - independenceDay.getTime()) / (1000 * 60 * 60 * 24));
+  const independenceDay = getIndependenceDay(year);
+  const independenceDate = { year, month: 7, day: independenceDay.getDate() };
+  const independenceDaysDiff = getDaysDifference(date, independenceDate);
   
   if (independenceDaysDiff === -1) return 'independence_day_-1';
   if (independenceDaysDiff === 0) return 'independence_day_0';
@@ -189,8 +195,8 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
       return;
     }
 
-    const displayDate = date || new Date();
-    const dateStr = displayDate.toISOString().split('T')[0];
+    const displayDate = date || getCurrentUTCTime();
+    const dateStr = getAirportLocalDateString(displayDate, airportCode, baseline);
     const dayOfWeek = getDayOfWeekName(dateStr);
     const timeSlot = currentTime ? getTimeSlotKey(currentTime) : getTimeSlotKey(new Date());
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
@@ -202,14 +208,49 @@ export function TrafficTimeline({ baseline, airportCode, date, currentTime, load
     const holidayKey = getHolidayKey(dateStr);
     const seasonalData = baseline[season];
     
+    console.log('[TrafficTimeline] Date calculation:', {
+      displayDate: displayDate.toISOString(),
+      dateStr,
+      dayOfWeek,
+      holidayKey,
+      season,
+      hasSeasonalData: !!seasonalData,
+      hasHolidayTimeSlots: !!seasonalData?.holidayTimeSlots,
+      holidayTimeSlotsKeys: seasonalData?.holidayTimeSlots ? Object.keys(seasonalData.holidayTimeSlots).slice(0, 10) : [],
+      hasDayOfWeekTimeSlots: !!seasonalData?.dayOfWeekTimeSlots,
+      dayOfWeekKeys: seasonalData?.dayOfWeekTimeSlots ? Object.keys(seasonalData.dayOfWeekTimeSlots) : []
+    });
+    
     let dayData: Record<string, BaselineTimeSlot> | undefined;
     let dayLabel: string;
     let isHoliday = false;
 
-    if (holidayKey && seasonalData?.holidayTimeSlots?.[holidayKey]) {
-      dayData = seasonalData.holidayTimeSlots[holidayKey];
-      dayLabel = getHolidayDisplayName(holidayKey);
-      isHoliday = true;
+    if (holidayKey) {
+      const currentSeasonData = baseline[season];
+      const otherSeason = season === 'summer' ? 'winter' : 'summer';
+      const otherSeasonData = baseline[otherSeason];
+      
+      if (currentSeasonData?.holidayTimeSlots?.[holidayKey]) {
+        dayData = currentSeasonData.holidayTimeSlots[holidayKey];
+        dayLabel = getHolidayDisplayName(holidayKey);
+        isHoliday = true;
+        console.log('[TrafficTimeline] Using holiday data from', season, ':', { holidayKey, dayLabel, timeSlotCount: Object.keys(dayData).length });
+      } else if (otherSeasonData?.holidayTimeSlots?.[holidayKey]) {
+        dayData = otherSeasonData.holidayTimeSlots[holidayKey];
+        dayLabel = getHolidayDisplayName(holidayKey);
+        isHoliday = true;
+        console.log('[TrafficTimeline] Using holiday data from', otherSeason, ':', { holidayKey, dayLabel, timeSlotCount: Object.keys(dayData).length });
+      } else {
+        console.warn('[TrafficTimeline] Holiday key found but no data in either season:', { 
+          holidayKey, 
+          currentSeason: season,
+          currentSeasonKeys: currentSeasonData?.holidayTimeSlots ? Object.keys(currentSeasonData.holidayTimeSlots).slice(0, 10) : [],
+          otherSeason: otherSeason,
+          otherSeasonKeys: otherSeasonData?.holidayTimeSlots ? Object.keys(otherSeasonData.holidayTimeSlots).slice(0, 10) : []
+        });
+        dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
+        dayLabel = `${dayOfWeekDisplay} Average`;
+      }
     } else {
       dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
       dayLabel = `${dayOfWeekDisplay} Average`;
