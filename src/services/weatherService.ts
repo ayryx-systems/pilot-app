@@ -40,49 +40,27 @@ class WeatherApiError extends Error {
 class WeatherService {
   private cache = new Map<string, { data: any; timestamp: number; expiry: number }>();
 
-  // NOAA Weather Data Services
-  private readonly WEATHER_SERVICES = {
-    NOWCOAST_RADAR: {
-      id: 'nowcoast_radar',
-      name: 'NOAA Real-time Radar',
-      baseUrl: 'https://nowcoast.noaa.gov/arcgis/services/nowcoast/radar_meteo_imagery_nexrad_time/MapServer/WMSServer',
-      type: 'WMS' as const,
-      updateFrequency: 4 // Updates every 4 minutes
-    },
-    NDFD_FORECAST: {
-      id: 'ndfd_forecast',
-      name: 'NOAA Weather Forecast',
-      baseUrl: 'https://digital.weather.gov/ndfd.conus/wms',
-      type: 'WMS' as const,
-      updateFrequency: 60 // Updates every hour
-    },
-    RIDGE_RADAR: {
-      id: 'ridge_radar',
-      name: 'NOAA RIDGE Radar',
-      baseUrl: 'https://nowcoast.noaa.gov/geoserver/observations/weather_radar/ows',
-      type: 'WMS' as const,
-      updateFrequency: 5 // Updates every 5 minutes
-    },
-    NWS_ALERTS: {
-      id: 'nws_alerts',
-      name: 'NWS Weather Alerts',
-      baseUrl: 'https://api.weather.gov/alerts',
-      type: 'REST' as const,
-      updateFrequency: 5 // Updates every 5 minutes
-    }
-  };
+  // NOTE: Weather data services are now proxied through the backend API
+  // The following object documents the original external services for reference:
+  // - NOWCOAST_RADAR: NOAA NowCoast WMS (not currently used)
+  // - NDFD_FORECAST: NOAA Digital Forecast WMS (not currently used)
+  // - RIDGE_RADAR: NOAA RIDGE Radar WMS (not currently used)
+  // - NWS_ALERTS: NWS REST API (proxied through /api/pilot/weather-alerts)
+  // All weather data requests should go through backend endpoints in /api/pilot/*
 
   /**
    * Get available weather layers for aviation use
+   * All weather data now goes through the backend API
    */
   getWeatherLayers(): WeatherLayer[] {
-    // Using Iowa Environmental Mesonet - tested and working!
+    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    
     return [
       {
         id: 'radar',
         name: 'Weather Radar (Real-time)',
-        url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi',
-        layers: 'nexrad-n0r', // NEXRAD Base Reflectivity (simplified layer name)
+        url: `${apiBaseUrl}/api/pilot/weather-radar`, // Backend proxy endpoint
+        layers: 'nexrad-n0r', // NEXRAD Base Reflectivity
         format: 'image/png',
         transparent: true,
         opacity: 0.15,
@@ -91,7 +69,7 @@ class WeatherService {
       {
         id: 'radar_composite',
         name: 'Weather Radar (Composite)',
-        url: 'https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi',
+        url: `${apiBaseUrl}/api/pilot/weather-radar`, // Backend proxy endpoint
         layers: 'nexrad-n0r', // Same layer for now
         format: 'image/png',
         transparent: true,
@@ -103,6 +81,7 @@ class WeatherService {
 
   /**
    * Get weather alerts for a specific area
+   * Now uses backend API proxy instead of direct NWS calls
    */
   async getWeatherAlerts(bounds: { north: number; south: number; east: number; west: number }): Promise<WeatherAlert[]> {
     const cacheKey = `alerts_${bounds.north}_${bounds.south}_${bounds.east}_${bounds.west}`;
@@ -113,11 +92,11 @@ class WeatherService {
     }
 
     try {
-      const url = `${this.WEATHER_SERVICES.NWS_ALERTS.baseUrl}/active?area=us&status=actual`;
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const url = `${apiBaseUrl}/api/pilot/weather-alerts?area=us&status=actual`;
 
       const response = await fetch(url, {
         headers: {
-          'User-Agent': 'AYRYX-PilotApp/1.0 (https://github.com/ayryx/pilot-app)',
           'Accept': 'application/json'
         }
       });
@@ -129,9 +108,9 @@ class WeatherService {
       const data = await response.json();
 
       // Filter alerts by bounding box and relevance to aviation
-      const relevantAlerts = data.features
-        ?.filter((feature: any) => {
-          const geometry = feature.geometry;
+      const relevantAlerts = (data.alerts || [])
+        .filter((alert: any) => {
+          const geometry = alert.geometry;
           if (!geometry || !geometry.coordinates) return false;
 
           // Simple bounding box check (could be improved with proper geo intersection)
@@ -144,21 +123,18 @@ class WeatherService {
               lon >= bounds.west && lon <= bounds.east;
           });
         })
-        ?.map((feature: any) => {
-          const props = feature.properties;
-          return {
-            id: props.id || `alert_${Date.now()}_${Math.random()}`,
-            title: props.headline || 'Weather Alert',
-            description: props.description || props.event || 'No description available',
-            severity: this.mapSeverity(props.severity),
-            urgency: props.urgency?.toLowerCase() || 'unknown',
-            certainty: props.certainty?.toLowerCase() || 'unknown',
-            areas: props.areaDesc ? props.areaDesc.split(';').map((area: string) => area.trim()) : [],
-            effective: props.effective || new Date().toISOString(),
-            expires: props.expires || new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-            status: props.status?.toLowerCase() || 'actual'
-          } as WeatherAlert;
-        }) || [];
+        .map((alert: any) => ({
+          id: alert.id,
+          title: alert.title,
+          description: alert.description,
+          severity: alert.severity,
+          urgency: alert.urgency,
+          certainty: alert.certainty,
+          areas: alert.areas,
+          effective: alert.effective,
+          expires: alert.expires,
+          status: alert.status
+        } as WeatherAlert));
 
       this.setCachedData(cacheKey, relevantAlerts, 5);
       return relevantAlerts;

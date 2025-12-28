@@ -1160,17 +1160,18 @@ export function PilotMap({
         if (radarLayer) {
           try {
             // STATIC WEATHER OVERLAY - Single image for entire CONUS
+            // Now uses backend API proxy endpoint
 
             // Get a single static weather image for the entire CONUS at fixed zoom
-            const conus_bbox = "-130,20,-60,50"; // Entire Continental US
+            const conus_bbox = "-130,20,-60,50"; // Entire Continental US (west,south,east,north)
             const image_width = 1024;
             const image_height = 512;
 
             // Generate single weather image URL with caching (ONLY ONE API CALL!)
             const cacheTimestamp = Math.floor(Date.now() / (10 * 60 * 1000)) * (10 * 60 * 1000); // 10-minute cache buckets
 
-            // Iowa Mesonet uses WMS 1.1.1, different parameter format
-            const staticWeatherUrl = `${radarLayer.url}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=${radarLayer.layers}&BBOX=${conus_bbox}&WIDTH=${image_width}&HEIGHT=${image_height}&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${cacheTimestamp}`;
+            // Backend endpoint expects query parameters: bbox, width, height, layers, t
+            const staticWeatherUrl = `${radarLayer.url}?bbox=${conus_bbox}&width=${image_width}&height=${image_height}&layers=${radarLayer.layers}&t=${cacheTimestamp}`;
 
             // Create image overlay instead of tiled layer
             const bounds: [[number, number], [number, number]] = [
@@ -1244,7 +1245,8 @@ export function PilotMap({
           const urlMatch = imageOverlay._url.match(/^([^?]+)\?/);
           if (urlMatch) {
             const baseUrl = urlMatch[1];
-            const staticWeatherUrl = `${baseUrl}?SERVICE=WMS&VERSION=1.1.1&REQUEST=GetMap&LAYERS=nexrad-n0r&BBOX=-130,20,-60,50&WIDTH=1024&HEIGHT=512&SRS=EPSG:4326&FORMAT=image/png&TRANSPARENT=true&t=${Date.now()}`;
+            // Backend endpoint expects query parameters: bbox, width, height, layers, t
+            const staticWeatherUrl = `${baseUrl}?bbox=-130,20,-60,50&width=1024&height=512&layers=nexrad-n0r&t=${Date.now()}`;
             imageOverlay.setUrl(staticWeatherUrl);
           }
         }
