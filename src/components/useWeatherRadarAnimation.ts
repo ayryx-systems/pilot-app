@@ -177,7 +177,23 @@ export function useWeatherRadarAnimation({
 
           console.log(`[WeatherRadarAnimation] ✅ All ${overlays.length} radar overlays preloaded`);
 
-          if (!radarTimeIndicatorRef.current && mapRef.current) {
+          // Check if time indicator exists and is still in the DOM
+          const timeIndicatorExists = radarTimeIndicatorRef.current && 
+                                     mapRef.current && 
+                                     mapRef.current.contains(radarTimeIndicatorRef.current);
+
+          if (!timeIndicatorExists && mapRef.current) {
+            // Remove old indicator if it exists but is not in DOM
+            if (radarTimeIndicatorRef.current) {
+              try {
+                radarTimeIndicatorRef.current.remove();
+              } catch (e) {
+                // Element already removed, ignore
+              }
+              radarTimeIndicatorRef.current = null;
+            }
+
+            // Create new time indicator
             const timeIndicatorDiv = document.createElement('div');
             timeIndicatorDiv.id = 'radar-time-indicator';
             timeIndicatorDiv.style.cssText = `
@@ -201,7 +217,8 @@ export function useWeatherRadarAnimation({
             timeIndicatorDiv.textContent = `Radar: ${frameTime}`;
             mapRef.current.appendChild(timeIndicatorDiv);
             radarTimeIndicatorRef.current = timeIndicatorDiv;
-          } else if (radarTimeIndicatorRef.current) {
+          } else if (radarTimeIndicatorRef.current && timeIndicatorExists) {
+            // Update existing indicator
             const frameTime = airportCode 
               ? formatAirportLocalTimeShort(frames[0].timestampISO || new Date(frames[0].timestamp).toISOString(), airportCode, baseline || undefined)
               : new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -317,6 +334,15 @@ export function useWeatherRadarAnimation({
       if (fadeAnimationFrameRef.current !== null) {
         cancelAnimationFrame(fadeAnimationFrameRef.current);
         fadeAnimationFrameRef.current = null;
+      }
+      // Clean up time indicator when map instance changes
+      if (radarTimeIndicatorRef.current) {
+        try {
+          radarTimeIndicatorRef.current.remove();
+        } catch (e) {
+          // Element already removed, ignore
+        }
+        radarTimeIndicatorRef.current = null;
       }
       radarBlobUrlsRef.current.forEach(url => {
         try {
