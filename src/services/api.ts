@@ -13,8 +13,9 @@ import {
   ArrivalForecastResponse
 } from '@/types';
 import { demoService } from './demoService';
+import { getApiBaseUrl } from '@/lib/apiConfig';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL = getApiBaseUrl();
 
 class ApiError extends Error {
   constructor(message: string, public status?: number, public response?: unknown) {

@@ -27,10 +27,12 @@ interface OSMResponse {
   source: string;
 }
 
+import { getApiBaseUrl } from '@/lib/apiConfig';
+
 class PilotOSMService {
   private cache = new Map<string, { data: AirportOSMFeatures; timestamp: number }>();
   private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
-  private readonly BACKEND_API_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+  private readonly BACKEND_API_URL = getApiBaseUrl();
 
   /**
    * Get OSM data for an airport from backend API

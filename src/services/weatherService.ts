@@ -3,6 +3,7 @@
 // Handles weather data from NOAA and NWS APIs
 
 import { WeatherLayer, WeatherAlert } from '@/types';
+import { getApiBaseUrl } from '@/lib/apiConfig';
 
 export interface SigmetAirmet {
   id: string;
@@ -53,7 +54,7 @@ class WeatherService {
    * All weather data now goes through the backend API
    */
   getWeatherLayers(): WeatherLayer[] {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     
     return [
       {
@@ -92,7 +93,7 @@ class WeatherService {
     }
 
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const apiBaseUrl = getApiBaseUrl();
       const url = `${apiBaseUrl}/api/pilot/weather-alerts?area=us&status=actual`;
 
       const response = await fetch(url, {
@@ -220,7 +221,7 @@ class WeatherService {
 
     try {
       // Call backend API which returns ALL active SIGMETs/AIRMETs (no bounds)
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const apiBaseUrl = getApiBaseUrl();
       const url = `${apiBaseUrl}/api/pilot/sigmet-airmet`;
       
       const response = await fetch(url, {
@@ -251,7 +252,7 @@ class WeatherService {
    * Get Winds Aloft data from backend
    */
   async getWindsAloft(airportCode?: string) {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     const url = airportCode 
       ? `${apiBaseUrl}/api/pilot/winds-aloft?airport=${airportCode}`
       : `${apiBaseUrl}/api/pilot/winds-aloft`;
@@ -270,7 +271,7 @@ class WeatherService {
    * Get Icing Forecast data from backend
    */
   async getIcing(): Promise<WeatherForecast[]> {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     const url = `${apiBaseUrl}/api/pilot/icing`;
     
     try {
@@ -287,7 +288,7 @@ class WeatherService {
    * Get Turbulence Forecast data from backend
    */
   async getTurbulence(): Promise<WeatherForecast[]> {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     const url = `${apiBaseUrl}/api/pilot/turbulence`;
     
     try {
@@ -304,7 +305,7 @@ class WeatherService {
    * Get PIREPs (Pilot Reports) from Aviation Weather API via backend
    */
   async getWeatherPireps() {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     const url = `${apiBaseUrl}/api/pilot/pireps-weather`;
     
     const cacheKey = 'weather_pireps';
@@ -335,7 +336,7 @@ class WeatherService {
    * Get METAR stations (weather observations) from backend
    */
   async getMetars() {
-    const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+    const apiBaseUrl = getApiBaseUrl();
     const url = `${apiBaseUrl}/api/pilot/metars`;
     
     const cacheKey = 'metars';
@@ -416,7 +417,7 @@ class WeatherService {
    */
   async getWeatherRadarAnimation(): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
     try {
-      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const apiBaseUrl = getApiBaseUrl();
       const url = `${apiBaseUrl}/api/pilot/weather-radar/animation`;
 
       const response = await fetch(url, {
