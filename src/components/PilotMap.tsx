@@ -1426,8 +1426,8 @@ export function PilotMap({
         }
         
         try {
-          // For now, get all wind data without airport filtering
-          const windsData = await weatherService.getWindsAloft();
+          // Get wind data with airport code for timezone formatting
+          const windsData = await weatherService.getWindsAloft(airport?.code);
           
           // Group winds by station to avoid superimposition
           const stationGroups = new Map();
@@ -1495,12 +1495,16 @@ export function PilotMap({
               </div>`
             ).join('');
 
+            const updatedLabel = wind.timestampFormatted && wind.airportCode
+              ? `Updated: ${wind.timestampFormatted} (${wind.airportCode})`
+              : `Updated: ${new Date(wind.timestamp).toLocaleTimeString()}`;
+
             const popupContent = `
               <div style="min-width: 200px;">
                 <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
                 <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
                 ${allLevelsHTML}
-                <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
+                <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${updatedLabel}</div>
               </div>
             `;
 
@@ -1545,8 +1549,8 @@ export function PilotMap({
           }
           
           try {
-            // For now, get all wind data without airport filtering
-            const windsData = await weatherService.getWindsAloft();
+            // Get wind data with airport code for timezone formatting
+            const windsData = await weatherService.getWindsAloft(airport?.code);
             
             // Group winds by station to avoid superimposition
             const stationGroups = new Map();
@@ -1612,12 +1616,16 @@ export function PilotMap({
                 </div>`
               ).join('');
 
+              const updatedLabel = wind.timestampFormatted && wind.airportCode
+                ? `Updated: ${wind.timestampFormatted} (${wind.airportCode})`
+                : `Updated: ${new Date(wind.timestamp).toLocaleTimeString()}`;
+
               const popupContent = `
                 <div style="min-width: 200px;">
                   <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
                   <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
                   ${allLevelsHTML}
-                  <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
+                  <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${updatedLabel}</div>
                 </div>
               `;
 
