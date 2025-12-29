@@ -410,17 +410,11 @@ class WeatherService {
   }
 
   /**
-   * Get cached weather radar animation frames
-   * Returns cached frames from backend
+   * Get weather radar animation frames from backend
+   * Returns the most recent 12 frames (1 hour worth, 5-minute intervals)
+   * Fetches every 5 minutes when auto-refresh runs
    */
   async getWeatherRadarAnimation(): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
-    const cacheKey = 'radar_animation';
-    const cached = this.getCachedData(cacheKey, 1); // Cache for 1 minute
-
-    if (cached) {
-      return cached;
-    }
-
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
       const url = `${apiBaseUrl}/api/pilot/weather-radar/animation`;
@@ -436,8 +430,6 @@ class WeatherService {
       }
 
       const frames = await response.json();
-
-      this.setCachedData(cacheKey, frames, 1);
       return frames;
 
     } catch (error) {

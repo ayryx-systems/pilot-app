@@ -151,7 +151,7 @@ export function PilotMap({
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
   const [sigmetAirmetData, setSigmetAirmetData] = useState<any[]>([]);
-  
+
   // Weather radar animation state
   const [radarFrames, setRadarFrames] = useState<Array<{ timestamp: number; timestampISO: string; imageData: string }>>([]);
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
@@ -1138,7 +1138,7 @@ export function PilotMap({
       const existingRadarLayer = activeWeatherLayers.get('radar');
       if (existingRadarLayer && layerGroupsRef.current.weather) {
         try {
-          layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
+        layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
         } catch (error) {
           // Layer might already be removed
         }
@@ -1257,7 +1257,7 @@ export function PilotMap({
               radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
             }
 
-            // Animate through frames (2 seconds per frame, then loop)
+            // Animate through frames (0.7 seconds per frame, 5-minute intervals, then loop)
             let frameIndex = 0;
             console.log('[PilotMap] Starting radar animation with', frames.length, 'frames');
             
@@ -1358,7 +1358,7 @@ export function PilotMap({
               if (radarTimeIndicatorRef.current) {
                 radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(frame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
               }
-            }, 2000); // 2 seconds per frame
+            }, 700); // 0.7 seconds per frame (5-minute intervals)
 
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
@@ -1399,7 +1399,7 @@ export function PilotMap({
         const radarLayer = weatherLayers.find(layer => layer.id === 'radar') || 
                           weatherLayers.find(layer => layer.id === 'radar_composite');
         
-        if (!radarLayer) return;
+    if (!radarLayer) return;
 
         const conus_bbox = "-130,20,-60,50";
         const image_width = 1024;
