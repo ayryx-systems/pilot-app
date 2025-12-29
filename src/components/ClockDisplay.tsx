@@ -44,7 +44,7 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
   return (
     <div className="flex items-center gap-2 text-xs text-gray-300">
       <div className="flex items-center gap-1">
-        <span className="text-gray-400">Local:</span>
+        <span className="text-gray-400">{airportCode}:</span>
         <span className="font-mono font-medium">{formatAirportLocalTime(currentTime)}</span>
       </div>
       <div className="flex items-center gap-1">
