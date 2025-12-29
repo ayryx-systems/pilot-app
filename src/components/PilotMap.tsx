@@ -1169,13 +1169,8 @@ export function PilotMap({
             const image_width = 1024;
             const image_height = 512;
 
-            // Fetch animation frames from backend
-            const frames = await weatherService.getWeatherRadarAnimation(
-              conus_bbox,
-              image_width,
-              image_height,
-              radarLayer.layers
-            );
+            // Fetch cached animation frames from backend
+            const frames = await weatherService.getWeatherRadarAnimation();
 
             if (frames.length === 0) {
               console.warn('[PilotMap] No radar animation frames available');
@@ -1371,13 +1366,8 @@ export function PilotMap({
         const image_width = 1024;
         const image_height = 512;
 
-        // Fetch fresh frames (backend will return cached frames + any new ones)
-        const frames = await weatherService.getWeatherRadarAnimation(
-          conus_bbox,
-          image_width,
-          image_height,
-          radarLayer.layers
-        );
+        // Fetch fresh cached frames from backend
+        const frames = await weatherService.getWeatherRadarAnimation();
 
         if (frames.length > 0) {
           setRadarFrames(frames);

@@ -410,17 +410,12 @@ class WeatherService {
   }
 
   /**
-   * Get weather radar animation frames (last 45 minutes at 15-minute intervals)
+   * Get cached weather radar animation frames
    * Returns cached frames from backend
    */
-  async getWeatherRadarAnimation(
-    bbox: string,
-    width: number = 1024,
-    height: number = 512,
-    layers: string = 'nexrad-n0r'
-  ): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
-    const cacheKey = `radar_animation_${bbox}_${width}_${height}_${layers}`;
-    const cached = this.getCachedData(cacheKey, 5); // Cache for 5 minutes
+  async getWeatherRadarAnimation(): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
+    const cacheKey = 'radar_animation';
+    const cached = this.getCachedData(cacheKey, 1); // Cache for 1 minute
 
     if (cached) {
       return cached;
@@ -428,7 +423,7 @@ class WeatherService {
 
     try {
       const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
-      const url = `${apiBaseUrl}/api/pilot/weather-radar/animation?bbox=${encodeURIComponent(bbox)}&width=${width}&height=${height}&layers=${layers}`;
+      const url = `${apiBaseUrl}/api/pilot/weather-radar/animation`;
 
       const response = await fetch(url, {
         headers: {
@@ -440,10 +435,9 @@ class WeatherService {
         throw new WeatherApiError(`Weather radar animation API error: ${response.status} ${response.statusText}`, response.status);
       }
 
-      const data = await response.json();
-      const frames = data.frames || [];
+      const frames = await response.json();
 
-      this.setCachedData(cacheKey, frames, 5);
+      this.setCachedData(cacheKey, frames, 1);
       return frames;
 
     } catch (error) {
