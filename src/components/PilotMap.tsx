@@ -1444,12 +1444,6 @@ export function PilotMap({
             stationGroups.get(stationKey).push(wind);
           });
           
-          // Log proxy station if viewing KORD
-          if (airport?.code === 'KORD') {
-            const jotWinds = Array.from(stationGroups.values()).flat().filter((w: any) => w.station === 'JOT');
-            console.log('[PilotMap] KORD view - JOT winds found:', jotWinds.length, jotWinds.length > 0 ? jotWinds[0] : 'none');
-          }
-
           // Only show one wind barb per station (prefer lower altitude)
           stationGroups.forEach((stationWinds) => {
             // Sort by altitude and take the lowest one
@@ -1492,7 +1486,9 @@ export function PilotMap({
             (windMarker as any)._windStationId = wind.id;
 
             // Create popup content showing all altitude levels for this station
-            const allLevelsHTML = stationWinds.map((w: any) => 
+            // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
+            const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
+            const allLevelsHTML = sortedLevels.map((w: any) => 
               `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                 <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
                 ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
@@ -1503,7 +1499,6 @@ export function PilotMap({
               <div style="min-width: 200px;">
                 <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
                 <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
-                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">All Levels:</span></div>
                 ${allLevelsHTML}
                 <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
               </div>
@@ -1552,7 +1547,6 @@ export function PilotMap({
           try {
             // For now, get all wind data without airport filtering
             const windsData = await weatherService.getWindsAloft();
-            console.log('[PilotMap] Redrawing winds aloft on zoom change:', windsData.length, 'stations');
             
             // Group winds by station to avoid superimposition
             const stationGroups = new Map();
@@ -1609,7 +1603,9 @@ export function PilotMap({
               (windMarker as any)._windStationId = wind.id;
 
               // Create popup content showing all altitude levels for this station
-              const allLevelsHTML = stationWinds.map((w: any) => 
+              // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
+              const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
+              const allLevelsHTML = sortedLevels.map((w: any) => 
                 `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                   <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
                   ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
@@ -1620,7 +1616,6 @@ export function PilotMap({
                 <div style="min-width: 200px;">
                   <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
                   <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
-                  <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">All Levels:</span></div>
                   ${allLevelsHTML}
                   <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">Updated: ${new Date(wind.timestamp).toLocaleTimeString()}</div>
                 </div>
