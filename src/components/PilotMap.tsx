@@ -1432,7 +1432,10 @@ export function PilotMap({
           // Group winds by station to avoid superimposition
           const stationGroups = new Map();
           windsData.forEach((wind: any) => {
-            if (!wind.lat || !wind.lon || !wind.windDir || !wind.windSpeed) return;
+            // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
+            if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) {
+              return;
+            }
             
             const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
             if (!stationGroups.has(stationKey)) {
@@ -1440,11 +1443,17 @@ export function PilotMap({
             }
             stationGroups.get(stationKey).push(wind);
           });
+          
+          // Log proxy station if viewing KORD
+          if (airport?.code === 'KORD') {
+            const jotWinds = Array.from(stationGroups.values()).flat().filter((w: any) => w.station === 'JOT');
+            console.log('[PilotMap] KORD view - JOT winds found:', jotWinds.length, jotWinds.length > 0 ? jotWinds[0] : 'none');
+          }
 
           // Only show one wind barb per station (prefer lower altitude)
           stationGroups.forEach((stationWinds) => {
             // Sort by altitude and take the lowest one
-            stationWinds.sort((a, b) => a.level - b.level);
+            stationWinds.sort((a: any, b: any) => a.level - b.level);
             const wind = stationWinds[0];
 
             // Calculate offset away from airport to avoid masking airport info
@@ -1483,7 +1492,7 @@ export function PilotMap({
             (windMarker as any)._windStationId = wind.id;
 
             // Create popup content showing all altitude levels for this station
-            const allLevelsHTML = stationWinds.map(w => 
+            const allLevelsHTML = stationWinds.map((w: any) => 
               `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                 <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
                 ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
@@ -1548,7 +1557,8 @@ export function PilotMap({
             // Group winds by station to avoid superimposition
             const stationGroups = new Map();
             windsData.forEach((wind: any) => {
-              if (!wind.lat || !wind.lon || !wind.windDir || !wind.windSpeed) return;
+              // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
+              if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) return;
               
               const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
               if (!stationGroups.has(stationKey)) {
@@ -1560,7 +1570,7 @@ export function PilotMap({
             // Only show one wind barb per station (prefer lower altitude)
             stationGroups.forEach((stationWinds) => {
               // Sort by altitude and take the lowest one
-              stationWinds.sort((a, b) => a.level - b.level);
+              stationWinds.sort((a: any, b: any) => a.level - b.level);
               const wind = stationWinds[0];
 
               // Calculate offset away from airport to avoid masking airport info
@@ -1599,7 +1609,7 @@ export function PilotMap({
               (windMarker as any)._windStationId = wind.id;
 
               // Create popup content showing all altitude levels for this station
-              const allLevelsHTML = stationWinds.map(w => 
+              const allLevelsHTML = stationWinds.map((w: any) => 
                 `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                   <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
                   ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
