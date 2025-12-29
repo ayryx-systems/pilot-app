@@ -370,6 +370,7 @@ export function PilotDashboard() {
             loading={loading}
             selectedAirport={selectedAirport}
             selectedTrackId={selectedTrackId}
+            baseline={baseline}
           />
 
           {/* Map Controls - Top Right of Map Area */}

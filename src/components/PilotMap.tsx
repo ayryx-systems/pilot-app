@@ -2,7 +2,7 @@
 
 import React, { useRef, useEffect, useState } from 'react';
 import * as L from 'leaflet';
-import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures } from '@/types';
+import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures, BaselineData } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
 import { weatherService, type SigmetAirmet, type WeatherForecast } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
@@ -122,6 +122,7 @@ interface PilotMapProps {
   loading?: boolean;
   selectedAirport?: string | null;
   selectedTrackId?: string | null;
+  baseline?: BaselineData | null;
 }
 
 export function PilotMap({
@@ -135,7 +136,8 @@ export function PilotMap({
   isDemo,
   loading,
   selectedAirport,
-  selectedTrackId
+  selectedTrackId,
+  baseline
 }: PilotMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
@@ -170,7 +172,9 @@ export function PilotMap({
     weatherLayers,
     layerGroupsRef,
     mapRef,
-    setActiveWeatherLayers
+    setActiveWeatherLayers,
+    airportCode: airport?.code,
+    baseline
   });
   
   // Track highlight overlay references for cleanup

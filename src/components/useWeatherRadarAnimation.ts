@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { weatherService } from '../services/weatherService';
+import { formatAirportLocalTimeShort } from '../utils/airportTime';
+import { BaselineData } from '../types';
 
 interface WeatherRadarFrame {
   timestamp: number;
@@ -15,6 +17,8 @@ interface UseWeatherRadarAnimationProps {
   layerGroupsRef: React.RefObject<Record<string, L.LayerGroup>>;
   mapRef: React.RefObject<HTMLDivElement | null>;
   setActiveWeatherLayers: React.Dispatch<React.SetStateAction<Map<string, L.TileLayer>>>;
+  airportCode?: string | null;
+  baseline?: BaselineData | null;
 }
 
 export function useWeatherRadarAnimation({
@@ -23,7 +27,9 @@ export function useWeatherRadarAnimation({
   weatherLayers,
   layerGroupsRef,
   mapRef,
-  setActiveWeatherLayers
+  setActiveWeatherLayers,
+  airportCode,
+  baseline
 }: UseWeatherRadarAnimationProps) {
   const [radarFrames, setRadarFrames] = useState<WeatherRadarFrame[]>([]);
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
@@ -177,7 +183,7 @@ export function useWeatherRadarAnimation({
             timeIndicatorDiv.style.cssText = `
               position: absolute;
               top: 10px;
-              left: 10px;
+              left: 50px;
               background: rgba(0, 0, 0, 0.8);
               color: white;
               padding: 4px 8px;
@@ -189,11 +195,17 @@ export function useWeatherRadarAnimation({
               z-index: 1000;
               pointer-events: none;
             `;
-            timeIndicatorDiv.textContent = `Radar: ${new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const frameTime = airportCode 
+              ? formatAirportLocalTimeShort(frames[0].timestampISO || new Date(frames[0].timestamp).toISOString(), airportCode, baseline || undefined)
+              : new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            timeIndicatorDiv.textContent = `Radar: ${frameTime}`;
             mapRef.current.appendChild(timeIndicatorDiv);
             radarTimeIndicatorRef.current = timeIndicatorDiv;
           } else if (radarTimeIndicatorRef.current) {
-            radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            const frameTime = airportCode 
+              ? formatAirportLocalTimeShort(frames[0].timestampISO || new Date(frames[0].timestamp).toISOString(), airportCode, baseline || undefined)
+              : new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
           }
 
           let frameIndex = 0;
@@ -270,7 +282,10 @@ export function useWeatherRadarAnimation({
             fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
 
             if (radarTimeIndicatorRef.current && radarFramesRef.current[frameIndex]) {
-              radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(radarFramesRef.current[frameIndex].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              const frameTime = airportCode 
+                ? formatAirportLocalTimeShort(radarFramesRef.current[frameIndex].timestampISO || new Date(radarFramesRef.current[frameIndex].timestamp).toISOString(), airportCode, baseline || undefined)
+                : new Date(radarFramesRef.current[frameIndex].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
             }
             
             const isLastFrame = frameIndex === overlays.length - 1;
@@ -312,7 +327,7 @@ export function useWeatherRadarAnimation({
       });
       radarBlobUrlsRef.current = [];
     };
-  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
+  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline]);
 
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;
