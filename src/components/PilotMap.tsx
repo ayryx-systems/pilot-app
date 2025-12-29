@@ -1289,19 +1289,19 @@ export function PilotMap({
             // Choose color and styling based on severity - stroke-focused with minimal fill
             let color = '#fbbf24'; // Default amber
             let strokeWidth = 2.5;
-            let fillOpacity = 0.04; // Very minimal - just enough to hint at "inside"
-            let strokeOpacity = 0.1;
+            let fillOpacity = 0.02; // Very minimal - just enough to hint at "inside"
+            let strokeOpacity = 0.04;
             
             if (sigmet.severity === 'SEVERE' || sigmet.severity === 'EXTREME') {
               color = '#ef4444'; // Red
               strokeWidth = 3.5;
-              fillOpacity = 0.06;
-              strokeOpacity = 0.2;
+              fillOpacity = 0.04;
+              strokeOpacity = 0.06;
             } else if (sigmet.severity === 'MODERATE') {
               color = '#f59e0b'; // Orange
               strokeWidth = 3;
               fillOpacity = 0.04;
-              strokeOpacity = 0.15;
+              strokeOpacity = 0.04;
             }
 
             // Create polygon: non-interactive fill + clickable border
