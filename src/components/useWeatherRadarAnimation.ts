@@ -32,6 +32,7 @@ export function useWeatherRadarAnimation({
   const radarBlobUrlsRef = useRef<string[]>([]);
   const radarTimeIndicatorRef = useRef<HTMLDivElement | null>(null);
   const radarFramesRef = useRef<WeatherRadarFrame[]>([]);
+  const fadeAnimationFrameRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current?.weather) return;
@@ -203,6 +204,10 @@ export function useWeatherRadarAnimation({
                 clearTimeout(radarAnimationIntervalRef.current as any);
                 radarAnimationIntervalRef.current = null;
               }
+              if (fadeAnimationFrameRef.current !== null) {
+                cancelAnimationFrame(fadeAnimationFrameRef.current);
+                fadeAnimationFrameRef.current = null;
+              }
               return;
             }
 
@@ -224,18 +229,24 @@ export function useWeatherRadarAnimation({
             const previousIndex = frameIndex === 0 ? overlays.length - 1 : frameIndex - 1;
             const previousOverlay = overlays[previousIndex];
             
-            const fadeDuration = 200;
-            const steps = 40;
-            const stepDelay = fadeDuration / steps;
+            const fadeDuration = 400;
+            const startTime = performance.now();
             
-            let step = 0;
-            const fadeInterval = setInterval(() => {
-              step++;
-              const progress = Math.min(step / steps, 1);
+            const easeInOutCubic = (t: number): number => {
+              return t < 0.5
+                ? 4 * t * t * t
+                : 1 - Math.pow(-2 * t + 2, 3) / 2;
+            };
+            
+            const fadeStep = (currentTime: number) => {
+              if (!displayOptions.showWeatherRadar) {
+                fadeAnimationFrameRef.current = null;
+                return;
+              }
               
-              const easedProgress = progress < 0.5
-                ? 4 * progress * progress * progress
-                : 1 - Math.pow(-2 * progress + 2, 3) / 2;
+              const elapsed = currentTime - startTime;
+              const progress = Math.min(elapsed / fadeDuration, 1);
+              const easedProgress = easeInOutCubic(progress);
               
               if (previousOverlay) {
                 const oldOpacity = 0.3 * (1 - easedProgress);
@@ -245,22 +256,25 @@ export function useWeatherRadarAnimation({
               const newOpacity = 0.3 * easedProgress;
               currentOverlay.setOpacity(newOpacity);
               
-              if (step >= steps) {
-                clearInterval(fadeInterval);
-                
+              if (progress < 1) {
+                fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
+              } else {
+                fadeAnimationFrameRef.current = null;
                 currentOverlay.setOpacity(0.3);
                 if (previousOverlay) {
                   previousOverlay.setOpacity(0);
                 }
               }
-            }, stepDelay);
+            };
+            
+            fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
 
             if (radarTimeIndicatorRef.current && radarFramesRef.current[frameIndex]) {
               radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(radarFramesRef.current[frameIndex].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
             }
             
             const isLastFrame = frameIndex === overlays.length - 1;
-            const delay = isLastFrame ? 3000 : 200;
+            const delay = isLastFrame ? 3000 : 300;
             
             if (radarAnimationIntervalRef.current) {
               clearTimeout(radarAnimationIntervalRef.current as any);
@@ -284,6 +298,10 @@ export function useWeatherRadarAnimation({
       if (radarAnimationIntervalRef.current) {
         clearTimeout(radarAnimationIntervalRef.current as any);
         clearInterval(radarAnimationIntervalRef.current as any);
+      }
+      if (fadeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(fadeAnimationFrameRef.current);
+        fadeAnimationFrameRef.current = null;
       }
       radarBlobUrlsRef.current.forEach(url => {
         try {
