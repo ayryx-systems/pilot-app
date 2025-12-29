@@ -408,6 +408,57 @@ class WeatherService {
     if (sev.includes('moderate')) return 'moderate';
     return 'minor';
   }
+
+  /**
+   * Get weather radar animation frames (last 45 minutes at 15-minute intervals)
+   * Returns cached frames from backend
+   */
+  async getWeatherRadarAnimation(
+    bbox: string,
+    width: number = 1024,
+    height: number = 512,
+    layers: string = 'nexrad-n0r'
+  ): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
+    const cacheKey = `radar_animation_${bbox}_${width}_${height}_${layers}`;
+    const cached = this.getCachedData(cacheKey, 5); // Cache for 5 minutes
+
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
+      const url = `${apiBaseUrl}/api/pilot/weather-radar/animation?bbox=${encodeURIComponent(bbox)}&width=${width}&height=${height}&layers=${layers}`;
+
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        throw new WeatherApiError(`Weather radar animation API error: ${response.status} ${response.statusText}`, response.status);
+      }
+
+      const data = await response.json();
+      const frames = data.frames || [];
+
+      this.setCachedData(cacheKey, frames, 5);
+      return frames;
+
+    } catch (error) {
+      console.error('[WeatherService] Failed to fetch weather radar animation:', error);
+
+      if (error instanceof WeatherApiError) {
+        throw error;
+      }
+
+      throw new WeatherApiError(
+        `Failed to fetch weather radar animation: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        0
+      );
+    }
+  }
 }
 
 export const weatherService = new WeatherService();

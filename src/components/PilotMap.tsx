@@ -151,24 +151,19 @@ export function PilotMap({
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
   const [sigmetAirmetData, setSigmetAirmetData] = useState<any[]>([]);
+  
+  // Weather radar animation state
+  const [radarFrames, setRadarFrames] = useState<Array<{ timestamp: number; timestampISO: string; imageData: string }>>([]);
+  const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
+  const radarAnimationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const radarImageOverlayRef = useRef<L.ImageOverlay | null>(null);
+  const radarTimeIndicatorRef = useRef<HTMLDivElement | null>(null);
+  const radarFramesRef = useRef<Array<{ timestamp: number; timestampISO: string; imageData: string }>>([]);
 
   // OSM data state
   const [osmData, setOsmData] = useState<AirportOSMFeatures | null>(null);
   const [osmLoading, setOsmLoading] = useState(false);
 
-  // Weather refresh function - works with static overlay
-  const refreshWeatherLayer = () => {
-    const radarLayer = activeWeatherLayers.get('radar');
-    if (radarLayer && mapInstance) {
-      // For image overlay, we need to update the URL with a cache-busting parameter
-      const imageOverlay = radarLayer as any;
-      if (imageOverlay._url && imageOverlay.setUrl) {
-        const baseUrl = imageOverlay._url.split('&t=')[0]; // Remove old timestamp
-        const freshUrl = `${baseUrl}&t=${Date.now()}`; // Add new timestamp
-        imageOverlay.setUrl(freshUrl);
-      }
-    }
-  };
 
 
   // Layer group references for easy cleanup
@@ -1130,7 +1125,7 @@ export function PilotMap({
     updateTracks();
   }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, selectedTrackId]);
 
-  // Update weather radar display - FIXED with conservative approach
+  // Update weather radar display with animation
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
@@ -1138,7 +1133,7 @@ export function PilotMap({
       const leafletModule = await import('leaflet');
       const L = leafletModule.default;
 
-      // Clear existing radar layer from weather layer group
+      // Clear existing radar layer and animation
       const existingRadarLayer = activeWeatherLayers.get('radar');
       if (existingRadarLayer && layerGroupsRef.current.weather) {
         layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
@@ -1149,67 +1144,196 @@ export function PilotMap({
         });
       }
 
+      // Clear existing time indicator
+      if (radarTimeIndicatorRef.current && mapRef.current) {
+        radarTimeIndicatorRef.current.remove();
+        radarTimeIndicatorRef.current = null;
+      }
+
+      // Clear animation interval
+      if (radarAnimationIntervalRef.current) {
+        clearInterval(radarAnimationIntervalRef.current);
+        radarAnimationIntervalRef.current = null;
+      }
+
       if (displayOptions.showWeatherRadar) {
         let radarLayer = weatherLayers.find(layer => layer.id === 'radar');
-
-        // Fallback to composite radar if primary not available
         if (!radarLayer) {
           radarLayer = weatherLayers.find(layer => layer.id === 'radar_composite');
         }
 
         if (radarLayer) {
           try {
-            // STATIC WEATHER OVERLAY - Single image for entire CONUS
-            // Now uses backend API proxy endpoint
-
-            // Get a single static weather image for the entire CONUS at fixed zoom
+            // ANIMATED WEATHER RADAR - Last 45 minutes at 15-minute intervals
             const conus_bbox = "-130,20,-60,50"; // Entire Continental US (west,south,east,north)
             const image_width = 1024;
             const image_height = 512;
 
-            // Generate single weather image URL with caching (ONLY ONE API CALL!)
-            const cacheTimestamp = Math.floor(Date.now() / (10 * 60 * 1000)) * (10 * 60 * 1000); // 10-minute cache buckets
+            // Fetch animation frames from backend
+            const frames = await weatherService.getWeatherRadarAnimation(
+              conus_bbox,
+              image_width,
+              image_height,
+              radarLayer.layers
+            );
 
-            // Backend endpoint expects query parameters: bbox, width, height, layers, t
-            const staticWeatherUrl = `${radarLayer.url}?bbox=${conus_bbox}&width=${image_width}&height=${image_height}&layers=${radarLayer.layers}&t=${cacheTimestamp}`;
+            if (frames.length === 0) {
+              console.warn('[PilotMap] No radar animation frames available');
+              return;
+            }
 
-            // Create image overlay instead of tiled layer
+            setRadarFrames(frames);
+            radarFramesRef.current = frames; // Store in ref for interval access
+            setCurrentRadarFrameIndex(0);
+
+            // Create bounds for CONUS
             const bounds: [[number, number], [number, number]] = [
               [20, -130], // Southwest corner of CONUS
               [50, -60]   // Northeast corner of CONUS
             ];
 
-            // Create image overlay that scales with zoom
-            const imageOverlay = L.imageOverlay(staticWeatherUrl, bounds, {
-              opacity: 0.3, // Reduced opacity for better map visibility
+            // Display first frame immediately
+            const firstFrame = frames[0];
+            const imageOverlay = L.imageOverlay(firstFrame.imageData, bounds, {
+              opacity: 0.3,
               interactive: false,
               crossOrigin: 'anonymous',
               alt: 'NOAA Weather Radar',
-              pane: 'overlayPane' // Ensure it renders on top of base tiles
+              pane: 'overlayPane'
             });
 
-            // Add event listeners for the single image request
-            imageOverlay.on('load', () => {
-              // Weather overlay loaded successfully
-            });
-
-            imageOverlay.on('error', (e) => {
-              console.error('[🌦️ WEATHER API] ❌ Static weather image failed to load:', e);
-              console.error('[🌦️ WEATHER API] 🔗 Failed URL:', staticWeatherUrl);
-            });
-
-            // Add static image overlay to weather layer group
             layerGroupsRef.current.weather.addLayer(imageOverlay);
+            imageOverlay.bringToFront();
+            radarImageOverlayRef.current = imageOverlay;
+
+            // Create fixed time indicator element (if it doesn't exist)
+            if (!radarTimeIndicatorRef.current && mapRef.current) {
+              const timeIndicatorDiv = document.createElement('div');
+              timeIndicatorDiv.id = 'radar-time-indicator';
+              timeIndicatorDiv.style.cssText = `
+                position: absolute;
+                top: 10px;
+                left: 10px;
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
+                padding: 4px 8px;
+                border-radius: 4px;
+                font-size: 11px;
+                font-weight: bold;
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                white-space: nowrap;
+                z-index: 1000;
+                pointer-events: none;
+              `;
+              timeIndicatorDiv.textContent = `Radar: ${new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              mapRef.current.appendChild(timeIndicatorDiv);
+              radarTimeIndicatorRef.current = timeIndicatorDiv;
+            } else if (radarTimeIndicatorRef.current) {
+              radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+            }
+
+            // Animate through frames (2 seconds per frame, then loop)
+            let frameIndex = 0;
+            console.log('[PilotMap] Starting radar animation with', frames.length, 'frames');
+            
+            // Check if frames are actually different
+            const frameHashes = frames.map(f => {
+              // Create a simple hash from first 100 chars of imageData to compare
+              const hash = f.imageData.substring(0, 100);
+              return hash;
+            });
+            
+            const uniqueFrames = new Set(frameHashes).size;
+            console.log(`[PilotMap] Frame analysis: ${frames.length} total frames, ${uniqueFrames} unique frames (based on image data)`);
+            
+            frames.forEach((f, i) => {
+              const timeStr = new Date(f.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const dataPreview = f.imageData.substring(0, 50);
+              console.log(`[PilotMap] Frame ${i}: ${timeStr} (${new Date(f.timestamp).toISOString()}), data preview: ${dataPreview}..., length: ${f.imageData.length}`);
+            });
+            
+            // Store previous frame hash to detect changes
+            let previousFrameHash: string | null = null;
+            
+            radarAnimationIntervalRef.current = setInterval(() => {
+              const currentFrames = radarFramesRef.current;
+              if (currentFrames.length === 0) {
+                console.warn('[PilotMap] No frames available for animation');
+                return;
+              }
+              
+              frameIndex = (frameIndex + 1) % currentFrames.length;
+              setCurrentRadarFrameIndex(frameIndex);
+
+              const frame = currentFrames[frameIndex];
+              const frameHash = frame.imageData.substring(0, 100);
+              const isDifferent = previousFrameHash !== frameHash;
+              
+              console.log(`[PilotMap] Frame ${frameIndex}/${currentFrames.length}: ${new Date(frame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}, different: ${isDifferent}, hash: ${frameHash.substring(0, 20)}...`);
+              
+              previousFrameHash = frameHash;
+              
+              if (radarImageOverlayRef.current && layerGroupsRef.current.weather && mapInstance) {
+                // Convert base64 to blob URL for better cache control
+                const base64Data = frame.imageData.replace(/^data:image\/\w+;base64,/, '');
+                const blob = new Blob([Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))], { type: 'image/png' });
+                const blobUrl = URL.createObjectURL(blob);
+                
+                // Remove old overlay completely
+                layerGroupsRef.current.weather.removeLayer(radarImageOverlayRef.current);
+                
+                // Clean up old blob URL if it exists
+                if ((radarImageOverlayRef.current as any)._blobUrl) {
+                  URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
+                }
+                
+                // Create new overlay with blob URL
+                const bounds: [[number, number], [number, number]] = [
+                  [20, -130],
+                  [50, -60]
+                ];
+                
+                const newOverlay = L.imageOverlay(blobUrl, bounds, {
+                  opacity: 0.3,
+                  interactive: false,
+                  crossOrigin: 'anonymous',
+                  alt: 'NOAA Weather Radar',
+                  pane: 'overlayPane'
+                });
+                
+                // Store blob URL for cleanup
+                (newOverlay as any)._blobUrl = blobUrl;
+                
+                // Add event listeners to verify image loads
+                newOverlay.on('load', () => {
+                  console.log(`[PilotMap] ✅ Frame ${frameIndex} image loaded successfully from blob URL`);
+                });
+                
+                newOverlay.on('error', (e) => {
+                  console.error(`[PilotMap] ❌ Frame ${frameIndex} image failed to load:`, e);
+                });
+                
+                // Add new overlay
+                layerGroupsRef.current.weather.addLayer(newOverlay);
+                newOverlay.bringToFront();
+                
+                radarImageOverlayRef.current = newOverlay;
+              }
+
+              // Update time indicator
+              if (radarTimeIndicatorRef.current) {
+                radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(frame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+              }
+            }, 2000); // 2 seconds per frame
+
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
-              newMap.set('radar', imageOverlay as any); // Type assertion for image overlay
+              newMap.set('radar', imageOverlay as any);
               return newMap;
             });
 
-            // Force the weather layer to the top
-            imageOverlay.bringToFront();
           } catch (error) {
-            console.error('[PilotMap] Failed to add static weather overlay:', error);
+            console.error('[PilotMap] Failed to add animated weather radar:', error);
           }
         } else {
           console.warn('[PilotMap] No radar layer available');
@@ -1218,45 +1342,59 @@ export function PilotMap({
     };
 
     updateWeatherRadar();
+
+    // Cleanup on unmount
+    return () => {
+      if (radarAnimationIntervalRef.current) {
+        clearInterval(radarAnimationIntervalRef.current);
+      }
+      // Clean up blob URLs
+      if (radarImageOverlayRef.current && (radarImageOverlayRef.current as any)._blobUrl) {
+        URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
+      }
+    };
   }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
 
-  // Auto-refresh weather overlay when cache bucket expires (checks every 2 minutes)
+  // Auto-refresh weather radar animation frames (check every 5 minutes for new frames)
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;
-    if (!activeWeatherLayers.has('radar')) return;
+    if (radarFrames.length === 0) return;
 
-    const radarLayer = activeWeatherLayers.get('radar');
-    if (!radarLayer) return;
-
-    // Store the current cache bucket to detect when it changes
-    let currentCacheBucket = Math.floor(Date.now() / (10 * 60 * 1000));
-
-    // Check every 2 minutes if the cache bucket has changed
-    const checkInterval = setInterval(() => {
-      const newCacheBucket = Math.floor(Date.now() / (10 * 60 * 1000));
-      
-      // Only update if the cache bucket has changed (meaning 10+ minutes have passed)
-      if (newCacheBucket !== currentCacheBucket) {
-        currentCacheBucket = newCacheBucket;
+    const refreshInterval = setInterval(async () => {
+      try {
+        const radarLayer = weatherLayers.find(layer => layer.id === 'radar') || 
+                          weatherLayers.find(layer => layer.id === 'radar_composite');
         
-        const imageOverlay = radarLayer as any;
-        if (imageOverlay && imageOverlay._url && imageOverlay.setUrl) {
-          // Get the base URL and radar layer info
-          const urlMatch = imageOverlay._url.match(/^([^?]+)\?/);
-          if (urlMatch) {
-            const baseUrl = urlMatch[1];
-            // Backend endpoint expects query parameters: bbox, width, height, layers, t
-            const staticWeatherUrl = `${baseUrl}?bbox=-130,20,-60,50&width=1024&height=512&layers=nexrad-n0r&t=${Date.now()}`;
-            imageOverlay.setUrl(staticWeatherUrl);
+        if (!radarLayer) return;
+
+        const conus_bbox = "-130,20,-60,50";
+        const image_width = 1024;
+        const image_height = 512;
+
+        // Fetch fresh frames (backend will return cached frames + any new ones)
+        const frames = await weatherService.getWeatherRadarAnimation(
+          conus_bbox,
+          image_width,
+          image_height,
+          radarLayer.layers
+        );
+
+        if (frames.length > 0) {
+          setRadarFrames(frames);
+          radarFramesRef.current = frames; // Update ref for interval access
+          // Reset to first frame if we got new data
+          if (radarImageOverlayRef.current && frames[0]) {
+            radarImageOverlayRef.current.setUrl(frames[0].imageData);
+            setCurrentRadarFrameIndex(0);
           }
         }
+      } catch (error) {
+        console.error('[PilotMap] Failed to refresh radar frames:', error);
       }
-    }, 2 * 60 * 1000); // Check every 2 minutes
+    }, 5 * 60 * 1000); // Check every 5 minutes
 
-    return () => {
-      clearInterval(checkInterval);
-    };
-  }, [mapInstance, displayOptions.showWeatherRadar, activeWeatherLayers]);
+    return () => clearInterval(refreshInterval);
+  }, [mapInstance, displayOptions.showWeatherRadar, radarFrames.length, weatherLayers]);
 
   // Update weather alerts display - TEMPORARILY DISABLED
   useEffect(() => {
