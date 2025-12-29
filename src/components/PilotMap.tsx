@@ -1280,11 +1280,11 @@ export function PilotMap({
             // Store previous frame hash to detect changes
             let previousFrameHash: string | null = null;
             
-            radarAnimationIntervalRef.current = setInterval(() => {
+            const animateFrame = () => {
               // Check if radar is still enabled
               if (!displayOptions.showWeatherRadar) {
                 if (radarAnimationIntervalRef.current) {
-                  clearInterval(radarAnimationIntervalRef.current);
+                  clearTimeout(radarAnimationIntervalRef.current as any);
                   radarAnimationIntervalRef.current = null;
                 }
                 return;
@@ -1296,7 +1296,14 @@ export function PilotMap({
                 return;
               }
               
-              frameIndex = (frameIndex + 1) % currentFrames.length;
+              // Move to next frame, or loop back to start if at end
+              if (frameIndex === currentFrames.length - 1) {
+                // Loop back to start after showing last frame
+                frameIndex = 0;
+              } else {
+                frameIndex = frameIndex + 1;
+              }
+              
               setCurrentRadarFrameIndex(frameIndex);
 
               const frame = currentFrames[frameIndex];
@@ -1358,7 +1365,20 @@ export function PilotMap({
               if (radarTimeIndicatorRef.current) {
                 radarTimeIndicatorRef.current.textContent = `Radar: ${new Date(frame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
               }
-            }, 700); // 0.7 seconds per frame (5-minute intervals)
+              
+              // Schedule next frame: pause longer on last frame (3 seconds) to indicate current situation
+              // Check if CURRENT frame being displayed is the last one (newest chronologically)
+              const isLastFrame = frameIndex === currentFrames.length - 1;
+              const delay = isLastFrame ? 3000 : 700; // 3 seconds on last frame, 0.7 seconds otherwise
+              
+              if (radarAnimationIntervalRef.current) {
+                clearTimeout(radarAnimationIntervalRef.current as any);
+              }
+              radarAnimationIntervalRef.current = setTimeout(animateFrame, delay) as any;
+            };
+            
+            // Start animation: 0.7 seconds per frame, pause 3 seconds on last frame
+            radarAnimationIntervalRef.current = setTimeout(animateFrame, 700) as any;
 
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
@@ -1380,7 +1400,9 @@ export function PilotMap({
     // Cleanup on unmount
     return () => {
       if (radarAnimationIntervalRef.current) {
-        clearInterval(radarAnimationIntervalRef.current);
+        // Clear both interval and timeout (we use setTimeout for animation)
+        clearTimeout(radarAnimationIntervalRef.current as any);
+        clearInterval(radarAnimationIntervalRef.current as any);
       }
       // Clean up blob URLs
       if (radarImageOverlayRef.current && (radarImageOverlayRef.current as any)._blobUrl) {
