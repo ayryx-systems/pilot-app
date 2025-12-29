@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo, memo } from 'react';
 import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
-import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Navigation } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
@@ -79,6 +79,7 @@ export const SituationOverview = memo(function SituationOverview({
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
+  const [isWeatherExpanded, setIsWeatherExpanded] = useState(true);
 
   // All hooks must be called before any early returns
   const filteredConditions = useMemo(() => {
@@ -223,7 +224,10 @@ export const SituationOverview = memo(function SituationOverview({
             {/* Weather Card with Graphs */}
             {(weather || summary.conditions.weather) && (
               <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(summary.conditions.weather?.status)}`}>
-                <div className="flex flex-col p-2">
+                <button
+                  onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
+                  className="w-full flex flex-col p-2 hover:bg-slate-600/30 rounded-lg transition-colors"
+                >
                   <div className="flex items-center justify-between w-full mb-1">
                     <div className="flex items-center">
                       <Cloud className="w-5 h-5 text-white mr-2" />
@@ -231,16 +235,21 @@ export const SituationOverview = memo(function SituationOverview({
                     </div>
                     <div className="flex items-center gap-2">
                       {getStatusIcon(summary.conditions.weather?.status)}
+                      {isWeatherExpanded ? (
+                        <ChevronUp className="w-5 h-5 text-gray-400" />
+                      ) : (
+                        <ChevronDown className="w-5 h-5 text-gray-400" />
+                      )}
                     </div>
                   </div>
-                  <div className="text-xs text-gray-300 leading-tight mb-2">
+                  <div className="text-xs text-gray-300 leading-tight mb-2 text-left">
                     {summary.conditions.weather?.short_summary ||
                       (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
                         summary.conditions.weather?.status?.charAt(0).toUpperCase() +
                         summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
                   </div>
-                </div>
-                {weather && (
+                </button>
+                {isWeatherExpanded && weather && (
                   <div className="px-2 pb-2 border-t border-slate-600/50">
                     <WeatherGraphs
                       weather={weather}
