@@ -1196,8 +1196,8 @@ export function PilotMap({
           try {
             // ANIMATED WEATHER RADAR - Last 45 minutes at 15-minute intervals
             const conus_bbox = "-130,20,-60,50"; // Entire Continental US (west,south,east,north)
-            const image_width = 1024;
-            const image_height = 512;
+            const image_width = 2048;
+            const image_height = 1024;
 
             // Fetch cached animation frames from backend
             const frames = await weatherService.getWeatherRadarAnimation();
@@ -1402,8 +1402,8 @@ export function PilotMap({
     if (!radarLayer) return;
 
         const conus_bbox = "-130,20,-60,50";
-        const image_width = 1024;
-        const image_height = 512;
+        const image_width = 2048;
+        const image_height = 1024;
 
         // Fetch fresh cached frames from backend
         const frames = await weatherService.getWeatherRadarAnimation();
