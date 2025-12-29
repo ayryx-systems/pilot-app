@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Airport } from '@/types';
-import { ChevronDown, Plane } from 'lucide-react';
 
 interface AirportSelectorProps {
   airports: Airport[];
@@ -38,10 +37,6 @@ export function AirportSelector({
           </option>
         ))}
       </select>
-
-      <div className="absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
-        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
-      </div>
     </div>
   );
 }
