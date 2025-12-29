@@ -92,15 +92,18 @@ export function usePilotData() {
   const loadAirports = useCallback(async () => {
     try {
       const response = await pilotApi.getAirports();
+      // Filter to only show airports with active backend processing
+      const activeAirports = response.airports.filter(a => a.active);
+      
       setState(prev => ({
         ...prev,
-        airports: response.airports,
+        airports: activeAirports,
         error: null,
       }));
 
       // Auto-select first active airport if none selected
-      if (!state.selectedAirport && response.airports.length > 0) {
-        const firstActive = response.airports.find(a => a.active) || response.airports[0];
+      if (!state.selectedAirport && activeAirports.length > 0) {
+        const firstActive = activeAirports[0];
         setState(prev => ({
           ...prev,
           selectedAirport: firstActive.id,
