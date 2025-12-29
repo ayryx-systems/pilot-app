@@ -2774,13 +2774,6 @@ export function PilotMap({
 
         // 1. Render other airport features FIRST (if toggle is enabled)
         if (displayOptions.showOSMFeatures) {
-          console.log('[PilotMap] Redrawing airport features on zoom change:', {
-            currentZoom,
-            taxiways: osmData.taxiways.length,
-            terminals: osmData.terminals.length,
-            gates: osmData.gates.length
-          });
-
           // Taxiways - show at zoom 10+, major taxiways at zoom 10+, all at zoom 12+
           if (currentZoom >= 10) {
             osmData.taxiways.forEach(way => {
