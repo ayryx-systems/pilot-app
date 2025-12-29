@@ -1880,33 +1880,33 @@ export function PilotMap({
             const hasModerate = (pirep.tbInt1 && ['MOD', 'MOD-SEV'].includes(pirep.tbInt1)) ||
                               (pirep.icgInt1 && ['MOD', 'MOD-SEV'].includes(pirep.icgInt1)) || false;
 
-            // Choose color based on priority
-            let color = '#10b981'; // Green for light/normal conditions
+            // Choose color based on priority - using darker, muted colors for better text readability
+            let color = '#10b981'; // Dark green for light/normal conditions
             if (isUrgent) {
-              color = '#ef4444'; // Red for urgent
+              color = '#dc2626'; // Dark red for urgent
             } else if (hasModerate) {
-              color = '#f59e0b'; // Amber for moderate
+              color = '#d97706'; // Dark amber for moderate
             }
 
-            // Create custom PIREP icon
+            // Create custom PIREP icon - smaller and less contrasted
             const pirepIcon = L.divIcon({
               html: `<div style="
-                width: 22px;
-                height: 22px;
+                width: 14px;
+                height: 14px;
                 background: ${color};
-                border: 2px solid #ffffff;
+                border: 1px solid rgba(255,255,255,0.6);
                 border-radius: 50%;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+                box-shadow: 0 1px 2px rgba(0,0,0,0.3);
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 12px;
-                font-weight: bold;
-                color: white;
+                font-size: 9px;
+                font-weight: 600;
+                color: rgba(255,255,255,0.9);
               ">W</div>`,
               className: 'custom-weather-pirep-marker',
-              iconSize: [26, 26],
-              iconAnchor: [13, 13]
+              iconSize: [18, 18],
+              iconAnchor: [9, 9]
             });
 
             const marker = L.marker([pirep.lat, pirep.lon], { 
