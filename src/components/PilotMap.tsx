@@ -157,6 +157,7 @@ export function PilotMap({
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
   const radarAnimationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const radarImageOverlayRef = useRef<L.ImageOverlay | null>(null);
+  const radarNextOverlayRef = useRef<L.ImageOverlay | null>(null); // For crossfade smoothing
   const radarTimeIndicatorRef = useRef<HTMLDivElement | null>(null);
   const radarFramesRef = useRef<Array<{ timestamp: number; timestampISO: string; imageData: string }>>([]);
 
@@ -1170,6 +1171,19 @@ export function PilotMap({
         radarImageOverlayRef.current = null;
       }
 
+      // Clean up next overlay ref if it exists
+      if (radarNextOverlayRef.current && layerGroupsRef.current.weather) {
+        try {
+          layerGroupsRef.current.weather.removeLayer(radarNextOverlayRef.current);
+          if ((radarNextOverlayRef.current as any)._blobUrl) {
+            URL.revokeObjectURL((radarNextOverlayRef.current as any)._blobUrl);
+          }
+        } catch (error) {
+          // Layer might already be removed, ignore
+        }
+        radarNextOverlayRef.current = null;
+      }
+
       // Clear existing time indicator
       if (radarTimeIndicatorRef.current && mapRef.current) {
         radarTimeIndicatorRef.current.remove();
@@ -1314,28 +1328,20 @@ export function PilotMap({
               
               previousFrameHash = frameHash;
               
-              if (radarImageOverlayRef.current && layerGroupsRef.current.weather && mapInstance && displayOptions.showWeatherRadar) {
+              if (layerGroupsRef.current.weather && mapInstance && displayOptions.showWeatherRadar) {
                 // Convert base64 to blob URL for better cache control
                 const base64Data = frame.imageData.replace(/^data:image\/\w+;base64,/, '');
                 const blob = new Blob([Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))], { type: 'image/png' });
                 const blobUrl = URL.createObjectURL(blob);
                 
-                // Remove old overlay completely
-                layerGroupsRef.current.weather.removeLayer(radarImageOverlayRef.current);
-                
-                // Clean up old blob URL if it exists
-                if ((radarImageOverlayRef.current as any)._blobUrl) {
-                  URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
-                }
-                
-                // Create new overlay with blob URL
+                // Create new overlay with blob URL (start transparent for crossfade)
                 const bounds: [[number, number], [number, number]] = [
                   [20, -130],
                   [50, -60]
                 ];
                 
                 const newOverlay = L.imageOverlay(blobUrl, bounds, {
-                  opacity: 0.3,
+                  opacity: 0, // Start transparent
                   interactive: false,
                   crossOrigin: 'anonymous',
                   alt: 'NOAA Weather Radar',
@@ -1345,20 +1351,68 @@ export function PilotMap({
                 // Store blob URL for cleanup
                 (newOverlay as any)._blobUrl = blobUrl;
                 
-                // Add event listeners to verify image loads
+                // Add event listeners
                 newOverlay.on('load', () => {
                   console.log(`[PilotMap] ✅ Frame ${frameIndex} image loaded successfully from blob URL`);
+                  
+                  // Start crossfade animation once image is loaded
+                  if (radarImageOverlayRef.current) {
+                    // Fade out old overlay and fade in new overlay simultaneously
+                    const fadeDuration = 150; // 150ms crossfade
+                    const steps = 15; // 15 steps for smooth animation
+                    const stepDelay = fadeDuration / steps;
+                    const opacityStep = 0.3 / steps; // Target opacity is 0.3
+                    
+                    let step = 0;
+                    const fadeInterval = setInterval(() => {
+                      step++;
+                      const progress = step / steps;
+                      
+                      // Fade out old overlay
+                      if (radarImageOverlayRef.current) {
+                        const oldOpacity = 0.3 * (1 - progress);
+                        radarImageOverlayRef.current.setOpacity(oldOpacity);
+                      }
+                      
+                      // Fade in new overlay
+                      const newOpacity = 0.3 * progress;
+                      newOverlay.setOpacity(newOpacity);
+                      
+                      if (step >= steps) {
+                        clearInterval(fadeInterval);
+                        
+                        // Remove old overlay after fade completes
+                        if (radarImageOverlayRef.current && layerGroupsRef.current.weather) {
+                          // Clean up old blob URL
+                          if ((radarImageOverlayRef.current as any)._blobUrl) {
+                            URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
+                          }
+                          layerGroupsRef.current.weather.removeLayer(radarImageOverlayRef.current);
+                        }
+                        
+                        // Set new overlay as current
+                        radarImageOverlayRef.current = newOverlay;
+                        newOverlay.setOpacity(0.3); // Ensure final opacity
+                      }
+                    }, stepDelay);
+                  } else {
+                    // No previous overlay, just show new one
+                    newOverlay.setOpacity(0.3);
+                    radarImageOverlayRef.current = newOverlay;
+                  }
                 });
                 
                 newOverlay.on('error', (e) => {
                   console.error(`[PilotMap] ❌ Frame ${frameIndex} image failed to load:`, e);
+                  URL.revokeObjectURL(blobUrl);
                 });
                 
-                // Add new overlay
+                // Add new overlay to map (will be transparent until loaded)
                 layerGroupsRef.current.weather.addLayer(newOverlay);
                 newOverlay.bringToFront();
                 
-                radarImageOverlayRef.current = newOverlay;
+                // Store as next overlay for crossfade
+                radarNextOverlayRef.current = newOverlay;
               }
 
               // Update time indicator
@@ -1369,7 +1423,7 @@ export function PilotMap({
               // Schedule next frame: pause longer on last frame (3 seconds) to indicate current situation
               // Check if CURRENT frame being displayed is the last one (newest chronologically)
               const isLastFrame = frameIndex === currentFrames.length - 1;
-              const delay = isLastFrame ? 3000 : 300; // 3 seconds on last frame, 0.7 seconds otherwise
+              const delay = isLastFrame ? 3000 : 200; // 3 seconds on last frame, 200ms otherwise (faster for smoother animation)
               
               if (radarAnimationIntervalRef.current) {
                 clearTimeout(radarAnimationIntervalRef.current as any);
@@ -1378,7 +1432,8 @@ export function PilotMap({
             };
             
             // Start animation: 0.7 seconds per frame, pause 3 seconds on last frame
-            radarAnimationIntervalRef.current = setTimeout(animateFrame, 700) as any;
+            // Start animation: 200ms per frame (with 150ms crossfade), pause 3 seconds on last frame
+            radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
 
             setActiveWeatherLayers(prev => {
               const newMap = new Map(prev);
@@ -1407,6 +1462,9 @@ export function PilotMap({
       // Clean up blob URLs
       if (radarImageOverlayRef.current && (radarImageOverlayRef.current as any)._blobUrl) {
         URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
+      }
+      if (radarNextOverlayRef.current && (radarNextOverlayRef.current as any)._blobUrl) {
+        URL.revokeObjectURL((radarNextOverlayRef.current as any)._blobUrl);
       }
     };
   }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers]);
