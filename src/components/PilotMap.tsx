@@ -1369,7 +1369,7 @@ export function PilotMap({
               // Schedule next frame: pause longer on last frame (3 seconds) to indicate current situation
               // Check if CURRENT frame being displayed is the last one (newest chronologically)
               const isLastFrame = frameIndex === currentFrames.length - 1;
-              const delay = isLastFrame ? 3000 : 700; // 3 seconds on last frame, 0.7 seconds otherwise
+              const delay = isLastFrame ? 3000 : 300; // 3 seconds on last frame, 0.7 seconds otherwise
               
               if (radarAnimationIntervalRef.current) {
                 clearTimeout(radarAnimationIntervalRef.current as any);
