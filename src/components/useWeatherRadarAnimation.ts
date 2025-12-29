@@ -225,7 +225,35 @@ export function useWeatherRadarAnimation({
             radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
           }
 
+          // Clear any existing animation intervals before starting new animation
+          if (radarAnimationIntervalRef.current) {
+            clearTimeout(radarAnimationIntervalRef.current as any);
+            clearInterval(radarAnimationIntervalRef.current as any);
+            radarAnimationIntervalRef.current = null;
+          }
+          if (fadeAnimationFrameRef.current !== null) {
+            cancelAnimationFrame(fadeAnimationFrameRef.current);
+            fadeAnimationFrameRef.current = null;
+          }
+          
           let frameIndex = 0;
+          
+          // Special handling for single frame - show it statically without animation
+          if (overlays.length === 1) {
+            const singleOverlay = overlays[0];
+            singleOverlay.setOpacity(0.3);
+            setCurrentRadarFrameIndex(0);
+            
+            if (radarTimeIndicatorRef.current && radarFramesRef.current[0]) {
+              const frameTime = airportCode 
+                ? formatAirportLocalTimeShort(radarFramesRef.current[0].timestampISO || new Date(radarFramesRef.current[0].timestamp).toISOString(), airportCode, baseline || undefined)
+                : new Date(radarFramesRef.current[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
+            }
+            
+            // Don't start animation loop for single frame
+            return;
+          }
           
           const animateFrame = () => {
             if (!displayOptions.showWeatherRadar) {
