@@ -119,8 +119,9 @@ export function PilotDashboard() {
   const scrollPositionRef = useRef<number>(0);
   const isRestoringRef = useRef<boolean>(false);
   const restoreTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const lastUserScrollTimeRef = useRef<number>(0);
   
-  // Save scroll position continuously
+  // Save scroll position continuously and watch for DOM changes
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -128,20 +129,75 @@ export function PilotDashboard() {
     const handleScroll = () => {
       if (!isRestoringRef.current) {
         scrollPositionRef.current = container.scrollTop;
+        lastUserScrollTimeRef.current = Date.now();
       }
     };
     
     container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container.removeEventListener('scroll', handleScroll);
+    
+    // Watch for DOM mutations (content changes) and restore scroll if it was reset
+    const observer = new MutationObserver(() => {
+      if (!isRestoringRef.current && scrollPositionRef.current > 0) {
+        const timeSinceLastScroll = Date.now() - lastUserScrollTimeRef.current;
+        // Only restore if user hasn't scrolled recently (within last 500ms)
+        if (timeSinceLastScroll > 500) {
+          const currentScroll = container.scrollTop;
+          const savedScroll = scrollPositionRef.current;
+          
+          // If scroll was reset (significantly less than saved), restore it
+          if (currentScroll < savedScroll - 10) {
+            isRestoringRef.current = true;
+            requestAnimationFrame(() => {
+              if (container && scrollPositionRef.current > 0) {
+                container.scrollTop = scrollPositionRef.current;
+              }
+              setTimeout(() => {
+                isRestoringRef.current = false;
+              }, 100);
+            });
+          }
+        }
+      }
+    });
+    
+    // Observe child list and subtree changes
+    observer.observe(container, {
+      childList: true,
+      subtree: true,
+      attributes: false,
+      characterData: false
+    });
+    
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      observer.disconnect();
+    };
   }, []);
 
-  // Restore scroll position aggressively after any data change
+  // Restore scroll position after EVERY render
+  // This is more aggressive but ensures scroll position is preserved even if React re-renders
   useLayoutEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
     
     const savedPosition = scrollPositionRef.current;
     if (savedPosition <= 0) return;
+
+    // Don't restore if user just scrolled (within last 300ms) to avoid jank
+    const timeSinceLastScroll = Date.now() - lastUserScrollTimeRef.current;
+    if (timeSinceLastScroll < 300) {
+      return;
+    }
+
+    const currentScroll = container.scrollTop;
+    
+    // If scroll was reset to top (or significantly reduced), restore it
+    // Check if scroll is significantly less than saved (more than 10px difference)
+    const scrollDiff = savedPosition - currentScroll;
+    if (scrollDiff < 10) {
+      // Scroll position is close enough, no need to restore
+      return;
+    }
 
     // Clear any pending restore
     if (restoreTimeoutRef.current) {
@@ -150,25 +206,42 @@ export function PilotDashboard() {
 
     isRestoringRef.current = true;
 
-    // Immediate restore
-    container.scrollTop = savedPosition;
-
-    // Also restore after a short delay to catch any late resets
-    restoreTimeoutRef.current = setTimeout(() => {
+    // Immediate restore using requestAnimationFrame
+    requestAnimationFrame(() => {
       if (container && scrollPositionRef.current > 0) {
         container.scrollTop = scrollPositionRef.current;
       }
-      isRestoringRef.current = false;
-    }, 0);
+      
+      // Also restore after multiple delays to catch any late resets from React re-renders
+      restoreTimeoutRef.current = setTimeout(() => {
+        if (container && scrollPositionRef.current > 0) {
+          container.scrollTop = scrollPositionRef.current;
+        }
+        // Additional delayed restore for stubborn cases
+        setTimeout(() => {
+          if (container && scrollPositionRef.current > 0) {
+            container.scrollTop = scrollPositionRef.current;
+          }
+          // Final delayed restore
+          setTimeout(() => {
+            if (container && scrollPositionRef.current > 0) {
+              container.scrollTop = scrollPositionRef.current;
+            }
+            isRestoringRef.current = false;
+          }, 100);
+        }, 50);
+      }, 10);
+    });
 
     return () => {
       if (restoreTimeoutRef.current) {
         clearTimeout(restoreTimeoutRef.current);
       }
     };
-  }, [airportOverview?.weather?.timestamp, summary?.situation_overview, baseline]);
+  }); // No dependencies - runs after every render
 
   // Continuous monitor to catch any scroll resets
+  // This is a safety net to catch scroll resets that slip through the useLayoutEffect
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container) return;
@@ -178,16 +251,27 @@ export function PilotDashboard() {
         const currentScroll = container.scrollTop;
         const savedScroll = scrollPositionRef.current;
         
+        // Don't restore if user just scrolled (within last 300ms) to avoid jank
+        const timeSinceLastScroll = Date.now() - lastUserScrollTimeRef.current;
+        if (timeSinceLastScroll < 300) {
+          return;
+        }
+        
         // If scroll was reset (jumped to top or significantly changed), restore it
-        if (Math.abs(currentScroll - savedScroll) > 50 && currentScroll < savedScroll) {
+        // Be more aggressive - restore if scroll is significantly less than saved position
+        if (currentScroll < savedScroll - 10) {
           isRestoringRef.current = true;
-          container.scrollTop = savedScroll;
-          setTimeout(() => {
-            isRestoringRef.current = false;
-          }, 100);
+          requestAnimationFrame(() => {
+            if (container && scrollPositionRef.current > 0) {
+              container.scrollTop = scrollPositionRef.current;
+            }
+            setTimeout(() => {
+              isRestoringRef.current = false;
+            }, 100);
+          });
         }
       }
-    }, 50); // Check every 50ms
+    }, 50); // Check every 50ms for more responsive restoration
 
     return () => clearInterval(monitor);
   }, []);
@@ -196,6 +280,11 @@ export function PilotDashboard() {
   useEffect(() => {
     if (connectionStatus.connected && selectedAirport) {
       const interval = setInterval(() => {
+        // Preserve scroll position before refresh
+        const container = scrollContainerRef.current;
+        if (container) {
+          scrollPositionRef.current = container.scrollTop;
+        }
         refreshData();
       }, 30000);
 
@@ -206,6 +295,12 @@ export function PilotDashboard() {
   // Smart refresh that always tries to get the best available data
   const handleRefresh = async () => {
     if (isRefreshing) return; // Prevent multiple simultaneous refreshes
+
+    // Preserve scroll position before refresh
+    const container = scrollContainerRef.current;
+    if (container) {
+      scrollPositionRef.current = container.scrollTop;
+    }
 
     console.log('[PilotDashboard] Starting manual refresh...');
     setIsRefreshing(true);
@@ -390,7 +485,6 @@ export function PilotDashboard() {
           <div key="right-panel" className="hidden md:flex md:w-[45%] md:min-w-[400px] md:max-w-[45%] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
             {/* Scrollable Content Area */}
             <div 
-              key="scroll-container"
               ref={scrollContainerRef} 
               className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3"
               onScroll={(e) => {
@@ -398,6 +492,7 @@ export function PilotDashboard() {
                 const target = e.currentTarget;
                 if (!isRestoringRef.current) {
                   scrollPositionRef.current = target.scrollTop;
+                  lastUserScrollTimeRef.current = Date.now();
                 }
               }}
             >
