@@ -1134,14 +1134,40 @@ export function PilotMap({
       const L = leafletModule.default;
 
       // Clear existing radar layer and animation
+      // Remove from activeWeatherLayers map
       const existingRadarLayer = activeWeatherLayers.get('radar');
       if (existingRadarLayer && layerGroupsRef.current.weather) {
-        layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
+        try {
+          layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
+        } catch (error) {
+          // Layer might already be removed
+        }
         setActiveWeatherLayers(prev => {
           const newMap = new Map(prev);
           newMap.delete('radar');
           return newMap;
         });
+      }
+
+      // Also remove from radarImageOverlayRef if it exists (this is the actual overlay on the map)
+      if (radarImageOverlayRef.current && layerGroupsRef.current.weather) {
+        try {
+          // Remove from map
+          if (mapInstance && radarImageOverlayRef.current.getPane()) {
+            layerGroupsRef.current.weather.removeLayer(radarImageOverlayRef.current);
+          }
+          // Clean up blob URL if it exists
+          if ((radarImageOverlayRef.current as any)._blobUrl) {
+            URL.revokeObjectURL((radarImageOverlayRef.current as any)._blobUrl);
+          }
+          // Remove from map if it's still there
+          if (mapInstance && mapInstance.hasLayer(radarImageOverlayRef.current)) {
+            mapInstance.removeLayer(radarImageOverlayRef.current);
+          }
+        } catch (error) {
+          // Layer might already be removed, ignore
+        }
+        radarImageOverlayRef.current = null;
       }
 
       // Clear existing time indicator
@@ -1155,6 +1181,10 @@ export function PilotMap({
         clearInterval(radarAnimationIntervalRef.current);
         radarAnimationIntervalRef.current = null;
       }
+
+      // Clear frames state
+      setRadarFrames([]);
+      radarFramesRef.current = [];
 
       if (displayOptions.showWeatherRadar) {
         let radarLayer = weatherLayers.find(layer => layer.id === 'radar');
@@ -1251,6 +1281,15 @@ export function PilotMap({
             let previousFrameHash: string | null = null;
             
             radarAnimationIntervalRef.current = setInterval(() => {
+              // Check if radar is still enabled
+              if (!displayOptions.showWeatherRadar) {
+                if (radarAnimationIntervalRef.current) {
+                  clearInterval(radarAnimationIntervalRef.current);
+                  radarAnimationIntervalRef.current = null;
+                }
+                return;
+              }
+
               const currentFrames = radarFramesRef.current;
               if (currentFrames.length === 0) {
                 console.warn('[PilotMap] No frames available for animation');
@@ -1268,7 +1307,7 @@ export function PilotMap({
               
               previousFrameHash = frameHash;
               
-              if (radarImageOverlayRef.current && layerGroupsRef.current.weather && mapInstance) {
+              if (radarImageOverlayRef.current && layerGroupsRef.current.weather && mapInstance && displayOptions.showWeatherRadar) {
                 // Convert base64 to blob URL for better cache control
                 const base64Data = frame.imageData.replace(/^data:image\/\w+;base64,/, '');
                 const blob = new Blob([Uint8Array.from(atob(base64Data), c => c.charCodeAt(0))], { type: 'image/png' });
