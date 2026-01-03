@@ -4,7 +4,6 @@ import React, { useMemo, useState, useEffect } from 'react';
 import {
   ArrivalSituationResponse,
   FlightCategory,
-  WindCategory,
   PrecipitationType,
   WeatherTrend,
 } from '@/types';
@@ -223,25 +222,31 @@ export default function ArrivalRiskCone({
     onConditionsChange?.(null, false);
   };
 
-  const coneData = useMemo(() => {
+  const barData = useMemo(() => {
     if (!situation?.distribution) return null;
 
     const { distribution } = situation;
     const baseline = distribution.baseline;
-    const range = distribution.max - distribution.min;
+    const rangeStart = Math.min(baseline - 2, distribution.p10);
+    const rangeEnd = Math.max(baseline + 25, distribution.p90 + 5);
+    const range = rangeEnd - rangeStart;
     const scale = range > 0 ? 100 / range : 1;
 
     return {
       baseline,
-      baselinePos: (baseline - distribution.min) * scale,
-      p10Pos: (distribution.p10 - distribution.min) * scale,
-      p25Pos: (distribution.p25 - distribution.min) * scale,
-      p50Pos: (distribution.p50 - distribution.min) * scale,
-      p75Pos: (distribution.p75 - distribution.min) * scale,
-      p90Pos: (distribution.p90 - distribution.min) * scale,
-      p95Pos: (distribution.p95 - distribution.min) * scale,
-      min: distribution.min,
-      max: distribution.max,
+      baselinePos: (baseline - rangeStart) * scale,
+      typicalPos: (distribution.p50 - rangeStart) * scale,
+      bestCasePos: (distribution.p10 - rangeStart) * scale,
+      extendedPos: (distribution.p90 - rangeStart) * scale,
+      typicalRangeStart: (distribution.p25 - rangeStart) * scale,
+      typicalRangeEnd: (distribution.p75 - rangeStart) * scale,
+      rangeStart,
+      rangeEnd,
+      p10: distribution.p10,
+      p25: distribution.p25,
+      p50: distribution.p50,
+      p75: distribution.p75,
+      p90: distribution.p90,
     };
   }, [situation]);
 
@@ -262,7 +267,7 @@ export default function ArrivalRiskCone({
       <div className="bg-slate-800/50 rounded-lg p-4 border border-slate-700">
         <div className="animate-pulse">
           <div className="h-4 bg-slate-700 rounded w-1/3 mb-4" />
-          <div className="h-32 bg-slate-700 rounded mb-4" />
+          <div className="h-24 bg-slate-700 rounded mb-4" />
           <div className="h-4 bg-slate-700 rounded w-2/3" />
         </div>
       </div>
@@ -310,7 +315,7 @@ export default function ArrivalRiskCone({
       <div className="px-4 py-3 border-b border-slate-700">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <h3 className="text-white font-medium">Arrival Duration Forecast</h3>
+            <h3 className="text-white font-medium">Expected Arrival Duration</h3>
             {situation && (
               <p className="text-slate-400 text-xs mt-0.5">
                 Based on {matchCount} similar historical situations
@@ -424,136 +429,118 @@ export default function ArrivalRiskCone({
       </div>
 
       <div className="p-4">
-        {coneData && (
-          <div className="mb-6">
-            <div className="relative h-20 bg-slate-900/50 rounded-lg overflow-hidden">
-              <div
-                className="absolute top-0 bottom-0 opacity-20"
-                style={{
-                  left: `${coneData.p10Pos}%`,
-                  right: `${100 - coneData.p90Pos}%`,
-                  background: 'linear-gradient(90deg, #22c55e, #22c55e 30%, #eab308 50%, #ef4444 80%, #ef4444)',
-                }}
-              />
-
-              <div
-                className="absolute top-0 bottom-0 opacity-40"
-                style={{
-                  left: `${coneData.p25Pos}%`,
-                  right: `${100 - coneData.p75Pos}%`,
-                  background: 'linear-gradient(90deg, #22c55e, #eab308 50%, #ef4444)',
-                }}
-              />
-
-              <div
-                className="absolute top-1/4 bottom-1/4 rounded"
-                style={{
-                  left: `${coneData.p50Pos}%`,
-                  width: '3px',
-                  marginLeft: '-1.5px',
-                  backgroundColor: '#fff',
-                  boxShadow: '0 0 8px rgba(255,255,255,0.5)',
-                }}
-              />
-
-              {coneData.baselinePos >= 0 && coneData.baselinePos <= 100 && (
-                <div
-                  className="absolute top-0 bottom-0 border-l-2 border-dashed border-blue-400"
-                  style={{
-                    left: `${coneData.baselinePos}%`,
-                  }}
-                />
-              )}
-
-              <div className="absolute bottom-1 left-2 text-xs text-slate-400">
-                {formatDuration(coneData.min)}
+        {barData && distribution && (
+          <div className="mb-5">
+            <div className="grid grid-cols-3 gap-4 mb-4">
+              <div className="text-center">
+                <div className="text-green-400 text-lg font-semibold">{formatDuration(barData.p10)}</div>
+                <div className="text-slate-400 text-xs">Best case</div>
               </div>
-              <div className="absolute bottom-1 right-2 text-xs text-slate-400">
-                {formatDuration(coneData.max)}
+              <div className="text-center">
+                <div className="text-white text-xl font-bold">{formatDuration(barData.p25)}-{formatDuration(barData.p75)}</div>
+                <div className="text-slate-400 text-xs">Typical range</div>
+              </div>
+              <div className="text-center">
+                <div className="text-amber-400 text-lg font-semibold">{formatDuration(barData.p90)}+</div>
+                <div className="text-slate-400 text-xs">Extended (1 in 10)</div>
               </div>
             </div>
 
-            {distribution && (
-              <>
-                <div className="flex justify-between mt-2 text-xs">
-                  <div className="text-green-400">P10: {formatDuration(distribution.p10)}</div>
-                  <div className="text-white font-medium">P50: {formatDuration(distribution.p50)}</div>
-                  <div className="text-red-400">P90: {formatDuration(distribution.p90)}</div>
-                </div>
+            <div className="relative h-8 bg-slate-900/50 rounded-lg overflow-hidden">
+              <div
+                className="absolute top-0 bottom-0 bg-green-500/30"
+                style={{
+                  left: `${barData.bestCasePos}%`,
+                  width: `${barData.typicalRangeStart - barData.bestCasePos}%`,
+                }}
+              />
+              <div
+                className="absolute top-0 bottom-0 bg-slate-400/40"
+                style={{
+                  left: `${barData.typicalRangeStart}%`,
+                  width: `${barData.typicalRangeEnd - barData.typicalRangeStart}%`,
+                }}
+              />
+              <div
+                className="absolute top-0 bottom-0 bg-amber-500/30"
+                style={{
+                  left: `${barData.typicalRangeEnd}%`,
+                  width: `${barData.extendedPos - barData.typicalRangeEnd}%`,
+                }}
+              />
 
-                <div className="flex items-center gap-4 mt-2 text-xs text-slate-500">
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-0.5 border-t-2 border-dashed border-blue-400" />
-                    <span>Baseline ({formatDuration(distribution.baseline)})</span>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    <div className="w-3 h-2 bg-white rounded-sm" />
-                    <span>Median</span>
-                  </div>
+              <div
+                className="absolute top-0 bottom-0 w-0.5 bg-blue-400"
+                style={{ left: `${barData.baselinePos}%` }}
+                title={`Baseline: ${formatDuration(distribution.baseline)}`}
+              />
+
+              <div
+                className="absolute top-1 bottom-1 w-1 bg-white rounded-full shadow-lg"
+                style={{ left: `${barData.typicalPos}%`, marginLeft: '-2px' }}
+                title={`Typical: ${formatDuration(barData.p50)}`}
+              />
+            </div>
+
+            <div className="flex justify-between mt-1.5 text-xs text-slate-500">
+              <span>{formatDuration(barData.rangeStart)}</span>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-blue-400 rounded-sm" />
+                  <span>Baseline ({formatDuration(distribution.baseline)})</span>
                 </div>
-              </>
-            )}
+                <div className="flex items-center gap-1">
+                  <div className="w-2 h-2 bg-white rounded-full" />
+                  <span>Typical ({formatDuration(barData.p50)})</span>
+                </div>
+              </div>
+              <span>{formatDuration(barData.rangeEnd)}</span>
+            </div>
           </div>
         )}
 
-        {extendedApproachProbability && goAroundRate !== undefined && (
-          <div className="grid grid-cols-2 gap-3 mb-4">
-            <div className="bg-slate-900/40 rounded p-3">
-              <div className="text-slate-400 text-xs mb-1">Extended Approach Risk</div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">+5 min</span>
-                  <span className="text-slate-300">{extendedApproachProbability.over5min}%</span>
+        {extendedApproachProbability && distribution && (
+          <div className="bg-slate-900/40 rounded p-3 mb-4">
+            <div className="text-slate-300 text-xs font-medium mb-2">Risk of delay beyond baseline ({formatDuration(distribution.baseline)})</div>
+            <div className="grid grid-cols-4 gap-2">
+              <div className="text-center">
+                <div className={`text-sm font-semibold ${extendedApproachProbability.over5min > 30 ? 'text-amber-400' : 'text-slate-300'}`}>
+                  {extendedApproachProbability.over5min}%
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">+10 min</span>
-                  <span className="text-amber-400">{extendedApproachProbability.over10min}%</span>
+                <div className="text-slate-500 text-xs">+5 min</div>
+                <div className="text-slate-600 text-xs">(&gt;{formatDuration(distribution.baseline + 5)})</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm font-semibold ${extendedApproachProbability.over10min > 20 ? 'text-amber-400' : 'text-slate-300'}`}>
+                  {extendedApproachProbability.over10min}%
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">+15 min</span>
-                  <span className="text-orange-400">{extendedApproachProbability.over15min}%</span>
+                <div className="text-slate-500 text-xs">+10 min</div>
+                <div className="text-slate-600 text-xs">(&gt;{formatDuration(distribution.baseline + 10)})</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm font-semibold ${extendedApproachProbability.over15min > 10 ? 'text-orange-400' : 'text-slate-300'}`}>
+                  {extendedApproachProbability.over15min}%
                 </div>
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">+20 min</span>
-                  <span className="text-red-400">{extendedApproachProbability.over20min}%</span>
+                <div className="text-slate-500 text-xs">+15 min</div>
+                <div className="text-slate-600 text-xs">(&gt;{formatDuration(distribution.baseline + 15)})</div>
+              </div>
+              <div className="text-center">
+                <div className={`text-sm font-semibold ${extendedApproachProbability.over20min > 5 ? 'text-red-400' : 'text-slate-300'}`}>
+                  {extendedApproachProbability.over20min}%
                 </div>
+                <div className="text-slate-500 text-xs">+20 min</div>
+                <div className="text-slate-600 text-xs">(&gt;{formatDuration(distribution.baseline + 20)})</div>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="bg-slate-900/40 rounded p-3">
-              <div className="text-slate-400 text-xs mb-1">Operational Metrics</div>
-              <div className="space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Go-Around Rate</span>
-                  <span className={goAroundRate > 2 ? 'text-amber-400' : 'text-slate-300'}>
-                    {goAroundRate.toFixed(1)}%
-                  </span>
-                </div>
-                {conditions && (
-                  <>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Time of Day</span>
-                      <span className="text-slate-300 capitalize">{conditions.timeOfDay}</span>
-                    </div>
-                    <div className="flex justify-between text-xs">
-                      <span className="text-slate-500">Trend</span>
-                      <span className={
-                        conditions.trend === 'improving' ? 'text-green-400' :
-                        conditions.trend === 'deteriorating' ? 'text-red-400' : 'text-slate-300'
-                      }>
-                        {conditions.trend}
-                      </span>
-                    </div>
-                    {conditions.hadIFR && (
-                      <div className="flex justify-between text-xs">
-                        <span className="text-slate-500">Recent IFR</span>
-                        <span className="text-amber-400">Yes (backlog)</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
+        {goAroundRate !== undefined && goAroundRate > 0 && (
+          <div className="flex items-center justify-between bg-slate-900/40 rounded p-2 mb-4">
+            <span className="text-slate-400 text-xs">Go-around rate</span>
+            <span className={`text-sm font-medium ${goAroundRate > 2 ? 'text-amber-400' : 'text-slate-300'}`}>
+              {goAroundRate.toFixed(1)}%
+            </span>
           </div>
         )}
 
@@ -569,10 +556,7 @@ export default function ArrivalRiskCone({
                   <div className="text-green-400 text-xs font-medium mb-1">Typical Day</div>
                   <div className="text-slate-300 text-xs">{referenceDays.typical.date}</div>
                   <div className="text-slate-500 text-xs">
-                    {formatDuration(referenceDays.typical.p50 || 0)} median
-                  </div>
-                  <div className="text-slate-500 text-xs">
-                    {referenceDays.typical.matchScore}% match
+                    {formatDuration(referenceDays.typical.p50 || 0)} typical
                   </div>
                 </button>
               )}
