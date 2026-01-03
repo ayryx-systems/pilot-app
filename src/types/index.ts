@@ -443,3 +443,104 @@ export interface ArrivalForecastResponse {
   cacheMaxAge: number;
   source: string;
 }
+
+export type FlightCategory = 'VFR' | 'MVFR' | 'IFR' | 'LIFR' | 'unlimited' | 'unknown';
+export type WindCategory = 'calm' | 'light' | 'moderate' | 'strong' | 'unknown';
+export type PrecipitationType = 'none' | 'rain' | 'snow' | 'fog' | 'mist' | 'thunderstorm' | 'freezing';
+export type WeatherTrend = 'improving' | 'steady' | 'deteriorating';
+export type TimeOfDay = 'earlyMorning' | 'morning' | 'midday' | 'afternoon' | 'evening' | 'night';
+export type DayType = 'weekday' | 'weekend' | 'holiday';
+export type Season = 'summer' | 'winter';
+
+export interface ArrivalConditions {
+  visibility: FlightCategory;
+  ceiling: FlightCategory;
+  wind: WindCategory;
+  flightCategory: FlightCategory;
+  precipitation: PrecipitationType;
+  hadIFR: boolean;
+  trend: WeatherTrend;
+  timeOfDay: TimeOfDay;
+  season: Season;
+  dayType: DayType;
+}
+
+export interface ArrivalDurationDistribution {
+  baseline: number;
+  p10: number;
+  p25: number;
+  p50: number;
+  p75: number;
+  p90: number;
+  p95: number;
+  p99: number;
+  min: number;
+  max: number;
+}
+
+export interface ExtendedApproachProbability {
+  over5min: number;
+  over10min: number;
+  over15min: number;
+  over20min: number;
+}
+
+export interface ReferenceDay {
+  date: string;
+  timeSlot: string;
+  matchScore: number;
+  p50?: number;
+  p90?: number;
+  max?: number;
+  arrivals: number;
+  goArounds?: number;
+  conditions: {
+    visibility: FlightCategory;
+    ceiling: FlightCategory;
+    flightCategory: FlightCategory;
+  };
+}
+
+export interface ArrivalSituation {
+  airport: string;
+  eta: string;
+  timeSlot: string;
+  conditions: ArrivalConditions;
+  matchCount: number;
+  totalHistoricalArrivals: number;
+  distribution: ArrivalDurationDistribution;
+  goAroundRate: number;
+  extendedApproachProbability: ExtendedApproachProbability;
+  referenceDays: {
+    typical: ReferenceDay | null;
+    worstCase: ReferenceDay | null;
+  };
+  explanation: string;
+  timestamp: string;
+  insufficientData?: boolean;
+  message?: string;
+  error?: string;
+}
+
+export interface ArrivalSituationResponse {
+  airportId: string;
+  airport: string;
+  eta: string;
+  timeSlot: string;
+  conditions: ArrivalConditions;
+  matchCount: number;
+  totalHistoricalArrivals: number;
+  distribution: ArrivalDurationDistribution;
+  goAroundRate: number;
+  extendedApproachProbability: ExtendedApproachProbability;
+  referenceDays: {
+    typical: ReferenceDay | null;
+    worstCase: ReferenceDay | null;
+  };
+  explanation: string;
+  timestamp: string;
+  insufficientData?: boolean;
+  message?: string;
+  error?: string;
+  source: string;
+}

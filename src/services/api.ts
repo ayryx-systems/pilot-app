@@ -10,7 +10,8 @@ import {
   ArrivalsResponse,
   SummaryResponse,
   BaselineResponse,
-  ArrivalForecastResponse
+  ArrivalForecastResponse,
+  ArrivalSituationResponse,
 } from '@/types';
 import { demoService } from './demoService';
 import { getApiBaseUrl } from '@/lib/apiConfig';
@@ -355,6 +356,72 @@ class PilotApiService {
 
       if (error instanceof ApiError && error.status === 0) {
         throw new ApiError('Cannot connect to server - arrival forecast unavailable while offline', 0);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
+   * Get arrival situation forecast based on historical pattern matching
+   * 
+   * @param airportId - Airport ICAO code
+   * @param eta - Expected arrival time (ISO timestamp)
+   * @param weatherData - Optional weather conditions for matching
+   */
+  async getArrivalSituation(
+    airportId: string,
+    eta: Date,
+    weatherData?: {
+      visibilitySM?: number;
+      ceilingFt?: number;
+      windKt?: number;
+      precipitation?: string;
+      hadIFR?: boolean;
+      trend?: string;
+    }
+  ): Promise<ArrivalSituationResponse> {
+    try {
+      const params = new URLSearchParams({
+        eta: eta.toISOString(),
+        t: Date.now().toString(),
+      });
+
+      if (weatherData?.visibilitySM !== undefined) {
+        params.append('visibilitySM', weatherData.visibilitySM.toString());
+      }
+      if (weatherData?.ceilingFt !== undefined) {
+        params.append('ceilingFt', weatherData.ceilingFt.toString());
+      }
+      if (weatherData?.windKt !== undefined) {
+        params.append('windKt', weatherData.windKt.toString());
+      }
+      if (weatherData?.precipitation) {
+        params.append('precipitation', weatherData.precipitation);
+      }
+      if (weatherData?.hadIFR !== undefined) {
+        params.append('hadIFR', weatherData.hadIFR.toString());
+      }
+      if (weatherData?.trend) {
+        params.append('trend', weatherData.trend);
+      }
+
+      const response = await this.fetchWithTimeout(
+        `${API_BASE_URL}/api/pilot/${airportId}/arrival-situation?${params.toString()}`,
+        {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        }
+      );
+      return await this.handleResponse<ArrivalSituationResponse>(response);
+    } catch (error) {
+      console.error(`Failed to fetch arrival situation for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - arrival situation unavailable while offline', 0);
       }
 
       throw error;

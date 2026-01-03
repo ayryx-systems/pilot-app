@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { PilotMap } from './PilotMap';
 import { AirportSelector } from './AirportSelector';
 import { ConnectionStatus } from './ConnectionStatus';
@@ -8,7 +8,8 @@ import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalScatterPlot } from './ArrivalScatterPlot';
-import { Arrival } from '@/types';
+import ArrivalRiskCone from './ArrivalRiskCone';
+import { Arrival, ArrivalSituationResponse } from '@/types';
 import { MapControls } from './MapControls';
 import { TimeSlider } from './TimeSlider';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
@@ -20,6 +21,7 @@ import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
 import { ClockDisplay } from './ClockDisplay';
+import { pilotApi } from '@/services/api';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -107,6 +109,53 @@ export function PilotDashboard() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
+  const [arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
+  const [arrivalSituationLoading, setArrivalSituationLoading] = useState(false);
+  const [arrivalSituationError, setArrivalSituationError] = useState<string | null>(null);
+  const lastSituationFetchRef = useRef<{ airport: string; time: number } | null>(null);
+
+  const fetchArrivalSituation = useCallback(async (airportId: string, eta: Date, weather?: { visibilitySM?: number; ceilingFt?: number; windKt?: number; }) => {
+    const now = Date.now();
+    const lastFetch = lastSituationFetchRef.current;
+    if (lastFetch && lastFetch.airport === airportId && Math.abs(lastFetch.time - eta.getTime()) < 5 * 60 * 1000) {
+      return;
+    }
+    
+    setArrivalSituationLoading(true);
+    setArrivalSituationError(null);
+    
+    try {
+      const situation = await pilotApi.getArrivalSituation(airportId, eta, weather);
+      setArrivalSituation(situation);
+      lastSituationFetchRef.current = { airport: airportId, time: eta.getTime() };
+    } catch (err) {
+      console.error('Failed to fetch arrival situation:', err);
+      setArrivalSituationError(err instanceof Error ? err.message : 'Failed to load arrival situation');
+      setArrivalSituation(null);
+    } finally {
+      setArrivalSituationLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!selectedAirport || !connectionStatus.connected) return;
+    
+    const isNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
+    if (isNow) {
+      setArrivalSituation(null);
+      lastSituationFetchRef.current = null;
+      return;
+    }
+    
+    const weather = airportOverview?.weather ? {
+      visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
+      ceilingFt: airportOverview.weather.ceiling || undefined,
+      windKt: airportOverview.weather.wind?.speed,
+    } : undefined;
+    
+    fetchArrivalSituation(selectedAirport, selectedTime, weather);
+  }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, airportOverview?.weather]);
 
   // Save map display options to localStorage whenever they change
   useEffect(() => {
@@ -524,6 +573,18 @@ export function PilotDashboard() {
                     } else {
                       console.log('[PilotDashboard] No matching track found for arrival:', arrival);
                     }
+                  }}
+                />
+              )}
+
+              {/* Arrival Risk Cone - shown when time slider is not at NOW */}
+              {selectedAirport && Math.abs(selectedTime.getTime() - Date.now()) >= 60000 && (
+                <ArrivalRiskCone
+                  situation={arrivalSituation}
+                  loading={arrivalSituationLoading}
+                  error={arrivalSituationError || undefined}
+                  onReferenceDayClick={(date, timeSlot) => {
+                    console.log('[PilotDashboard] Reference day clicked:', date, timeSlot);
                   }}
                 />
               )}
