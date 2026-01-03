@@ -8,7 +8,7 @@ import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalScatterPlot } from './ArrivalScatterPlot';
-import ArrivalRiskCone from './ArrivalRiskCone';
+import ArrivalRiskCone, { CustomConditions } from './ArrivalRiskCone';
 import { Arrival, ArrivalSituationResponse } from '@/types';
 import { MapControls } from './MapControls';
 import { TimeSlider } from './TimeSlider';
@@ -113,12 +113,21 @@ export function PilotDashboard() {
   const [arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
   const [arrivalSituationLoading, setArrivalSituationLoading] = useState(false);
   const [arrivalSituationError, setArrivalSituationError] = useState<string | null>(null);
-  const lastSituationFetchRef = useRef<{ airport: string; time: number } | null>(null);
+  const lastSituationFetchRef = useRef<{ airport: string; time: number; conditions?: string } | null>(null);
+  const [isCustomConditions, setIsCustomConditions] = useState(false);
+  const [customConditions, setCustomConditions] = useState<CustomConditions | null>(null);
 
-  const fetchArrivalSituation = useCallback(async (airportId: string, eta: Date, weather?: { visibilitySM?: number; ceilingFt?: number; windKt?: number; }) => {
-    const now = Date.now();
+  const fetchArrivalSituation = useCallback(async (
+    airportId: string, 
+    eta: Date, 
+    weather?: { visibilitySM?: number; ceilingFt?: number; windKt?: number; precipitation?: string; hadIFR?: boolean; trend?: string; },
+    forceRefresh?: boolean
+  ) => {
+    const conditionsKey = weather ? JSON.stringify(weather) : '';
     const lastFetch = lastSituationFetchRef.current;
-    if (lastFetch && lastFetch.airport === airportId && Math.abs(lastFetch.time - eta.getTime()) < 5 * 60 * 1000) {
+    if (!forceRefresh && lastFetch && lastFetch.airport === airportId && 
+        Math.abs(lastFetch.time - eta.getTime()) < 5 * 60 * 1000 &&
+        lastFetch.conditions === conditionsKey) {
       return;
     }
     
@@ -128,7 +137,7 @@ export function PilotDashboard() {
     try {
       const situation = await pilotApi.getArrivalSituation(airportId, eta, weather);
       setArrivalSituation(situation);
-      lastSituationFetchRef.current = { airport: airportId, time: eta.getTime() };
+      lastSituationFetchRef.current = { airport: airportId, time: eta.getTime(), conditions: conditionsKey };
     } catch (err) {
       console.error('Failed to fetch arrival situation:', err);
       setArrivalSituationError(err instanceof Error ? err.message : 'Failed to load arrival situation');
@@ -148,14 +157,25 @@ export function PilotDashboard() {
       return;
     }
     
-    const weather = airportOverview?.weather ? {
-      visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
-      ceilingFt: airportOverview.weather.ceiling || undefined,
-      windKt: airportOverview.weather.wind?.speed,
-    } : undefined;
-    
-    fetchArrivalSituation(selectedAirport, selectedTime, weather);
-  }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, airportOverview?.weather]);
+    if (isCustomConditions && customConditions) {
+      fetchArrivalSituation(selectedAirport, selectedTime, {
+        visibilitySM: customConditions.visibilitySM,
+        ceilingFt: customConditions.ceilingFt ?? undefined,
+        windKt: customConditions.windKt,
+        precipitation: customConditions.precipitation,
+        hadIFR: customConditions.hadIFR,
+        trend: customConditions.trend,
+      }, true);
+    } else {
+      const weather = airportOverview?.weather ? {
+        visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
+        ceilingFt: airportOverview.weather.ceiling || undefined,
+        windKt: airportOverview.weather.wind?.speed,
+      } : undefined;
+      
+      fetchArrivalSituation(selectedAirport, selectedTime, weather);
+    }
+  }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, airportOverview?.weather, isCustomConditions, customConditions]);
 
   // Save map display options to localStorage whenever they change
   useEffect(() => {
@@ -583,6 +603,15 @@ export function PilotDashboard() {
                   situation={arrivalSituation}
                   loading={arrivalSituationLoading}
                   error={arrivalSituationError || undefined}
+                  forecastConditions={airportOverview?.weather ? {
+                    visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
+                    ceilingFt: airportOverview.weather.ceiling || undefined,
+                    windKt: airportOverview.weather.wind?.speed,
+                  } : undefined}
+                  onConditionsChange={(conditions, isCustom) => {
+                    setIsCustomConditions(isCustom);
+                    setCustomConditions(conditions);
+                  }}
                   onReferenceDayClick={(date, timeSlot) => {
                     console.log('[PilotDashboard] Reference day clicked:', date, timeSlot);
                   }}
