@@ -588,7 +588,7 @@ export function PilotDashboard() {
             >
               {/* Weather Category Slider - shown when time slider is not at NOW */}
               {selectedAirport && Math.abs(selectedTime.getTime() - Date.now()) >= 60000 && (
-                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4 mb-4">
                   <WeatherCategorySlider
                     value={weatherCategory}
                     onChange={setWeatherCategory}
@@ -599,7 +599,7 @@ export function PilotDashboard() {
 
               {/* Unified Arrival Timeline */}
               {selectedAirport && (
-                <div className="bg-white rounded-lg border border-gray-200 p-4 mb-4">
+                <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4 mb-4">
                   <ArrivalTimeline
                     arrivals={arrivals || []}
                     airportCode={selectedAirport}
@@ -631,7 +631,7 @@ export function PilotDashboard() {
                     }}
                   />
                   {matchedDaysLoading && (
-                    <div className="mt-2 text-center text-sm text-gray-500">
+                    <div className="mt-2 text-center text-sm text-gray-400">
                       Loading historical data...
                     </div>
                   )}

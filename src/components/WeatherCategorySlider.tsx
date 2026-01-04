@@ -68,7 +68,7 @@ export function WeatherCategorySlider({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-xs font-medium text-gray-600">{label}</span>
+        <span className="text-xs font-medium text-gray-300">{label}</span>
         <span 
           className="text-xs font-semibold px-2 py-0.5 rounded"
           style={{ 
@@ -82,7 +82,7 @@ export function WeatherCategorySlider({
       </div>
       
       <div className="relative">
-        <div className="h-2 rounded-full bg-gradient-to-r from-green-500 via-blue-500 via-orange-500 to-red-500 opacity-30" />
+        <div className="h-2 rounded-full bg-gradient-to-r from-green-500 via-blue-500 via-orange-500 to-red-500 opacity-40" />
         
         <input
           type="range"
@@ -104,8 +104,8 @@ export function WeatherCategorySlider({
             height: 20px;
             border-radius: 50%;
             background: ${info.color};
-            border: 3px solid white;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgb(31, 41, 55);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
             cursor: pointer;
             margin-top: -6px;
           }
@@ -114,8 +114,8 @@ export function WeatherCategorySlider({
             height: 20px;
             border-radius: 50%;
             background: ${info.color};
-            border: 3px solid white;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+            border: 3px solid rgb(31, 41, 55);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
             cursor: pointer;
           }
           input[type='range']:disabled::-webkit-slider-thumb {
@@ -139,7 +139,7 @@ export function WeatherCategorySlider({
               disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-80'
             }`}
             style={{
-              color: cat === value ? CATEGORY_INFO[cat].color : 'rgb(156, 163, 175)',
+              color: cat === value ? CATEGORY_INFO[cat].color : 'rgb(107, 114, 128)',
             }}
           >
             {cat}
@@ -147,7 +147,7 @@ export function WeatherCategorySlider({
         ))}
       </div>
       
-      <p className="text-xs text-gray-500 mt-2 text-center">
+      <p className="text-xs text-gray-400 mt-2 text-center">
         {info.description}
       </p>
     </div>

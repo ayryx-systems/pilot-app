@@ -252,8 +252,8 @@ export function ArrivalTimeline({
           label: seasonLabel,
           data: baselinePoints,
           type: 'line' as const,
-          borderColor: 'rgba(0, 0, 0, 0.8)',
-          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          borderColor: 'rgba(255, 255, 255, 0.6)',
+          backgroundColor: 'rgba(255, 255, 255, 0.1)',
           borderWidth: 2,
           borderDash: [8, 4],
           pointRadius: 0,
@@ -393,6 +393,7 @@ export function ArrivalTimeline({
             usePointStyle: true,
             padding: 12,
             font: { size: 11 },
+            color: 'rgba(156, 163, 175, 0.9)',
             filter: (item) => {
               return !item.text?.includes('P90') && !item.text?.includes('Range');
             },
@@ -440,11 +441,13 @@ export function ArrivalTimeline({
             display: true,
             text: 'Hours from Now',
             font: { weight: 'bold' },
+            color: 'rgba(209, 213, 219, 0.9)',
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
+            color: 'rgba(255, 255, 255, 0.08)',
           },
           ticks: {
+            color: 'rgba(156, 163, 175, 0.9)',
             callback: (value) => {
               const v = Number(value);
               if (v === 0) return 'Now';
@@ -460,9 +463,13 @@ export function ArrivalTimeline({
             display: true,
             text: 'Duration from 50nm (min)',
             font: { weight: 'bold' },
+            color: 'rgba(209, 213, 219, 0.9)',
           },
           grid: {
-            color: 'rgba(0, 0, 0, 0.05)',
+            color: 'rgba(255, 255, 255, 0.08)',
+          },
+          ticks: {
+            color: 'rgba(156, 163, 175, 0.9)',
           },
         },
       },
@@ -484,7 +491,7 @@ export function ArrivalTimeline({
 
   if (!chartData || chartData.datasets.length === 0) {
     return (
-      <div className="flex items-center justify-center h-64 text-gray-500">
+      <div className="flex items-center justify-center h-64 text-gray-400">
         <p>No arrival data available</p>
       </div>
     );
@@ -493,7 +500,7 @@ export function ArrivalTimeline({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-700">
+        <h3 className="text-sm font-semibold text-gray-200">
           Arrival Duration Timeline
         </h3>
         {!isAtNow && matchedDaysData && (
@@ -508,14 +515,14 @@ export function ArrivalTimeline({
             >
               {weatherCategory}
             </span>
-            <span className="text-gray-500">
+            <span className="text-gray-400">
               {matchedDaysData.matchCount} historical days, {matchedDaysData.totalArrivals} arrivals
             </span>
           </div>
         )}
       </div>
       
-      <div className="h-72 bg-white rounded-lg border border-gray-200 p-2">
+      <div className="h-72 bg-gray-800/50 rounded-lg border border-gray-700 p-2">
         <Scatter 
           ref={chartRef} 
           data={{ datasets: chartData.datasets }} 
@@ -525,27 +532,27 @@ export function ArrivalTimeline({
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
         <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-          <div className="bg-gray-50 rounded p-2">
-            <div className="text-xs text-gray-500">Best Case (P10)</div>
-            <div className="text-lg font-semibold text-green-600">
+          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
+            <div className="text-xs text-gray-400">Best Case (P10)</div>
+            <div className="text-lg font-semibold text-green-400">
               {matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-50 rounded p-2">
-            <div className="text-xs text-gray-500">Typical (P50)</div>
-            <div className="text-lg font-semibold text-gray-800">
+          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
+            <div className="text-xs text-gray-400">Typical (P50)</div>
+            <div className="text-lg font-semibold text-gray-200">
               {matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-50 rounded p-2">
-            <div className="text-xs text-gray-500">Extended (P90)</div>
-            <div className="text-lg font-semibold text-orange-600">
+          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
+            <div className="text-xs text-gray-400">Extended (P90)</div>
+            <div className="text-lg font-semibold text-orange-400">
               {matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-50 rounded p-2">
-            <div className="text-xs text-gray-500">Baseline</div>
-            <div className="text-lg font-semibold text-gray-600">
+          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
+            <div className="text-xs text-gray-400">Baseline</div>
+            <div className="text-lg font-semibold text-gray-300">
               {matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m
             </div>
           </div>
