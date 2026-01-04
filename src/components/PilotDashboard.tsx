@@ -8,7 +8,7 @@ import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalTimeline } from './ArrivalTimeline';
-import { WeatherOutlook, deriveWeatherCategoryFromTAF } from './WeatherOutlook';
+import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
 import { ETASelector } from './ETASelector';
 import { Arrival, ArrivalSituationResponse, MatchedDaysResponse, FlightCategory } from '@/types';
 import { MapControls } from './MapControls';
@@ -16,7 +16,7 @@ import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
@@ -592,7 +592,7 @@ export function PilotDashboard() {
                 }
               }}
             >
-              {/* ETA Selector - moved from header */}
+              {/* ETA Selector with integrated weather scenario */}
               {selectedAirport && (
                 <ETASelector
                   airportCode={selectedAirport}
@@ -600,23 +600,12 @@ export function PilotDashboard() {
                   onTimeChange={setSelectedTime}
                   maxHoursAhead={48}
                   baseline={baseline}
-                  weatherCategory={activeWeatherCategory}
+                  tafCategory={tafCategory}
+                  isManualWeather={isManualWeather}
+                  onManualWeatherChange={setIsManualWeather}
+                  manualCategory={weatherCategory}
+                  onCategoryChange={setWeatherCategory}
                 />
-              )}
-
-              {/* Weather Outlook - shown when not at NOW */}
-              {selectedAirport && Math.abs(selectedTime.getTime() - Date.now()) >= 60000 && (
-                <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-3">
-                  <WeatherOutlook
-                    weather={airportOverview?.weather}
-                    selectedTime={selectedTime}
-                    isManual={isManualWeather}
-                    onManualChange={setIsManualWeather}
-                    manualCategory={weatherCategory}
-                    onCategoryChange={setWeatherCategory}
-                    tafCategory={tafCategory}
-                  />
-                </div>
               )}
 
               {/* ARRIVAL FORECAST SECTION */}

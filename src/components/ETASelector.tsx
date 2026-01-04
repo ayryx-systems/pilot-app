@@ -12,8 +12,14 @@ interface ETASelectorProps {
   onTimeChange: (time: Date) => void;
   maxHoursAhead?: number;
   baseline?: BaselineData | null;
-  weatherCategory?: FlightCategory;
+  tafCategory: FlightCategory;
+  isManualWeather: boolean;
+  onManualWeatherChange: (isManual: boolean) => void;
+  manualCategory: FlightCategory;
+  onCategoryChange: (category: FlightCategory) => void;
 }
+
+const CATEGORIES: FlightCategory[] = ['VFR', 'MVFR', 'IFR', 'LIFR'];
 
 export function ETASelector({
   airportCode,
@@ -21,28 +27,31 @@ export function ETASelector({
   onTimeChange,
   maxHoursAhead = 24,
   baseline,
-  weatherCategory = 'VFR',
+  tafCategory,
+  isManualWeather,
+  onManualWeatherChange,
+  manualCategory,
+  onCategoryChange,
 }: ETASelectorProps) {
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
   const selectedTimeLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
   
   const isNow = Math.abs(selectedTimeLocal.getTime() - airportNowLocal.getTime()) <= 60000;
-  
   const hoursAhead = (selectedTime.getTime() - utcNow.getTime()) / (1000 * 60 * 60);
   const sliderValue = isNow ? 0 : Math.min(100, (hoursAhead / maxHoursAhead) * 100);
 
+  const activeCategory = isManualWeather ? manualCategory : tafCategory;
+  const categoryColors = FLIGHT_CATEGORY_COLORS[activeCategory] || FLIGHT_CATEGORY_COLORS.unknown;
+
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
-    
     if (value <= 0.5) {
       onTimeChange(getCurrentUTCTime());
       return;
     }
-    
     const targetHours = (value / 100) * maxHoursAhead;
     const roundedSlots = Math.round(targetHours * 4);
-    
     const next15MinBoundary = Math.ceil(airportNowLocal.getUTCMinutes() / 15) * 15;
     const targetLocalTime = new Date(airportNowLocal);
     
@@ -57,33 +66,22 @@ export function ETASelector({
         targetLocalTime.setTime(targetLocalTime.getTime() + (roundedSlots - 1) * 15 * 60 * 1000);
       }
     }
-    
-    const newUTCTime = airportLocalToUTC(targetLocalTime, airportCode, baseline);
-    onTimeChange(newUTCTime);
+    onTimeChange(airportLocalToUTC(targetLocalTime, airportCode, baseline));
   };
 
-  const handleResetToNow = () => {
-    onTimeChange(getCurrentUTCTime());
-  };
-
-  const formatTime = (date: Date) => {
-    return formatAirportLocalTime(date, airportCode, baseline);
-  };
+  const formatTime = (date: Date) => formatAirportLocalTime(date, airportCode, baseline);
 
   const formatDate = (date: Date) => {
     const dateLocal = utcToAirportLocal(date, airportCode, baseline);
     const todayLocal = utcToAirportLocal(utcNow, airportCode, baseline);
-    
     const dateLocalStr = `${dateLocal.getUTCFullYear()}-${String(dateLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(dateLocal.getUTCDate()).padStart(2, '0')}`;
     const todayLocalStr = `${todayLocal.getUTCFullYear()}-${String(todayLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(todayLocal.getUTCDate()).padStart(2, '0')}`;
-    
     const tomorrowLocal = new Date(todayLocal);
     tomorrowLocal.setUTCDate(tomorrowLocal.getUTCDate() + 1);
     const tomorrowLocalStr = `${tomorrowLocal.getUTCFullYear()}-${String(tomorrowLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(tomorrowLocal.getUTCDate()).padStart(2, '0')}`;
     
     if (dateLocalStr === todayLocalStr) return 'Today';
     if (dateLocalStr === tomorrowLocalStr) return 'Tomorrow';
-    
     const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     return `${monthNames[dateLocal.getUTCMonth()]} ${dateLocal.getUTCDate()}`;
   };
@@ -95,66 +93,51 @@ export function ETASelector({
 
   useEffect(() => {
     if (!isNow) return;
-
     onTimeChangeRef.current(getCurrentUTCTime());
-
     const interval = setInterval(() => {
-      if (isNowRef.current) {
-        onTimeChangeRef.current(getCurrentUTCTime());
-      }
+      if (isNowRef.current) onTimeChangeRef.current(getCurrentUTCTime());
     }, 1000);
-
     return () => clearInterval(interval);
   }, [isNow]);
 
-  const categoryColors = FLIGHT_CATEGORY_COLORS[weatherCategory] || FLIGHT_CATEGORY_COLORS.unknown;
-
   return (
-    <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-3">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2 text-xs text-gray-400">
-          <Clock className="w-4 h-4" />
-          <span className="font-medium">Expected Time of Arrival</span>
+    <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-2">
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="flex items-center gap-2">
+          <Clock className="w-3.5 h-3.5 text-gray-400" />
+          <span className={`text-lg font-bold ${isNow ? 'text-blue-300' : 'text-white'}`}>
+            {formatTime(selectedTime)}
+          </span>
+          <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
+          {isNow ? (
+            <span className="px-1.5 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-[10px] font-medium text-blue-300">
+              NOW
+            </span>
+          ) : (
+            <span 
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                backgroundColor: categoryColors.bg,
+                color: categoryColors.color,
+                border: `1px solid ${categoryColors.border}`,
+              }}
+            >
+              +{hoursAhead.toFixed(1)}h
+            </span>
+          )}
         </div>
         {!isNow && (
           <button
-            onClick={handleResetToNow}
-            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
+            onClick={() => onTimeChange(getCurrentUTCTime())}
+            className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300"
           >
             <RotateCcw className="w-3 h-3" />
-            Reset to NOW
+            NOW
           </button>
         )}
       </div>
 
-      <div className="flex items-center gap-3 mb-3">
-        <div className={`text-2xl font-bold ${isNow ? 'text-blue-300' : 'text-white'}`}>
-          {formatTime(selectedTime)}
-        </div>
-        <div className="flex flex-col">
-          <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
-          <span className="text-xs text-gray-500">{airportCode} local</span>
-        </div>
-        {isNow && (
-          <div className="px-2 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-xs font-medium text-blue-300">
-            NOW
-          </div>
-        )}
-        {!isNow && (
-          <div 
-            className="px-2 py-0.5 rounded text-xs font-medium"
-            style={{
-              backgroundColor: categoryColors.bg,
-              color: categoryColors.color,
-              border: `1px solid ${categoryColors.border}`,
-            }}
-          >
-            +{hoursAhead.toFixed(1)}h
-          </div>
-        )}
-      </div>
-
-      <div className="relative">
+      <div className="relative mb-1">
         <input
           type="range"
           min="0"
@@ -162,7 +145,7 @@ export function ETASelector({
           step={0.5}
           value={sliderValue}
           onChange={handleSliderChange}
-          className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer eta-slider"
+          className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer eta-slider"
           style={{
             background: `linear-gradient(to right, 
               ${isNow ? '#60a5fa' : categoryColors.color} 0%, 
@@ -175,37 +158,85 @@ export function ETASelector({
           __html: `
             .eta-slider::-webkit-slider-thumb {
               appearance: none;
-              width: 18px;
-              height: 18px;
+              width: 14px;
+              height: 14px;
               border-radius: 50%;
               background: ${isNow ? '#ffffff' : categoryColors.color};
               cursor: pointer;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-              border: ${isNow ? '3px solid #60a5fa' : `2px solid ${categoryColors.border}`};
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+              border: ${isNow ? '2px solid #60a5fa' : `2px solid ${categoryColors.border}`};
             }
             .eta-slider::-moz-range-thumb {
-              width: 18px;
-              height: 18px;
+              width: 14px;
+              height: 14px;
               border-radius: 50%;
               background: ${isNow ? '#ffffff' : categoryColors.color};
               cursor: pointer;
-              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-              border: ${isNow ? '3px solid #60a5fa' : `2px solid ${categoryColors.border}`};
+              box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+              border: ${isNow ? '2px solid #60a5fa' : `2px solid ${categoryColors.border}`};
             }
           `
         }} />
       </div>
 
-      <div className="flex justify-between mt-1 text-[10px] text-gray-500">
-        <span>NOW</span>
-        <span>+6h</span>
-        <span>+12h</span>
-        <span>+18h</span>
-        <span>+24h</span>
-      </div>
+      {!isNow && (
+        <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/50">
+          <div className="flex items-center gap-2">
+            <label className="flex items-center gap-1.5 cursor-pointer">
+              <input
+                type="radio"
+                checked={!isManualWeather}
+                onChange={() => onManualWeatherChange(false)}
+                className="w-3 h-3 text-blue-500"
+              />
+              <span className="text-[10px] text-gray-300">TAF</span>
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+                style={{
+                  backgroundColor: FLIGHT_CATEGORY_COLORS[tafCategory].bg,
+                  color: FLIGHT_CATEGORY_COLORS[tafCategory].color,
+                }}
+              >
+                {tafCategory}
+              </span>
+            </label>
+          </div>
+          
+          <div className="flex items-center gap-1">
+            <label className="flex items-center gap-1 cursor-pointer">
+              <input
+                type="radio"
+                checked={isManualWeather}
+                onChange={() => onManualWeatherChange(true)}
+                className="w-3 h-3 text-blue-500"
+              />
+              <span className="text-[10px] text-gray-400">What-if:</span>
+            </label>
+            {CATEGORIES.map((cat) => {
+              const colors = FLIGHT_CATEGORY_COLORS[cat];
+              const isSelected = isManualWeather && manualCategory === cat;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => { onManualWeatherChange(true); onCategoryChange(cat); }}
+                  className={`px-1.5 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                    isSelected ? '' : 'opacity-50 hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: isSelected ? colors.bg : 'transparent',
+                    color: isSelected ? colors.color : 'rgb(107, 114, 128)',
+                    border: isSelected ? `1px solid ${colors.border}` : '1px solid transparent',
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 export default ETASelector;
-
