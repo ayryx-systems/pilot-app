@@ -30,6 +30,11 @@ class PilotApiService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+    const externalSignal = options.signal;
+    if (externalSignal) {
+      externalSignal.addEventListener('abort', () => controller.abort());
+    }
+
     try {
       const response = await fetch(url, {
         ...options,
@@ -44,6 +49,10 @@ class PilotApiService {
       return response;
     } catch (error) {
       clearTimeout(timeoutId);
+
+      if (externalSignal?.aborted) {
+        throw new ApiError('Request cancelled', 0);
+      }
 
       // Enhanced error classification
       if (error instanceof Error) {
@@ -368,6 +377,7 @@ class PilotApiService {
    * @param airportId - Airport ICAO code
    * @param eta - Expected arrival time (ISO timestamp)
    * @param weatherData - Optional weather conditions for matching
+   * @param signal - Optional AbortSignal to cancel the request
    */
   async getArrivalSituation(
     airportId: string,
@@ -379,7 +389,8 @@ class PilotApiService {
       precipitation?: string;
       hadIFR?: boolean;
       trend?: string;
-    }
+    },
+    signal?: AbortSignal
   ): Promise<ArrivalSituationResponse> {
     try {
       const params = new URLSearchParams({
@@ -410,6 +421,7 @@ class PilotApiService {
         `${API_BASE_URL}/api/pilot/${airportId}/arrival-situation?${params.toString()}`,
         {
           cache: 'no-cache',
+          signal,
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -418,6 +430,10 @@ class PilotApiService {
       );
       return await this.handleResponse<ArrivalSituationResponse>(response);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 408 && signal?.aborted) {
+        throw new ApiError('Request cancelled', 0);
+      }
+
       console.error(`Failed to fetch arrival situation for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       if (error instanceof ApiError && error.status === 0) {
@@ -435,6 +451,7 @@ class PilotApiService {
    * @param eta - Expected arrival time
    * @param category - Flight category (VFR, MVFR, IFR, LIFR)
    * @param options - Additional options (maxDays, matchSeason)
+   * @param signal - Optional AbortSignal to cancel the request
    */
   async getMatchedDaysArrivals(
     airportId: string,
@@ -443,7 +460,8 @@ class PilotApiService {
     options?: {
       maxDays?: number;
       matchSeason?: boolean;
-    }
+    },
+    signal?: AbortSignal
   ): Promise<MatchedDaysResponse> {
     try {
       const params = new URLSearchParams({
@@ -463,6 +481,7 @@ class PilotApiService {
         `${API_BASE_URL}/api/pilot/${airportId}/matched-days?${params.toString()}`,
         {
           cache: 'no-cache',
+          signal,
           headers: {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
@@ -471,6 +490,10 @@ class PilotApiService {
       );
       return await this.handleResponse<MatchedDaysResponse>(response);
     } catch (error) {
+      if (error instanceof ApiError && error.status === 408 && signal?.aborted) {
+        throw new ApiError('Request cancelled', 0);
+      }
+
       console.error(`Failed to fetch matched days for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
 
       if (error instanceof ApiError && error.status === 0) {

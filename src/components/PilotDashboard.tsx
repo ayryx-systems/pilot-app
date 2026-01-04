@@ -105,6 +105,7 @@ export function PilotDashboard() {
   const [arrivalSituationLoading, setArrivalSituationLoading] = useState(false);
   const [arrivalSituationError, setArrivalSituationError] = useState<string | null>(null);
   const lastSituationFetchRef = useRef<{ airport: string; time: number; conditions?: string } | null>(null);
+  const situationAbortControllerRef = useRef<AbortController | null>(null);
   
   const [matchedDaysData, setMatchedDaysData] = useState<MatchedDaysResponse | null>(null);
   const [matchedDaysLoading, setMatchedDaysLoading] = useState(false);
@@ -115,6 +116,8 @@ export function PilotDashboard() {
     pireps: true,
   });
   const lastMatchedDaysFetchRef = useRef<{ airport: string; time: number; category: string } | null>(null);
+  const matchedDaysAbortControllerRef = useRef<AbortController | null>(null);
+  const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -134,7 +137,8 @@ export function PilotDashboard() {
     airportId: string, 
     eta: Date, 
     weather?: { visibilitySM?: number; ceilingFt?: number; windKt?: number; precipitation?: string; hadIFR?: boolean; trend?: string; },
-    forceRefresh?: boolean
+    forceRefresh?: boolean,
+    signal?: AbortSignal
   ) => {
     const conditionsKey = weather ? JSON.stringify(weather) : '';
     const lastFetch = lastSituationFetchRef.current;
@@ -148,22 +152,30 @@ export function PilotDashboard() {
     setArrivalSituationError(null);
     
     try {
-      const situation = await pilotApi.getArrivalSituation(airportId, eta, weather);
-      setArrivalSituation(situation);
-      lastSituationFetchRef.current = { airport: airportId, time: eta.getTime(), conditions: conditionsKey };
+      const situation = await pilotApi.getArrivalSituation(airportId, eta, weather, signal);
+      if (!signal?.aborted) {
+        setArrivalSituation(situation);
+        lastSituationFetchRef.current = { airport: airportId, time: eta.getTime(), conditions: conditionsKey };
+      }
     } catch (err) {
+      if (signal?.aborted) {
+        return;
+      }
       console.error('Failed to fetch arrival situation:', err);
       setArrivalSituationError(err instanceof Error ? err.message : 'Failed to load arrival situation');
       setArrivalSituation(null);
     } finally {
-      setArrivalSituationLoading(false);
+      if (!signal?.aborted) {
+        setArrivalSituationLoading(false);
+      }
     }
   }, []);
 
   const fetchMatchedDays = useCallback(async (
     airportId: string,
     eta: Date,
-    category: FlightCategory
+    category: FlightCategory,
+    signal?: AbortSignal
   ) => {
     const lastFetch = lastMatchedDaysFetchRef.current;
     if (lastFetch && lastFetch.airport === airportId && 
@@ -175,19 +187,37 @@ export function PilotDashboard() {
     setMatchedDaysLoading(true);
     
     try {
-      const data = await pilotApi.getMatchedDaysArrivals(airportId, eta, category, { maxDays: 10 });
-      setMatchedDaysData(data);
-      lastMatchedDaysFetchRef.current = { airport: airportId, time: eta.getTime(), category };
+      const data = await pilotApi.getMatchedDaysArrivals(airportId, eta, category, { maxDays: 10 }, signal);
+      if (!signal?.aborted) {
+        setMatchedDaysData(data);
+        lastMatchedDaysFetchRef.current = { airport: airportId, time: eta.getTime(), category };
+      }
     } catch (err) {
+      if (signal?.aborted) {
+        return;
+      }
       console.error('Failed to fetch matched days:', err);
       setMatchedDaysData(null);
     } finally {
-      setMatchedDaysLoading(false);
+      if (!signal?.aborted) {
+        setMatchedDaysLoading(false);
+      }
     }
   }, []);
 
   useEffect(() => {
     if (!selectedAirport || !connectionStatus.connected) return;
+    
+    if (debounceTimeoutRef.current) {
+      clearTimeout(debounceTimeoutRef.current);
+    }
+    
+    if (situationAbortControllerRef.current) {
+      situationAbortControllerRef.current.abort();
+    }
+    if (matchedDaysAbortControllerRef.current) {
+      matchedDaysAbortControllerRef.current.abort();
+    }
     
     const isNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
     if (isNow) {
@@ -198,14 +228,33 @@ export function PilotDashboard() {
       return;
     }
     
-    const weather = airportOverview?.weather ? {
-      visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
-      ceilingFt: airportOverview.weather.ceiling || undefined,
-      windKt: airportOverview.weather.wind?.speed,
-    } : undefined;
+    debounceTimeoutRef.current = setTimeout(() => {
+      const weather = airportOverview?.weather ? {
+        visibilitySM: typeof airportOverview.weather.visibility === 'number' ? airportOverview.weather.visibility : undefined,
+        ceilingFt: airportOverview.weather.ceiling || undefined,
+        windKt: airportOverview.weather.wind?.speed,
+      } : undefined;
+      
+      const situationController = new AbortController();
+      const matchedDaysController = new AbortController();
+      situationAbortControllerRef.current = situationController;
+      matchedDaysAbortControllerRef.current = matchedDaysController;
+      
+      fetchArrivalSituation(selectedAirport, selectedTime, weather, false, situationController.signal);
+      fetchMatchedDays(selectedAirport, selectedTime, activeWeatherCategory, matchedDaysController.signal);
+    }, 400);
     
-    fetchArrivalSituation(selectedAirport, selectedTime, weather);
-    fetchMatchedDays(selectedAirport, selectedTime, activeWeatherCategory);
+    return () => {
+      if (debounceTimeoutRef.current) {
+        clearTimeout(debounceTimeoutRef.current);
+      }
+      if (situationAbortControllerRef.current) {
+        situationAbortControllerRef.current.abort();
+      }
+      if (matchedDaysAbortControllerRef.current) {
+        matchedDaysAbortControllerRef.current.abort();
+      }
+    };
   }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, fetchMatchedDays, airportOverview?.weather, activeWeatherCategory]);
 
   // Save map display options to localStorage whenever they change
