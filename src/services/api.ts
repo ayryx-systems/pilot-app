@@ -517,6 +517,7 @@ class PilotApiService {
     airport: string;
     totalArrivals: number;
     arrivals: Array<{ hour: number; duration: number; type: string | null }>;
+    weatherTimeline?: Record<string, string>;
     timestamp: string;
   }> {
     try {

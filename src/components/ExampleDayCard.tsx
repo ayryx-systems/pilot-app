@@ -10,7 +10,7 @@ import {
   ScatterController,
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
-import { ExampleDay } from '@/types';
+import { ExampleDay, FlightCategory } from '@/types';
 import { pilotApi } from '@/services/api';
 import { ChevronDown, ChevronUp, Calendar, Loader2 } from 'lucide-react';
 import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
@@ -35,10 +35,13 @@ interface HistoricalArrival {
   type: string | null;
 }
 
+type WeatherTimeline = Record<string, FlightCategory>;
+
 export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [arrivals, setArrivals] = useState<HistoricalArrival[] | null>(null);
+  const [weatherTimeline, setWeatherTimeline] = useState<WeatherTimeline | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const categoryColors = FLIGHT_CATEGORY_COLORS[example.category] || FLIGHT_CATEGORY_COLORS.unknown;
@@ -59,6 +62,9 @@ export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
     try {
       const data = await pilotApi.getHistoricalDayData(airportCode, example.date);
       setArrivals(data.arrivals);
+      if (data.weatherTimeline) {
+        setWeatherTimeline(data.weatherTimeline as WeatherTimeline);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load data');
     } finally {
@@ -186,6 +192,9 @@ export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
               <div className="h-36 bg-slate-900/50 rounded p-2">
                 <Scatter data={chartData} options={chartOptions} />
               </div>
+              {weatherTimeline && (
+                <WeatherTimelineBar timeline={weatherTimeline} />
+              )}
               <div className="mt-1 flex justify-between text-[10px] text-gray-500">
                 <span>Time of day (local)</span>
                 <span>Duration from 50nm (min)</span>
@@ -194,6 +203,40 @@ export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function WeatherTimelineBar({ timeline }: { timeline: WeatherTimeline }) {
+  const hours = Array.from({ length: 18 }, (_, i) => i + 6);
+  
+  const getHourCategory = (hour: number): FlightCategory => {
+    const slot = `${String(hour).padStart(2, '0')}:00`;
+    return timeline[slot] || 'VFR';
+  };
+  
+  return (
+    <div className="mt-1 mx-2">
+      <div className="flex h-3 rounded overflow-hidden">
+        {hours.map(hour => {
+          const category = getHourCategory(hour);
+          const colors = FLIGHT_CATEGORY_COLORS[category] || FLIGHT_CATEGORY_COLORS.unknown;
+          return (
+            <div
+              key={hour}
+              className="flex-1"
+              style={{ backgroundColor: colors.color }}
+              title={`${hour}:00 - ${category}`}
+            />
+          );
+        })}
+      </div>
+      <div className="flex justify-between text-[8px] text-gray-500 mt-0.5 px-0.5">
+        <span>6</span>
+        <span>12</span>
+        <span>18</span>
+        <span>24</span>
+      </div>
     </div>
   );
 }
