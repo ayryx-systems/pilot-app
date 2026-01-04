@@ -556,6 +556,7 @@ export function ArrivalTimeline({
         airportCode={airportCode}
         isAtNow={isAtNow}
         selectedTime={selectedTime}
+        baselineMinutes={matchedDaysData?.baselineMinutes}
       />
     </div>
   );
@@ -566,9 +567,10 @@ interface ExampleDaysSectionProps {
   airportCode: string;
   isAtNow: boolean;
   selectedTime: Date;
+  baselineMinutes?: number;
 }
 
-function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime }: ExampleDaysSectionProps) {
+function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime, baselineMinutes }: ExampleDaysSectionProps) {
   const [expanded, setExpanded] = useState(false);
   
   if (isAtNow || !exampleDays || exampleDays.length === 0) {
@@ -610,6 +612,7 @@ function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime }:
               example={example}
               airportCode={airportCode}
               selectedHour={selectedHour}
+              baselineMinutes={baselineMinutes}
             />
           ))}
         </div>

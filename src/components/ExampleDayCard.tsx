@@ -29,6 +29,7 @@ interface ExampleDayCardProps {
   example: ExampleDay;
   airportCode: string;
   selectedHour?: number;
+  baselineMinutes?: number;
   onClose?: () => void;
 }
 
@@ -38,7 +39,7 @@ interface HistoricalArrival {
   type: string | null;
 }
 
-export function ExampleDayCard({ example, airportCode, selectedHour }: ExampleDayCardProps) {
+export function ExampleDayCard({ example, airportCode, selectedHour, baselineMinutes }: ExampleDayCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [arrivals, setArrivals] = useState<HistoricalArrival[] | null>(null);
@@ -111,6 +112,33 @@ export function ExampleDayCard({ example, airportCode, selectedHour }: ExampleDa
       };
     }
     
+    // Add baseline (median) horizontal line
+    if (baselineMinutes !== undefined && baselineMinutes > 0) {
+      annotations.baselineLine = {
+        type: 'line',
+        yMin: baselineMinutes,
+        yMax: baselineMinutes,
+        borderColor: 'rgba(156, 163, 175, 0.6)',
+        borderWidth: 1.5,
+        borderDash: [6, 3],
+        label: {
+          display: true,
+          content: `${Math.round(baselineMinutes)}m`,
+          position: 'end',
+          backgroundColor: 'rgba(156, 163, 175, 0.8)',
+          color: '#000',
+          font: { size: 8 },
+          padding: 2,
+        },
+      };
+    }
+    
+    // Calculate y-axis max from data, with sensible defaults
+    const maxDuration = arrivals 
+      ? Math.max(...arrivals.map(a => a.duration), 40)
+      : 40;
+    const yMax = Math.ceil(maxDuration / 10) * 10; // Round up to nearest 10
+    
     return {
       responsive: true,
       maintainAspectRatio: false,
@@ -143,17 +171,17 @@ export function ExampleDayCard({ example, airportCode, selectedHour }: ExampleDa
         },
         y: {
           min: 10,
-          max: 40,
           title: { display: false },
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
           ticks: {
             color: 'rgba(156, 163, 175, 0.7)',
             font: { size: 9 },
           },
+          suggestedMax: yMax,
         },
       },
     };
-  }, [selectedHour]);
+  }, [selectedHour, arrivals, baselineMinutes]);
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-');
