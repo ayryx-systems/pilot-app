@@ -39,6 +39,109 @@ export function useWeatherRadarAnimation({
   const radarTimeIndicatorRef = useRef<HTMLDivElement | null>(null);
   const radarFramesRef = useRef<WeatherRadarFrame[]>([]);
   const fadeAnimationFrameRef = useRef<number | null>(null);
+  const frameIndexRef = useRef<number>(0);
+
+  const startAnimation = () => {
+    if (radarOverlaysRef.current.length <= 1) return;
+    
+    if (radarAnimationIntervalRef.current) {
+      clearTimeout(radarAnimationIntervalRef.current as any);
+      clearInterval(radarAnimationIntervalRef.current as any);
+      radarAnimationIntervalRef.current = null;
+    }
+    if (fadeAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(fadeAnimationFrameRef.current);
+      fadeAnimationFrameRef.current = null;
+    }
+
+    const animateFrame = () => {
+      if (!displayOptions.showWeatherRadar) {
+        if (radarAnimationIntervalRef.current) {
+          clearTimeout(radarAnimationIntervalRef.current as any);
+          radarAnimationIntervalRef.current = null;
+        }
+        if (fadeAnimationFrameRef.current !== null) {
+          cancelAnimationFrame(fadeAnimationFrameRef.current);
+          fadeAnimationFrameRef.current = null;
+        }
+        return;
+      }
+
+      const overlays = radarOverlaysRef.current;
+      if (overlays.length === 0) {
+        return;
+      }
+      
+      if (frameIndexRef.current === overlays.length - 1) {
+        frameIndexRef.current = 0;
+      } else {
+        frameIndexRef.current = frameIndexRef.current + 1;
+      }
+      
+      setCurrentRadarFrameIndex(frameIndexRef.current);
+
+      const currentOverlay = overlays[frameIndexRef.current];
+      const previousIndex = frameIndexRef.current === 0 ? overlays.length - 1 : frameIndexRef.current - 1;
+      const previousOverlay = overlays[previousIndex];
+      
+      const fadeDuration = 400;
+      const startTime = performance.now();
+      
+      const easeInOutCubic = (t: number): number => {
+        return t < 0.5
+          ? 4 * t * t * t
+          : 1 - Math.pow(-2 * t + 2, 3) / 2;
+      };
+      
+      const fadeStep = (currentTime: number) => {
+        if (!displayOptions.showWeatherRadar) {
+          fadeAnimationFrameRef.current = null;
+          return;
+        }
+        
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / fadeDuration, 1);
+        const easedProgress = easeInOutCubic(progress);
+        
+        if (previousOverlay) {
+          const oldOpacity = 0.3 * (1 - easedProgress);
+          previousOverlay.setOpacity(oldOpacity);
+        }
+        
+        const newOpacity = 0.3 * easedProgress;
+        currentOverlay.setOpacity(newOpacity);
+        
+        if (progress < 1) {
+          fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
+        } else {
+          fadeAnimationFrameRef.current = null;
+          currentOverlay.setOpacity(0.3);
+          if (previousOverlay) {
+            previousOverlay.setOpacity(0);
+          }
+        }
+      };
+      
+      fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
+
+      if (radarTimeIndicatorRef.current && radarFramesRef.current[frameIndexRef.current]) {
+        const frameTime = airportCode 
+          ? formatAirportLocalTimeShort(radarFramesRef.current[frameIndexRef.current].timestampISO || new Date(radarFramesRef.current[frameIndexRef.current].timestamp).toISOString(), airportCode, baseline || undefined)
+          : new Date(radarFramesRef.current[frameIndexRef.current].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
+      }
+      
+      const isLastFrame = frameIndexRef.current === overlays.length - 1;
+      const delay = isLastFrame ? 3000 : 300;
+      
+      if (radarAnimationIntervalRef.current) {
+        clearTimeout(radarAnimationIntervalRef.current as any);
+      }
+      radarAnimationIntervalRef.current = setTimeout(animateFrame, delay) as any;
+    };
+    
+    radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
+  };
 
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current?.weather) return;
@@ -115,6 +218,12 @@ export function useWeatherRadarAnimation({
 
           if (framesUnchanged && radarOverlaysRef.current.length > 0) {
             console.log('[WeatherRadarAnimation] Frames unchanged, skipping reload');
+            
+            // Ensure animation is still running even though we skipped reload
+            if (!radarAnimationIntervalRef.current) {
+              startAnimation();
+            }
+            
             return;
           }
 
@@ -140,6 +249,7 @@ export function useWeatherRadarAnimation({
 
           setRadarFrames(frames);
           radarFramesRef.current = frames;
+          frameIndexRef.current = 0;
           setCurrentRadarFrameIndex(0);
 
           const bounds: [[number, number], [number, number]] = [
@@ -238,23 +348,11 @@ export function useWeatherRadarAnimation({
             radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
           }
 
-          // Clear any existing animation intervals before starting new animation
-          if (radarAnimationIntervalRef.current) {
-            clearTimeout(radarAnimationIntervalRef.current as any);
-            clearInterval(radarAnimationIntervalRef.current as any);
-            radarAnimationIntervalRef.current = null;
-          }
-          if (fadeAnimationFrameRef.current !== null) {
-            cancelAnimationFrame(fadeAnimationFrameRef.current);
-            fadeAnimationFrameRef.current = null;
-          }
-          
-          let frameIndex = 0;
-          
           // Special handling for single frame - show it statically without animation
           if (overlays.length === 1) {
             const singleOverlay = overlays[0];
             singleOverlay.setOpacity(0.3);
+            frameIndexRef.current = 0;
             setCurrentRadarFrameIndex(0);
             
             if (radarTimeIndicatorRef.current && radarFramesRef.current[0]) {
@@ -268,94 +366,7 @@ export function useWeatherRadarAnimation({
             return;
           }
           
-          const animateFrame = () => {
-            if (!displayOptions.showWeatherRadar) {
-              if (radarAnimationIntervalRef.current) {
-                clearTimeout(radarAnimationIntervalRef.current as any);
-                radarAnimationIntervalRef.current = null;
-              }
-              if (fadeAnimationFrameRef.current !== null) {
-                cancelAnimationFrame(fadeAnimationFrameRef.current);
-                fadeAnimationFrameRef.current = null;
-              }
-              return;
-            }
-
-            const overlays = radarOverlaysRef.current;
-            if (overlays.length === 0) {
-              console.warn('[WeatherRadarAnimation] No overlays available for animation');
-              return;
-            }
-            
-            if (frameIndex === overlays.length - 1) {
-              frameIndex = 0;
-            } else {
-              frameIndex = frameIndex + 1;
-            }
-            
-            setCurrentRadarFrameIndex(frameIndex);
-
-            const currentOverlay = overlays[frameIndex];
-            const previousIndex = frameIndex === 0 ? overlays.length - 1 : frameIndex - 1;
-            const previousOverlay = overlays[previousIndex];
-            
-            const fadeDuration = 400;
-            const startTime = performance.now();
-            
-            const easeInOutCubic = (t: number): number => {
-              return t < 0.5
-                ? 4 * t * t * t
-                : 1 - Math.pow(-2 * t + 2, 3) / 2;
-            };
-            
-            const fadeStep = (currentTime: number) => {
-              if (!displayOptions.showWeatherRadar) {
-                fadeAnimationFrameRef.current = null;
-                return;
-              }
-              
-              const elapsed = currentTime - startTime;
-              const progress = Math.min(elapsed / fadeDuration, 1);
-              const easedProgress = easeInOutCubic(progress);
-              
-              if (previousOverlay) {
-                const oldOpacity = 0.3 * (1 - easedProgress);
-                previousOverlay.setOpacity(oldOpacity);
-              }
-              
-              const newOpacity = 0.3 * easedProgress;
-              currentOverlay.setOpacity(newOpacity);
-              
-              if (progress < 1) {
-                fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
-              } else {
-                fadeAnimationFrameRef.current = null;
-                currentOverlay.setOpacity(0.3);
-                if (previousOverlay) {
-                  previousOverlay.setOpacity(0);
-                }
-              }
-            };
-            
-            fadeAnimationFrameRef.current = requestAnimationFrame(fadeStep);
-
-            if (radarTimeIndicatorRef.current && radarFramesRef.current[frameIndex]) {
-              const frameTime = airportCode 
-                ? formatAirportLocalTimeShort(radarFramesRef.current[frameIndex].timestampISO || new Date(radarFramesRef.current[frameIndex].timestamp).toISOString(), airportCode, baseline || undefined)
-                : new Date(radarFramesRef.current[frameIndex].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
-            }
-            
-            const isLastFrame = frameIndex === overlays.length - 1;
-            const delay = isLastFrame ? 3000 : 300;
-            
-            if (radarAnimationIntervalRef.current) {
-              clearTimeout(radarAnimationIntervalRef.current as any);
-            }
-            radarAnimationIntervalRef.current = setTimeout(animateFrame, delay) as any;
-          };
-          
-          radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
+          startAnimation();
 
         } catch (error) {
           console.error('[WeatherRadarAnimation] Failed to add animated weather radar:', error);
