@@ -40,6 +40,7 @@ class WeatherApiError extends Error {
 
 class WeatherService {
   private cache = new Map<string, { data: any; timestamp: number; expiry: number }>();
+  private radarETag: string | null = null;
 
   // NOTE: Weather data services are now proxied through the backend API
   // The following object documents the original external services for reference:
@@ -414,23 +415,45 @@ class WeatherService {
    * Get weather radar animation frames from backend
    * Returns the most recent 12 frames (1 hour worth, 5-minute intervals)
    * Fetches every 5 minutes when auto-refresh runs
+   * Uses ETag for conditional requests to avoid unnecessary downloads
    */
   async getWeatherRadarAnimation(): Promise<Array<{ timestamp: number; timestampISO: string; imageData: string }>> {
     try {
       const apiBaseUrl = getApiBaseUrl();
       const url = `${apiBaseUrl}/api/pilot/weather-radar/animation`;
 
-      const response = await fetch(url, {
-        headers: {
-          'Accept': 'application/json'
+      const headers: HeadersInit = {
+        'Accept': 'application/json'
+      };
+
+      if (this.radarETag) {
+        headers['If-None-Match'] = this.radarETag;
+      }
+
+      const response = await fetch(url, { headers });
+
+      if (response.status === 304) {
+        const cacheKey = 'radar_animation_frames';
+        const cached = this.getCachedData(cacheKey, 5);
+        if (cached) {
+          return cached;
         }
-      });
+      }
 
       if (!response.ok) {
         throw new WeatherApiError(`Weather radar animation API error: ${response.status} ${response.statusText}`, response.status);
       }
 
+      const etag = response.headers.get('ETag');
+      if (etag) {
+        this.radarETag = etag;
+      }
+
       const frames = await response.json();
+      
+      const cacheKey = 'radar_animation_frames';
+      this.setCachedData(cacheKey, frames, 5);
+      
       return frames;
 
     } catch (error) {

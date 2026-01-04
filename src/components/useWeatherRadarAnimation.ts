@@ -105,6 +105,19 @@ export function useWeatherRadarAnimation({
             return;
           }
 
+          const existingFrames = radarFramesRef.current;
+          const existingTimestamps = existingFrames.map(f => f.timestamp).sort();
+          const newTimestamps = frames.map(f => f.timestamp).sort();
+
+          const framesUnchanged = existingFrames.length === frames.length &&
+            existingTimestamps.length === newTimestamps.length &&
+            existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+
+          if (framesUnchanged && radarOverlaysRef.current.length > 0) {
+            console.log('[WeatherRadarAnimation] Frames unchanged, skipping reload');
+            return;
+          }
+
           if (radarOverlaysRef.current.length > 0 && layerGroupsRef.current.weather) {
             radarOverlaysRef.current.forEach(overlay => {
               try {
@@ -397,10 +410,20 @@ export function useWeatherRadarAnimation({
         const frames = await weatherService.getWeatherRadarAnimation();
 
         if (frames.length > 0) {
-          setRadarFrames([]);
-          setTimeout(() => {
-            setRadarFrames(frames);
-          }, 100);
+          const existingTimestamps = radarFramesRef.current.map(f => f.timestamp).sort();
+          const newTimestamps = frames.map(f => f.timestamp).sort();
+          
+          const framesUnchanged = existingTimestamps.length === newTimestamps.length &&
+            existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+
+          if (!framesUnchanged) {
+            setRadarFrames([]);
+            setTimeout(() => {
+              setRadarFrames(frames);
+            }, 100);
+          } else {
+            console.log('[WeatherRadarAnimation] Refresh: frames unchanged, skipping update');
+          }
         }
       } catch (error) {
         console.error('[WeatherRadarAnimation] Failed to refresh radar frames:', error);
