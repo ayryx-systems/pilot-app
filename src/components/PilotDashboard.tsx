@@ -62,15 +62,6 @@ export function PilotDashboard() {
     }
   }, [selectedAirport]);
 
-  // Debug data structure to help identify issues
-  useEffect(() => {
-    if (tracks && tracks.length > 0) {
-      console.log('[PilotDashboard] Track data structure:', tracks[0]);
-    }
-    if (pireps && pireps.length > 0) {
-      console.log('[PilotDashboard] PIREP data structure:', pireps[0]);
-    }
-  }, [tracks, pireps]);
 
   // Load map display options from localStorage or use defaults
   const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>(() => {
