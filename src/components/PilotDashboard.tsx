@@ -604,6 +604,21 @@ export function PilotDashboard() {
                 />
               )}
 
+              {/* Situation Overview - Conditions at top */}
+              <SituationOverview
+                key={`situation-${selectedAirport}`}
+                summary={summary}
+                weather={airportOverview?.weather}
+                loading={loading}
+                connectionStatus={connectionStatus}
+                airportCode={selectedAirport || undefined}
+                summaryMetadata={summaryMetadata}
+                baseline={baseline}
+                baselineLoading={baselineLoading}
+                isDemo={selectedAirport === 'KDEN'}
+                selectedTime={selectedTime}
+              />
+
               {/* Weather Outlook - shown when not at NOW */}
               {selectedAirport && Math.abs(selectedTime.getTime() - Date.now()) >= 60000 && (
                 <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-3">
@@ -683,21 +698,6 @@ export function PilotDashboard() {
                   </div>
                 )}
               </div>
-
-              {/* Situation Overview */}
-              <SituationOverview
-                key={`situation-${selectedAirport}`}
-                summary={summary}
-                weather={airportOverview?.weather}
-                loading={loading}
-                connectionStatus={connectionStatus}
-                airportCode={selectedAirport || undefined}
-                summaryMetadata={summaryMetadata}
-                baseline={baseline}
-                baselineLoading={baselineLoading}
-                isDemo={selectedAirport === 'KDEN'}
-                selectedTime={selectedTime}
-              />
 
               {/* FAA NAS Status */}
               {selectedAirport && (
