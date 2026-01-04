@@ -79,7 +79,7 @@ export const SituationOverview = memo(function SituationOverview({
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
-  const [isWeatherExpanded, setIsWeatherExpanded] = useState(true);
+  const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
 
   // All hooks must be called before any early returns
   const filteredConditions = useMemo(() => {
