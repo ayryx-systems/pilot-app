@@ -236,7 +236,7 @@ export function ArrivalTimeline({
       label: {
         display: true,
         content: 'NOW',
-        position: 'start',
+        position: 'end',
         backgroundColor: 'rgba(239, 68, 68, 0.9)',
         color: 'white',
         font: { size: 10, weight: 'bold' },
@@ -290,7 +290,7 @@ export function ArrivalTimeline({
         label: {
           display: true,
           content: 'ETA',
-          position: 'start',
+          position: 'end',
           backgroundColor: 'rgba(59, 130, 246, 0.9)',
           color: 'white',
           font: { size: 10, weight: 'bold' },

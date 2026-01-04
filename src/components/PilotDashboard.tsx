@@ -219,6 +219,8 @@ export function PilotDashboard() {
       matchedDaysAbortControllerRef.current.abort();
     }
     
+    setMatchedDaysData(null);
+    
     const isNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
     if (isNow) {
       setArrivalSituation(null);
