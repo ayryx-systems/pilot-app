@@ -115,6 +115,7 @@ export function ArrivalTimeline({
   const chartData = useMemo(() => {
     const datasets: ChartData<'scatter'>['datasets'] = [];
     const now = Date.now();
+    const chartMax = isAtNow ? 0.5 : Math.max(hoursAhead + 0.5, 1);
     
     if (arrivals && arrivals.length > 0) {
       const categoryData: Record<string, Arrival[]> = {};
@@ -162,7 +163,6 @@ export function ArrivalTimeline({
       const nowLocalHoursSinceMidnight = nowLocalHours + nowLocalMinutes / 60;
       
       const baselinePoints: Array<{ x: number; y: number }> = [];
-      const maxHours = isAtNow ? 0.5 : hoursAhead + 0.5;
       
       for (const [slot, slotData] of Object.entries(seasonalBaseline.byTimeSlot)) {
         if (!slotData.medianTimeFrom50nm) continue;
@@ -170,23 +170,26 @@ export function ArrivalTimeline({
         const [hours, minutes] = slot.split(':').map(Number);
         const slotHoursSinceMidnight = hours + minutes / 60;
         
-        let hoursFromNow: number;
+        let hoursFromNow = slotHoursSinceMidnight - nowLocalHoursSinceMidnight;
         
-        if (slotHoursSinceMidnight >= nowLocalHoursSinceMidnight) {
-          hoursFromNow = slotHoursSinceMidnight - nowLocalHoursSinceMidnight;
-        } else {
-          hoursFromNow = slotHoursSinceMidnight - nowLocalHoursSinceMidnight + 24;
-        }
+        if (hoursFromNow < -12) hoursFromNow += 24;
+        if (hoursFromNow > 24) hoursFromNow -= 24;
         
-        if (hoursFromNow > 12) {
-          hoursFromNow -= 24;
-        }
-        
-        if (hoursFromNow >= -2 && hoursFromNow <= maxHours) {
+        if (hoursFromNow >= -2 && hoursFromNow <= chartMax) {
           baselinePoints.push({
             x: hoursFromNow,
             y: slotData.medianTimeFrom50nm / 60,
           });
+        }
+        
+        if (!isAtNow && chartMax > 12) {
+          let hoursFromNowNextDay = hoursFromNow + 24;
+          if (hoursFromNowNextDay >= -2 && hoursFromNowNextDay <= chartMax) {
+            baselinePoints.push({
+              x: hoursFromNowNextDay,
+              y: slotData.medianTimeFrom50nm / 60,
+            });
+          }
         }
       }
       
@@ -214,7 +217,7 @@ export function ArrivalTimeline({
       datasets, 
       timeRange: { 
         min: -2, 
-        max: isAtNow ? 0.5 : Math.max(hoursAhead + 0.5, 1) 
+        max: chartMax 
       } 
     };
   }, [arrivals, airportCode, baseline, selectedTime, isAtNow, hoursAhead]);
@@ -241,14 +244,38 @@ export function ArrivalTimeline({
     };
 
     if (!isAtNow) {
-      const bgColor = WEATHER_COLORS[weatherCategory] || WEATHER_COLORS.unknown;
-      annotations['weatherBackground'] = {
+      const baseColor = WEATHER_BORDER_COLORS[weatherCategory] || WEATHER_BORDER_COLORS.unknown;
+      const gradientWidth = Math.min(2, hoursAhead * 0.3);
+      
+      annotations['weatherCore'] = {
         type: 'box',
-        xMin: 0,
-        xMax: hoursAhead + 0.5,
+        xMin: hoursAhead - gradientWidth,
+        xMax: hoursAhead + gradientWidth,
         yMin: 0,
         yMax: 50,
-        backgroundColor: bgColor,
+        backgroundColor: baseColor.replace('0.8)', '0.2)'),
+        borderColor: 'transparent',
+        drawTime: 'beforeDatasetsDraw',
+      };
+      
+      annotations['weatherFadeLeft'] = {
+        type: 'box',
+        xMin: Math.max(0, hoursAhead - gradientWidth * 2),
+        xMax: hoursAhead - gradientWidth,
+        yMin: 0,
+        yMax: 50,
+        backgroundColor: baseColor.replace('0.8)', '0.08)'),
+        borderColor: 'transparent',
+        drawTime: 'beforeDatasetsDraw',
+      };
+      
+      annotations['weatherFadeRight'] = {
+        type: 'box',
+        xMin: hoursAhead + gradientWidth,
+        xMax: hoursAhead + gradientWidth * 2,
+        yMin: 0,
+        yMax: 50,
+        backgroundColor: baseColor.replace('0.8)', '0.08)'),
         borderColor: 'transparent',
         drawTime: 'beforeDatasetsDraw',
       };
@@ -405,9 +432,10 @@ export function ArrivalTimeline({
           },
           ticks: {
             color: 'rgba(156, 163, 175, 0.9)',
+            stepSize: 2,
             callback: (value) => {
-              const v = Number(value);
-              if (v === 0) return 'Now';
+              const v = Math.round(Number(value) * 10) / 10;
+              if (Math.abs(v) < 0.01) return 'Now';
               if (v < 0) return `${Math.abs(v)}h ago`;
               return `+${v}h`;
             },
@@ -455,9 +483,15 @@ export function ArrivalTimeline({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-semibold text-gray-200">
-          Arrival Duration Timeline
-        </h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-sm font-semibold text-gray-200">
+            Arrival Duration Timeline
+          </h3>
+          <div className="flex items-center gap-1 text-[10px] text-gray-400">
+            <span className="inline-block w-4 border-t-2 border-dashed border-white/50"></span>
+            <span>Median baseline</span>
+          </div>
+        </div>
         {!isAtNow && matchedDaysData?.aggregatedStats && (
           <div className="flex items-center gap-2 text-xs">
             <span 
