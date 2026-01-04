@@ -219,8 +219,10 @@ export function useWeatherRadarAnimation({
           if (framesUnchanged && radarOverlaysRef.current.length > 0) {
             console.log('[WeatherRadarAnimation] Frames unchanged, skipping reload');
             
-            // Ensure animation is still running even though we skipped reload
-            if (!radarAnimationIntervalRef.current) {
+            // Always restart animation when frames are unchanged to ensure it keeps running
+            // The cleanup function clears it when dependencies change, so we need to restart it
+            if (radarOverlaysRef.current.length > 1) {
+              console.log('[WeatherRadarAnimation] Restarting animation to ensure it continues...');
               startAnimation();
             }
             
@@ -382,6 +384,7 @@ export function useWeatherRadarAnimation({
       if (radarAnimationIntervalRef.current) {
         clearTimeout(radarAnimationIntervalRef.current as any);
         clearInterval(radarAnimationIntervalRef.current as any);
+        radarAnimationIntervalRef.current = null;
       }
       if (fadeAnimationFrameRef.current !== null) {
         cancelAnimationFrame(fadeAnimationFrameRef.current);
