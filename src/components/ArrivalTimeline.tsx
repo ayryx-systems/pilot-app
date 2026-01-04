@@ -111,6 +111,7 @@ export function ArrivalTimeline({
   
   const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
   const hoursAhead = (selectedTime.getTime() - Date.now()) / (1000 * 60 * 60);
+  const currentSeason = getSeason(new Date(), baseline);
 
   const chartData = useMemo(() => {
     const datasets: ChartData<'scatter'>['datasets'] = [];
@@ -489,7 +490,7 @@ export function ArrivalTimeline({
           </h3>
           <div className="flex items-center gap-1 text-[10px] text-gray-400">
             <span className="inline-block w-4 border-t-2 border-dashed border-white/50"></span>
-            <span>Median baseline</span>
+            <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>
           </div>
         </div>
         {!isAtNow && matchedDaysData?.aggregatedStats && (
