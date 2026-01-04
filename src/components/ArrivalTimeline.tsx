@@ -555,6 +555,7 @@ export function ArrivalTimeline({
         exampleDays={matchedDaysData?.exampleDays}
         airportCode={airportCode}
         isAtNow={isAtNow}
+        selectedTime={selectedTime}
       />
     </div>
   );
@@ -564,14 +565,19 @@ interface ExampleDaysSectionProps {
   exampleDays?: MatchedDaysResponse['exampleDays'];
   airportCode: string;
   isAtNow: boolean;
+  selectedTime: Date;
 }
 
-function ExampleDaysSection({ exampleDays, airportCode, isAtNow }: ExampleDaysSectionProps) {
+function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime }: ExampleDaysSectionProps) {
   const [expanded, setExpanded] = useState(false);
   
   if (isAtNow || !exampleDays || exampleDays.length === 0) {
     return null;
   }
+  
+  // Convert selectedTime to local hour for the marker
+  const localTime = utcToAirportLocal(selectedTime, airportCode);
+  const selectedHour = localTime.getHours() + localTime.getMinutes() / 60;
   
   return (
     <div className="mt-4 border-t border-gray-700/50 pt-3">
@@ -602,6 +608,7 @@ function ExampleDaysSection({ exampleDays, airportCode, isAtNow }: ExampleDaysSe
               key={`${example.date}-${idx}`}
               example={example}
               airportCode={airportCode}
+              selectedHour={selectedHour}
             />
           ))}
         </div>

@@ -9,6 +9,7 @@ import {
   Tooltip,
   ScatterController,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Scatter } from 'react-chartjs-2';
 import { ExampleDay, FlightCategory } from '@/types';
 import { pilotApi } from '@/services/api';
@@ -20,12 +21,14 @@ ChartJS.register(
   PointElement,
   LineElement,
   Tooltip,
-  ScatterController
+  ScatterController,
+  annotationPlugin
 );
 
 interface ExampleDayCardProps {
   example: ExampleDay;
   airportCode: string;
+  selectedHour?: number;
   onClose?: () => void;
 }
 
@@ -35,7 +38,7 @@ interface HistoricalArrival {
   type: string | null;
 }
 
-export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
+export function ExampleDayCard({ example, airportCode, selectedHour }: ExampleDayCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [arrivals, setArrivals] = useState<HistoricalArrival[] | null>(null);
@@ -85,45 +88,72 @@ export function ExampleDayCard({ example, airportCode }: ExampleDayCardProps) {
     };
   }, [arrivals]);
 
-  const chartOptions = useMemo(() => ({
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (context: { parsed: { x: number; y: number } }) => {
-            const hour = Math.floor(context.parsed.x);
-            const min = Math.round((context.parsed.x - hour) * 60);
-            return `${hour}:${String(min).padStart(2, '0')} - ${context.parsed.y.toFixed(1)}min`;
+  const chartOptions = useMemo(() => {
+    const annotations: Record<string, unknown> = {};
+    
+    if (selectedHour !== undefined && selectedHour >= 6 && selectedHour <= 24) {
+      annotations.etaLine = {
+        type: 'line',
+        xMin: selectedHour,
+        xMax: selectedHour,
+        borderColor: 'rgba(251, 191, 36, 0.8)',
+        borderWidth: 2,
+        borderDash: [4, 4],
+        label: {
+          display: true,
+          content: 'ETA',
+          position: 'start',
+          backgroundColor: 'rgba(251, 191, 36, 0.9)',
+          color: '#000',
+          font: { size: 9, weight: 'bold' },
+          padding: 2,
+        },
+      };
+    }
+    
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (context: { parsed: { x: number; y: number } }) => {
+              const hour = Math.floor(context.parsed.x);
+              const min = Math.round((context.parsed.x - hour) * 60);
+              return `${hour}:${String(min).padStart(2, '0')} - ${context.parsed.y.toFixed(1)}min`;
+            },
+          },
+        },
+        annotation: {
+          annotations,
+        },
+      },
+      scales: {
+        x: {
+          min: 6,
+          max: 24,
+          title: { display: false },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: {
+            color: 'rgba(156, 163, 175, 0.7)',
+            font: { size: 9 },
+            callback: (value: number | string) => `${value}:00`,
+          },
+        },
+        y: {
+          min: 10,
+          max: 40,
+          title: { display: false },
+          grid: { color: 'rgba(255, 255, 255, 0.05)' },
+          ticks: {
+            color: 'rgba(156, 163, 175, 0.7)',
+            font: { size: 9 },
           },
         },
       },
-    },
-    scales: {
-      x: {
-        min: 6,
-        max: 24,
-        title: { display: false },
-        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-        ticks: {
-          color: 'rgba(156, 163, 175, 0.7)',
-          font: { size: 9 },
-          callback: (value: number | string) => `${value}:00`,
-        },
-      },
-      y: {
-        min: 10,
-        max: 40,
-        title: { display: false },
-        grid: { color: 'rgba(255, 255, 255, 0.05)' },
-        ticks: {
-          color: 'rgba(156, 163, 175, 0.7)',
-          font: { size: 9 },
-        },
-      },
-    },
-  }), []);
+    };
+  }, [selectedHour]);
 
   const formatDate = (dateStr: string) => {
     const [year, month, day] = dateStr.split('-');
