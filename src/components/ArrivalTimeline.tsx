@@ -576,8 +576,9 @@ function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime }:
   }
   
   // Convert selectedTime to local hour for the marker
+  // Note: utcToAirportLocal stores local time in UTC fields, so use getUTCHours
   const localTime = utcToAirportLocal(selectedTime, airportCode);
-  const selectedHour = localTime.getHours() + localTime.getMinutes() / 60;
+  const selectedHour = localTime.getUTCHours() + localTime.getUTCMinutes() / 60;
   
   return (
     <div className="mt-4 border-t border-gray-700/50 pt-3">
