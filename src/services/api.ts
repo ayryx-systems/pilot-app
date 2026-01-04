@@ -505,6 +505,33 @@ class PilotApiService {
   }
 
   /**
+   * Fetch historical day data for example day drilldown
+   * @param airportId - Airport ICAO code
+   * @param date - Date in YYYY-MM-DD format
+   */
+  async getHistoricalDayData(
+    airportId: string,
+    date: string
+  ): Promise<{
+    date: string;
+    airport: string;
+    totalArrivals: number;
+    arrivals: Array<{ hour: number; duration: number; type: string | null }>;
+    timestamp: string;
+  }> {
+    try {
+      const response = await this.fetchWithTimeout(
+        `${API_BASE_URL}/api/pilot/${airportId}/historical-day/${date}`,
+        { cache: 'default' }
+      );
+      return await this.handleResponse(response);
+    } catch (error) {
+      console.error(`Failed to fetch historical day data for ${date}:`, error instanceof Error ? error.message : 'Unknown error');
+      throw error;
+    }
+  }
+
+  /**
    * Health check
    */
   async checkHealth(): Promise<{ status: string; timestamp: string }> {

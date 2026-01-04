@@ -573,6 +573,25 @@ export interface MatchedDay {
   dayOfWeek: number;
 }
 
+export interface ExampleDay {
+  date: string;
+  category: FlightCategory;
+  p50: number;
+  arrivalCount: number;
+}
+
+export interface HistoricalDayData {
+  date: string;
+  airport: string;
+  totalArrivals: number;
+  arrivals: Array<{
+    hour: number;
+    duration: number;
+    type: string | null;
+  }>;
+  timestamp: string;
+}
+
 export interface MatchedDaysResponse {
   airportId: string;
   airport: string;
@@ -594,6 +613,7 @@ export interface MatchedDaysResponse {
   } | null;
   matchedDays: MatchedDay[];
   arrivals: HistoricalArrival[];
+  exampleDays?: ExampleDay[];
   timestamp: string;
   insufficientData?: boolean;
   message?: string;

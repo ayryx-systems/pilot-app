@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useCallback } from 'react';
+import React, { useMemo, useRef, useCallback, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -20,6 +20,8 @@ import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData, HistoricalArrival, FlightCategory, MatchedDaysResponse } from '@/types';
 import { utcToAirportLocal, getSeason } from '@/utils/airportTime';
 import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
+import { ChevronDown, ChevronUp, History } from 'lucide-react';
+import { ExampleDayCard } from './ExampleDayCard';
 
 ChartJS.register(
   CategoryScale,
@@ -546,6 +548,62 @@ export function ArrivalTimeline({
               {matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m
             </div>
           </div>
+        </div>
+      )}
+      
+      <ExampleDaysSection 
+        exampleDays={matchedDaysData?.exampleDays}
+        airportCode={airportCode}
+        isAtNow={isAtNow}
+      />
+    </div>
+  );
+}
+
+interface ExampleDaysSectionProps {
+  exampleDays?: MatchedDaysResponse['exampleDays'];
+  airportCode: string;
+  isAtNow: boolean;
+}
+
+function ExampleDaysSection({ exampleDays, airportCode, isAtNow }: ExampleDaysSectionProps) {
+  const [expanded, setExpanded] = useState(false);
+  
+  if (isAtNow || !exampleDays || exampleDays.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="mt-4 border-t border-gray-700/50 pt-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between text-sm text-gray-300 hover:text-gray-100 transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <History className="w-4 h-4" />
+          <span className="font-medium">Similar Historical Days</span>
+          <span className="text-xs text-gray-500">({exampleDays.length} examples)</span>
+        </div>
+        {expanded ? (
+          <ChevronUp className="w-4 h-4" />
+        ) : (
+          <ChevronDown className="w-4 h-4" />
+        )}
+      </button>
+      
+      {expanded && (
+        <div className="mt-3 space-y-2">
+          <p className="text-xs text-gray-500 mb-2">
+            These historical days had similar weather conditions at this time slot. 
+            Click to see their full arrival patterns.
+          </p>
+          {exampleDays.map((example, idx) => (
+            <ExampleDayCard
+              key={`${example.date}-${idx}`}
+              example={example}
+              airportCode={airportCode}
+            />
+          ))}
         </div>
       )}
     </div>
