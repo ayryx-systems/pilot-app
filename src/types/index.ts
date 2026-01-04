@@ -578,6 +578,7 @@ export interface ExampleDay {
   category: FlightCategory;
   p50: number;
   arrivalCount: number;
+  weather?: Record<number, FlightCategory>;
 }
 
 export interface HistoricalDayData {
