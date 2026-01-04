@@ -8,15 +8,15 @@ import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalTimeline } from './ArrivalTimeline';
-import { WeatherCategorySlider } from './WeatherCategorySlider';
+import { WeatherOutlook, deriveWeatherCategoryFromTAF } from './WeatherOutlook';
+import { ETASelector } from './ETASelector';
 import { Arrival, ArrivalSituationResponse, MatchedDaysResponse, FlightCategory } from '@/types';
 import { MapControls } from './MapControls';
-import { TimeSlider } from './TimeSlider';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
+import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X, ChevronDown, ChevronUp } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
@@ -118,7 +118,26 @@ export function PilotDashboard() {
   const [matchedDaysData, setMatchedDaysData] = useState<MatchedDaysResponse | null>(null);
   const [matchedDaysLoading, setMatchedDaysLoading] = useState(false);
   const [weatherCategory, setWeatherCategory] = useState<FlightCategory>('VFR');
+  const [isManualWeather, setIsManualWeather] = useState(false);
+  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+    weather: false,
+    pireps: true,
+  });
   const lastMatchedDaysFetchRef = useRef<{ airport: string; time: number; category: string } | null>(null);
+
+  const toggleSection = (section: string) => {
+    setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
+  };
+
+  const tafCategory = deriveWeatherCategoryFromTAF(airportOverview?.weather, selectedTime);
+  
+  const activeWeatherCategory = isManualWeather ? weatherCategory : tafCategory;
+  
+  useEffect(() => {
+    if (!isManualWeather) {
+      setWeatherCategory(tafCategory);
+    }
+  }, [tafCategory, isManualWeather]);
 
   const fetchArrivalSituation = useCallback(async (
     airportId: string, 
@@ -195,8 +214,8 @@ export function PilotDashboard() {
     } : undefined;
     
     fetchArrivalSituation(selectedAirport, selectedTime, weather);
-    fetchMatchedDays(selectedAirport, selectedTime, weatherCategory);
-  }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, fetchMatchedDays, airportOverview?.weather, weatherCategory]);
+    fetchMatchedDays(selectedAirport, selectedTime, activeWeatherCategory);
+  }, [selectedAirport, selectedTime, connectionStatus.connected, fetchArrivalSituation, fetchMatchedDays, airportOverview?.weather, activeWeatherCategory]);
 
   // Save map display options to localStorage whenever they change
   useEffect(() => {
@@ -527,18 +546,6 @@ export function PilotDashboard() {
         </div>
       )}
 
-      {/* Time Slider - Always visible when airport selected */}
-      {selectedAirport && (
-        <TimeSlider
-          airportCode={selectedAirport}
-          selectedTime={selectedTime}
-          onTimeChange={setSelectedTime}
-          minHoursAhead={0}
-          maxHoursAhead={48}
-          baseline={baseline}
-        />
-      )}
-
       {/* Main Content: Split Screen Layout for Landscape */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
         {/* Map Section - Left Side (full width on mobile, flexible on desktop) */}
@@ -578,7 +585,6 @@ export function PilotDashboard() {
               ref={scrollContainerRef} 
               className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3"
               onScroll={(e) => {
-                // Track scroll via React event
                 const target = e.currentTarget;
                 if (!isRestoringRef.current) {
                   scrollPositionRef.current = target.scrollTop;
@@ -586,57 +592,97 @@ export function PilotDashboard() {
                 }
               }}
             >
-              {/* Weather Category Slider - shown when time slider is not at NOW */}
+              {/* ETA Selector - moved from header */}
+              {selectedAirport && (
+                <ETASelector
+                  airportCode={selectedAirport}
+                  selectedTime={selectedTime}
+                  onTimeChange={setSelectedTime}
+                  maxHoursAhead={48}
+                  baseline={baseline}
+                  weatherCategory={activeWeatherCategory}
+                />
+              )}
+
+              {/* Weather Outlook - shown when not at NOW */}
               {selectedAirport && Math.abs(selectedTime.getTime() - Date.now()) >= 60000 && (
-                <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4 mb-4">
-                  <WeatherCategorySlider
-                    value={weatherCategory}
-                    onChange={setWeatherCategory}
-                    label="Forecast Weather Scenario"
+                <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-3">
+                  <WeatherOutlook
+                    weather={airportOverview?.weather}
+                    selectedTime={selectedTime}
+                    isManual={isManualWeather}
+                    onManualChange={setIsManualWeather}
+                    manualCategory={weatherCategory}
+                    onCategoryChange={setWeatherCategory}
+                    tafCategory={tafCategory}
                   />
                 </div>
               )}
 
-              {/* Unified Arrival Timeline */}
-              {selectedAirport && (
-                <div className="bg-gray-900/80 rounded-lg border border-gray-700 p-4 mb-4">
-                  <ArrivalTimeline
-                    arrivals={arrivals || []}
-                    airportCode={selectedAirport}
-                    baseline={baseline}
-                    matchedDaysData={matchedDaysData}
-                    selectedTime={selectedTime}
-                    weatherCategory={weatherCategory}
-                    onPointClick={(arrival) => {
-                      const landingTime = new Date(arrival.timestampLanding);
-                      const matchingTrack = tracks.find(track => {
-                        const trackLandingTime = track.createdAt ? new Date(track.createdAt) : null;
-                        return track.callsign === arrival.callsign && 
-                               trackLandingTime && 
-                               Math.abs(trackLandingTime.getTime() - landingTime.getTime()) < 60000;
-                      });
-                      
-                      if (matchingTrack) {
-                        setSelectedTrackId(matchingTrack.id);
-                        setTimeout(() => {
-                          const mapElement = document.querySelector('[data-map-container]');
-                          if (mapElement) {
-                            mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                          }
-                        }, 100);
-                      }
-                    }}
-                    onHistoricalPointClick={(historical) => {
-                      console.log('[PilotDashboard] Historical arrival clicked:', historical);
-                    }}
-                  />
-                  {matchedDaysLoading && (
-                    <div className="mt-2 text-center text-sm text-gray-400">
-                      Loading historical data...
-                    </div>
-                  )}
+              {/* ARRIVAL FORECAST SECTION */}
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <div className="h-px flex-1 bg-slate-700"></div>
+                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                    Arrival Forecast
+                  </span>
+                  <div className="h-px flex-1 bg-slate-700"></div>
                 </div>
-              )}
+
+                {/* Traffic Forecast */}
+                {selectedAirport && baseline && (
+                  <TimeBasedGraphs
+                    key={`traffic-${selectedAirport}`}
+                    baseline={baseline}
+                    arrivalForecast={arrivalForecast}
+                    airportCode={selectedAirport}
+                    selectedTime={selectedTime}
+                    loading={baselineLoading || arrivalForecastLoading || loading}
+                    onTimeClick={setSelectedTime}
+                  />
+                )}
+
+                {/* Unified Arrival Timeline */}
+                {selectedAirport && (
+                  <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
+                    <ArrivalTimeline
+                      arrivals={arrivals || []}
+                      airportCode={selectedAirport}
+                      baseline={baseline}
+                      matchedDaysData={matchedDaysData}
+                      selectedTime={selectedTime}
+                      weatherCategory={activeWeatherCategory}
+                      onPointClick={(arrival) => {
+                        const landingTime = new Date(arrival.timestampLanding);
+                        const matchingTrack = tracks.find(track => {
+                          const trackLandingTime = track.createdAt ? new Date(track.createdAt) : null;
+                          return track.callsign === arrival.callsign && 
+                                 trackLandingTime && 
+                                 Math.abs(trackLandingTime.getTime() - landingTime.getTime()) < 60000;
+                        });
+                        
+                        if (matchingTrack) {
+                          setSelectedTrackId(matchingTrack.id);
+                          setTimeout(() => {
+                            const mapElement = document.querySelector('[data-map-container]');
+                            if (mapElement) {
+                              mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                          }, 100);
+                        }
+                      }}
+                      onHistoricalPointClick={(historical) => {
+                        console.log('[PilotDashboard] Historical arrival clicked:', historical);
+                      }}
+                    />
+                    {matchedDaysLoading && (
+                      <div className="mt-2 text-center text-sm text-gray-400">
+                        Loading historical data...
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* Situation Overview */}
               <SituationOverview
@@ -656,19 +702,6 @@ export function PilotDashboard() {
               {/* FAA NAS Status */}
               {selectedAirport && (
                 <FAAStatus airportId={selectedAirport} />
-              )}
-
-              {/* Time-Based Graphs - Traffic Forecast */}
-              {selectedAirport && baseline && (
-                <TimeBasedGraphs
-                  key={`traffic-${selectedAirport}`}
-                  baseline={baseline}
-                  arrivalForecast={arrivalForecast}
-                  airportCode={selectedAirport}
-                  selectedTime={selectedTime}
-                  loading={baselineLoading || arrivalForecastLoading || loading}
-                  onTimeClick={setSelectedTime}
-                />
               )}
             </div>
           </div>
