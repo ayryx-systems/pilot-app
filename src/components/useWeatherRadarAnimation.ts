@@ -217,12 +217,9 @@ export function useWeatherRadarAnimation({
             existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
 
           if (framesUnchanged && radarOverlaysRef.current.length > 0) {
-            console.log('[WeatherRadarAnimation] Frames unchanged, skipping reload');
-            
             // Always restart animation when frames are unchanged to ensure it keeps running
             // The cleanup function clears it when dependencies change, so we need to restart it
             if (radarOverlaysRef.current.length > 1) {
-              console.log('[WeatherRadarAnimation] Restarting animation to ensure it continues...');
               startAnimation();
             }
             
@@ -435,8 +432,6 @@ export function useWeatherRadarAnimation({
             setTimeout(() => {
               setRadarFrames(frames);
             }, 100);
-          } else {
-            console.log('[WeatherRadarAnimation] Refresh: frames unchanged, skipping update');
           }
         }
       } catch (error) {
