@@ -544,3 +544,59 @@ export interface ArrivalSituationResponse {
   error?: string;
   source: string;
 }
+
+export interface HistoricalArrival {
+  time: string;
+  duration: number;
+  callsign: string;
+  category: string;
+  goAround: boolean;
+  sourceDate: string;
+}
+
+export interface MatchedDayStats {
+  count: number;
+  p10: number | null;
+  p25: number | null;
+  p50: number | null;
+  p75: number | null;
+  p90: number | null;
+  goArounds: number;
+}
+
+export interface MatchedDay {
+  date: string;
+  arrivalCount: number;
+  stats: MatchedDayStats;
+  conditions: Record<string, FlightCategory>;
+  season: Season;
+  dayOfWeek: number;
+}
+
+export interface MatchedDaysResponse {
+  airportId: string;
+  airport: string;
+  eta: string;
+  timeSlot: string;
+  category: FlightCategory;
+  matchCount: number;
+  totalArrivals: number;
+  baselineMinutes: number;
+  aggregatedStats: {
+    count: number;
+    p10: number | null;
+    p25: number | null;
+    p50: number | null;
+    p75: number | null;
+    p90: number | null;
+    min: number | null;
+    max: number | null;
+  } | null;
+  matchedDays: MatchedDay[];
+  arrivals: HistoricalArrival[];
+  timestamp: string;
+  insufficientData?: boolean;
+  message?: string;
+  error?: string;
+  source: string;
+}

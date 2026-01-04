@@ -429,6 +429,59 @@ class PilotApiService {
   }
 
   /**
+   * Get matched historical days arrivals for timeline overlay
+   * 
+   * @param airportId - Airport ICAO code  
+   * @param eta - Expected arrival time
+   * @param category - Flight category (VFR, MVFR, IFR, LIFR)
+   * @param options - Additional options (maxDays, matchSeason)
+   */
+  async getMatchedDaysArrivals(
+    airportId: string,
+    eta: Date,
+    category: FlightCategory = 'VFR',
+    options?: {
+      maxDays?: number;
+      matchSeason?: boolean;
+    }
+  ): Promise<MatchedDaysResponse> {
+    try {
+      const params = new URLSearchParams({
+        eta: eta.toISOString(),
+        category,
+        t: Date.now().toString(),
+      });
+
+      if (options?.maxDays) {
+        params.append('maxDays', options.maxDays.toString());
+      }
+      if (options?.matchSeason) {
+        params.append('matchSeason', 'true');
+      }
+
+      const response = await this.fetchWithTimeout(
+        `${API_BASE_URL}/api/pilot/${airportId}/matched-days?${params.toString()}`,
+        {
+          cache: 'no-cache',
+          headers: {
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
+            'Pragma': 'no-cache'
+          }
+        }
+      );
+      return await this.handleResponse<MatchedDaysResponse>(response);
+    } catch (error) {
+      console.error(`Failed to fetch matched days for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError && error.status === 0) {
+        throw new ApiError('Cannot connect to server - matched days unavailable while offline', 0);
+      }
+
+      throw error;
+    }
+  }
+
+  /**
    * Health check
    */
   async checkHealth(): Promise<{ status: string; timestamp: string }> {

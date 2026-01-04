@@ -1,0 +1,559 @@
+'use client';
+
+import React, { useMemo, useRef, useCallback } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ScatterController,
+  Filler,
+  ChartOptions,
+  ChartData,
+} from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
+import { Scatter } from 'react-chartjs-2';
+import { Arrival, BaselineData, HistoricalArrival, FlightCategory, MatchedDaysResponse } from '@/types';
+import { utcToAirportLocal, getSeason, getAirportUTCOffset } from '@/utils/airportTime';
+import { getAircraftCategoryFromType, categoryColors, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  Title,
+  Tooltip,
+  Legend,
+  ScatterController,
+  Filler,
+  annotationPlugin
+);
+
+interface ArrivalTimelineProps {
+  arrivals: Arrival[];
+  airportCode: string;
+  baseline?: BaselineData | null;
+  matchedDaysData?: MatchedDaysResponse | null;
+  selectedTime: Date;
+  weatherCategory?: FlightCategory;
+  onPointClick?: (arrival: Arrival) => void;
+  onHistoricalPointClick?: (arrival: HistoricalArrival) => void;
+}
+
+const WEATHER_COLORS: Record<FlightCategory, string> = {
+  VFR: 'rgba(34, 197, 94, 0.15)',
+  MVFR: 'rgba(59, 130, 246, 0.15)',
+  IFR: 'rgba(234, 88, 12, 0.15)',
+  LIFR: 'rgba(220, 38, 38, 0.15)',
+  unlimited: 'rgba(34, 197, 94, 0.15)',
+  unknown: 'rgba(156, 163, 175, 0.15)',
+};
+
+const WEATHER_BORDER_COLORS: Record<FlightCategory, string> = {
+  VFR: 'rgba(34, 197, 94, 0.8)',
+  MVFR: 'rgba(59, 130, 246, 0.8)',
+  IFR: 'rgba(234, 88, 12, 0.8)',
+  LIFR: 'rgba(220, 38, 38, 0.8)',
+  unlimited: 'rgba(34, 197, 94, 0.8)',
+  unknown: 'rgba(156, 163, 175, 0.8)',
+};
+
+const categoryNames: Record<string, string> = {
+  light: 'Light',
+  small: 'Small',
+  large: 'Large',
+  heavy: 'Heavy',
+  other: 'Other',
+  regional: 'Regional',
+  narrowbody: 'Narrow-body',
+  widebody: 'Wide-body',
+};
+
+const getAircraftCategory = (arrival: Arrival): string => {
+  if (arrival.aircraftCategory) {
+    return arrival.aircraftCategory;
+  }
+  return getAircraftCategoryFromType(arrival.aircraftType);
+};
+
+function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string) {
+  if (!baseline) return null;
+  
+  const now = new Date();
+  const season = getSeason(now, baseline);
+  const seasonData = season === 'summer' ? baseline.summer : baseline.winter;
+  
+  if (!seasonData) return null;
+  
+  const byTimeSlot = (seasonData as Record<string, unknown>).byTimeSlotLocal || 
+    (seasonData as Record<string, unknown>).seasonalTimeSlots;
+  if (!byTimeSlot) return null;
+  
+  return { season, byTimeSlot: byTimeSlot as Record<string, { medianTimeFrom50nm?: number }> };
+}
+
+export function ArrivalTimeline({ 
+  arrivals, 
+  airportCode, 
+  baseline, 
+  matchedDaysData,
+  selectedTime,
+  weatherCategory = 'VFR',
+  onPointClick,
+  onHistoricalPointClick,
+}: ArrivalTimelineProps) {
+  const chartRef = useRef<ChartJS<'scatter'>>(null);
+  
+  const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
+  const hoursAhead = (selectedTime.getTime() - Date.now()) / (1000 * 60 * 60);
+
+  const chartData = useMemo(() => {
+    const datasets: ChartData<'scatter'>['datasets'] = [];
+    const now = Date.now();
+    
+    if (arrivals && arrivals.length > 0) {
+      const categoryData: Record<string, Arrival[]> = {};
+      arrivals.forEach(arrival => {
+        const category = getAircraftCategory(arrival);
+        if (!categoryData[category]) {
+          categoryData[category] = [];
+        }
+        categoryData[category].push(arrival);
+      });
+
+      const categoryOrder = ['widebody', 'narrowbody', 'regional', 'small', 'light', 'heavy', 'large', 'other'];
+
+      categoryOrder.forEach(category => {
+        const categoryArrivals = categoryData[category];
+        if (categoryArrivals && categoryArrivals.length > 0) {
+          const scatterData = categoryArrivals.map(arrival => {
+            const landingTime = new Date(arrival.timestampLanding);
+            const hoursAgo = (landingTime.getTime() - now) / (1000 * 60 * 60);
+
+            return {
+              x: hoursAgo,
+              y: arrival.durationMinutes,
+              arrival: arrival,
+            };
+          });
+
+          datasets.push({
+            label: `${categoryNames[category]} (${categoryArrivals.length})`,
+            data: scatterData,
+            backgroundColor: categoryColors[category]?.replace('1)', '0.7)') || 'rgba(156, 163, 175, 0.7)',
+            borderColor: categoryColors[category] || 'rgba(156, 163, 175, 1)',
+            pointRadius: 5,
+            pointHoverRadius: 7,
+          } as ChartData<'scatter'>['datasets'][0]);
+        }
+      });
+    }
+
+    if (matchedDaysData?.arrivals && matchedDaysData.arrivals.length > 0 && !isAtNow) {
+      const historicalByDate: Record<string, HistoricalArrival[]> = {};
+      
+      matchedDaysData.arrivals.forEach(arrival => {
+        if (!historicalByDate[arrival.sourceDate]) {
+          historicalByDate[arrival.sourceDate] = [];
+        }
+        historicalByDate[arrival.sourceDate].push(arrival);
+      });
+
+      const dates = Object.keys(historicalByDate).slice(0, 5);
+      const colorPalettes = [
+        { bg: 'rgba(99, 102, 241, 0.25)', border: 'rgba(99, 102, 241, 0.6)' },
+        { bg: 'rgba(139, 92, 246, 0.25)', border: 'rgba(139, 92, 246, 0.6)' },
+        { bg: 'rgba(168, 85, 247, 0.25)', border: 'rgba(168, 85, 247, 0.6)' },
+        { bg: 'rgba(192, 132, 252, 0.25)', border: 'rgba(192, 132, 252, 0.6)' },
+        { bg: 'rgba(216, 180, 254, 0.25)', border: 'rgba(216, 180, 254, 0.6)' },
+      ];
+
+      dates.forEach((date, idx) => {
+        const dateArrivals = historicalByDate[date];
+        const colors = colorPalettes[idx % colorPalettes.length];
+        
+        const scatterData = dateArrivals.map(arrival => {
+          const [hours, minutes] = arrival.time.split(':').map(Number);
+          const arrivalLocalMinutes = hours * 60 + minutes;
+          
+          const selectedLocalTime = utcToAirportLocal(selectedTime, airportCode, baseline);
+          const selectedLocalMinutes = selectedLocalTime.getUTCHours() * 60 + selectedLocalTime.getUTCMinutes();
+          
+          const diffMinutes = arrivalLocalMinutes - selectedLocalMinutes;
+          const hoursFromSelected = diffMinutes / 60;
+          const xValue = hoursAhead + hoursFromSelected;
+
+          return {
+            x: xValue,
+            y: arrival.duration,
+            historicalArrival: arrival,
+          };
+        }).filter(d => d.x >= -2 && d.x <= hoursAhead + 3);
+
+        if (scatterData.length > 0) {
+          datasets.push({
+            label: `${date} (${scatterData.length})`,
+            data: scatterData,
+            backgroundColor: colors.bg,
+            borderColor: colors.border,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+            pointStyle: 'circle',
+          } as ChartData<'scatter'>['datasets'][0]);
+        }
+      });
+    }
+
+    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
+    if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
+      const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
+      const nowLocalHours = nowLocal.getUTCHours();
+      const nowLocalMinutes = nowLocal.getUTCMinutes();
+      const nowLocalHoursSinceMidnight = nowLocalHours + nowLocalMinutes / 60;
+      
+      const baselinePoints: Array<{ x: number; y: number }> = [];
+      const maxHours = isAtNow ? 0 : hoursAhead + 2;
+      
+      for (const [slot, slotData] of Object.entries(seasonalBaseline.byTimeSlot)) {
+        if (!slotData.medianTimeFrom50nm) continue;
+        
+        const [hours, minutes] = slot.split(':').map(Number);
+        const slotHoursSinceMidnight = hours + minutes / 60;
+        
+        let hoursFromNow: number;
+        
+        if (slotHoursSinceMidnight >= nowLocalHoursSinceMidnight) {
+          hoursFromNow = slotHoursSinceMidnight - nowLocalHoursSinceMidnight;
+        } else {
+          hoursFromNow = slotHoursSinceMidnight - nowLocalHoursSinceMidnight + 24;
+        }
+        
+        if (hoursFromNow > 12) {
+          hoursFromNow -= 24;
+        }
+        
+        if (hoursFromNow >= -2 && hoursFromNow <= maxHours) {
+          baselinePoints.push({
+            x: hoursFromNow,
+            y: slotData.medianTimeFrom50nm / 60,
+          });
+        }
+      }
+      
+      if (baselinePoints.length > 0) {
+        baselinePoints.sort((a, b) => a.x - b.x);
+        const seasonLabel = seasonalBaseline.season === 'summer' ? 'Baseline (Summer)' : 'Baseline (Winter)';
+        datasets.push({
+          label: seasonLabel,
+          data: baselinePoints,
+          type: 'line' as const,
+          borderColor: 'rgba(0, 0, 0, 0.8)',
+          backgroundColor: 'rgba(0, 0, 0, 0.1)',
+          borderWidth: 2,
+          borderDash: [8, 4],
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: false,
+          tension: 0.3,
+          showLine: true,
+        } as unknown as ChartData<'scatter'>['datasets'][0]);
+      }
+    }
+
+    if (matchedDaysData?.aggregatedStats && !isAtNow) {
+      const stats = matchedDaysData.aggregatedStats;
+      const xMin = -2;
+      const xMax = hoursAhead + 2;
+      
+      if (stats.p10 !== null && stats.p90 !== null) {
+        datasets.push({
+          label: 'P10-P90 Range',
+          data: [
+            { x: xMin, y: stats.p10 },
+            { x: xMax, y: stats.p10 },
+          ],
+          type: 'line' as const,
+          borderColor: 'rgba(99, 102, 241, 0.4)',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          showLine: true,
+          fill: false,
+        } as unknown as ChartData<'scatter'>['datasets'][0]);
+        
+        datasets.push({
+          label: 'P90',
+          data: [
+            { x: xMin, y: stats.p90 },
+            { x: xMax, y: stats.p90 },
+          ],
+          type: 'line' as const,
+          borderColor: 'rgba(99, 102, 241, 0.4)',
+          backgroundColor: 'transparent',
+          borderWidth: 1,
+          borderDash: [4, 4],
+          pointRadius: 0,
+          showLine: true,
+          fill: false,
+        } as unknown as ChartData<'scatter'>['datasets'][0]);
+      }
+      
+      if (stats.p50 !== null) {
+        datasets.push({
+          label: 'Historical Median (P50)',
+          data: [
+            { x: xMin, y: stats.p50 },
+            { x: xMax, y: stats.p50 },
+          ],
+          type: 'line' as const,
+          borderColor: 'rgba(99, 102, 241, 0.8)',
+          backgroundColor: 'transparent',
+          borderWidth: 2,
+          pointRadius: 0,
+          showLine: true,
+          fill: false,
+        } as unknown as ChartData<'scatter'>['datasets'][0]);
+      }
+    }
+
+    return { 
+      datasets, 
+      timeRange: { 
+        min: -2, 
+        max: isAtNow ? 0.5 : Math.max(hoursAhead + 2, 1) 
+      } 
+    };
+  }, [arrivals, airportCode, baseline, matchedDaysData, selectedTime, isAtNow, hoursAhead]);
+
+  const options = useMemo((): ChartOptions<'scatter'> => {
+    const annotations: Record<string, unknown> = {};
+    
+    annotations['nowLine'] = {
+      type: 'line',
+      xMin: 0,
+      xMax: 0,
+      borderColor: 'rgba(239, 68, 68, 0.8)',
+      borderWidth: 2,
+      borderDash: [6, 3],
+      label: {
+        display: true,
+        content: 'NOW',
+        position: 'start',
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        color: 'white',
+        font: { size: 10, weight: 'bold' },
+        padding: 3,
+      },
+    };
+
+    if (!isAtNow) {
+      annotations['selectedTimeLine'] = {
+        type: 'line',
+        xMin: hoursAhead,
+        xMax: hoursAhead,
+        borderColor: 'rgba(59, 130, 246, 0.8)',
+        borderWidth: 2,
+        label: {
+          display: true,
+          content: 'ETA',
+          position: 'start',
+          backgroundColor: 'rgba(59, 130, 246, 0.9)',
+          color: 'white',
+          font: { size: 10, weight: 'bold' },
+          padding: 3,
+        },
+      };
+      
+      const bgColor = WEATHER_COLORS[weatherCategory] || WEATHER_COLORS.unknown;
+      annotations['weatherBackground'] = {
+        type: 'box',
+        xMin: 0,
+        xMax: hoursAhead + 2,
+        yMin: 0,
+        yMax: 50,
+        backgroundColor: bgColor,
+        borderColor: 'transparent',
+        drawTime: 'beforeDatasetsDraw',
+      };
+    }
+
+    return {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom' as const,
+          labels: {
+            usePointStyle: true,
+            padding: 12,
+            font: { size: 11 },
+            filter: (item) => {
+              return !item.text?.includes('P90') && !item.text?.includes('Range');
+            },
+          },
+        },
+        tooltip: {
+          enabled: true,
+          callbacks: {
+            label: (context) => {
+              const point = context.raw as { x: number; y: number; arrival?: Arrival; historicalArrival?: HistoricalArrival };
+              
+              if (point.arrival) {
+                const arrival = point.arrival;
+                return [
+                  `${arrival.callsign || arrival.icao}`,
+                  `Type: ${arrival.aircraftType || 'Unknown'}`,
+                  `Duration: ${point.y.toFixed(1)} min`,
+                ];
+              }
+              
+              if (point.historicalArrival) {
+                const historical = point.historicalArrival;
+                return [
+                  `${historical.callsign}`,
+                  `Date: ${historical.sourceDate}`,
+                  `Time: ${historical.time}`,
+                  `Duration: ${historical.duration.toFixed(1)} min`,
+                ];
+              }
+              
+              return `${point.y.toFixed(1)} min`;
+            },
+          },
+        },
+        annotation: {
+          annotations,
+        },
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: chartData?.timeRange.min ?? -2,
+          max: chartData?.timeRange.max ?? 1,
+          title: {
+            display: true,
+            text: 'Hours from Now',
+            font: { weight: 'bold' },
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+          },
+          ticks: {
+            callback: (value) => {
+              const v = Number(value);
+              if (v === 0) return 'Now';
+              if (v < 0) return `${Math.abs(v)}h ago`;
+              return `+${v}h`;
+            },
+          },
+        },
+        y: {
+          min: 10,
+          max: 45,
+          title: {
+            display: true,
+            text: 'Duration from 50nm (min)',
+            font: { weight: 'bold' },
+          },
+          grid: {
+            color: 'rgba(0, 0, 0, 0.05)',
+          },
+        },
+      },
+      onClick: (event, elements) => {
+        if (elements.length > 0) {
+          const element = elements[0];
+          const dataset = chartData?.datasets[element.datasetIndex];
+          const point = (dataset?.data as Array<{ arrival?: Arrival; historicalArrival?: HistoricalArrival }>)?.[element.index];
+          
+          if (point?.arrival && onPointClick) {
+            onPointClick(point.arrival);
+          } else if (point?.historicalArrival && onHistoricalPointClick) {
+            onHistoricalPointClick(point.historicalArrival);
+          }
+        }
+      },
+    };
+  }, [chartData, isAtNow, hoursAhead, weatherCategory, onPointClick, onHistoricalPointClick]);
+
+  if (!chartData || chartData.datasets.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-64 text-gray-500">
+        <p>No arrival data available</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-semibold text-gray-700">
+          Arrival Duration Timeline
+        </h3>
+        {!isAtNow && matchedDaysData && (
+          <div className="flex items-center gap-2 text-xs">
+            <span 
+              className="px-2 py-0.5 rounded font-medium"
+              style={{ 
+                backgroundColor: WEATHER_COLORS[weatherCategory],
+                color: WEATHER_BORDER_COLORS[weatherCategory],
+                border: `1px solid ${WEATHER_BORDER_COLORS[weatherCategory]}`,
+              }}
+            >
+              {weatherCategory}
+            </span>
+            <span className="text-gray-500">
+              {matchedDaysData.matchCount} historical days, {matchedDaysData.totalArrivals} arrivals
+            </span>
+          </div>
+        )}
+      </div>
+      
+      <div className="h-72 bg-white rounded-lg border border-gray-200 p-2">
+        <Scatter 
+          ref={chartRef} 
+          data={{ datasets: chartData.datasets }} 
+          options={options} 
+        />
+      </div>
+      
+      {!isAtNow && matchedDaysData?.aggregatedStats && (
+        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
+          <div className="bg-gray-50 rounded p-2">
+            <div className="text-xs text-gray-500">Best Case (P10)</div>
+            <div className="text-lg font-semibold text-green-600">
+              {matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded p-2">
+            <div className="text-xs text-gray-500">Typical (P50)</div>
+            <div className="text-lg font-semibold text-gray-800">
+              {matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded p-2">
+            <div className="text-xs text-gray-500">Extended (P90)</div>
+            <div className="text-lg font-semibold text-orange-600">
+              {matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m
+            </div>
+          </div>
+          <div className="bg-gray-50 rounded p-2">
+            <div className="text-xs text-gray-500">Baseline</div>
+            <div className="text-lg font-semibold text-gray-600">
+              {matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default ArrivalTimeline;
+
