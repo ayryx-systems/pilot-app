@@ -118,6 +118,8 @@ export function PilotDashboard() {
   const lastMatchedDaysFetchRef = useRef<{ airport: string; time: number; category: string } | null>(null);
   const matchedDaysAbortControllerRef = useRef<AbortController | null>(null);
   const debounceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const prevSelectedTimeRef = useRef<number>(selectedTime.getTime());
+  const prevWeatherCategoryRef = useRef<FlightCategory>(weatherCategory);
 
   const toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
@@ -219,7 +221,14 @@ export function PilotDashboard() {
       matchedDaysAbortControllerRef.current.abort();
     }
     
-    setMatchedDaysData(null);
+    const timeChanged = Math.abs(selectedTime.getTime() - prevSelectedTimeRef.current) > 60000;
+    const categoryChanged = activeWeatherCategory !== prevWeatherCategoryRef.current;
+    
+    if (timeChanged || categoryChanged) {
+      setMatchedDaysData(null);
+      prevSelectedTimeRef.current = selectedTime.getTime();
+      prevWeatherCategoryRef.current = activeWeatherCategory;
+    }
     
     const isNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
     if (isNow) {
