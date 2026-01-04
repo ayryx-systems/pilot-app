@@ -18,8 +18,8 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData, HistoricalArrival, FlightCategory, MatchedDaysResponse } from '@/types';
-import { utcToAirportLocal, getSeason, getAirportUTCOffset } from '@/utils/airportTime';
-import { getAircraftCategoryFromType, categoryColors, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
+import { utcToAirportLocal, getSeason } from '@/utils/airportTime';
+import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
 
 ChartJS.register(
   CategoryScale,
@@ -154,61 +154,6 @@ export function ArrivalTimeline({
       });
     }
 
-    if (matchedDaysData?.arrivals && matchedDaysData.arrivals.length > 0 && !isAtNow) {
-      const historicalByDate: Record<string, HistoricalArrival[]> = {};
-      
-      matchedDaysData.arrivals.forEach(arrival => {
-        if (!historicalByDate[arrival.sourceDate]) {
-          historicalByDate[arrival.sourceDate] = [];
-        }
-        historicalByDate[arrival.sourceDate].push(arrival);
-      });
-
-      const dates = Object.keys(historicalByDate).slice(0, 5);
-      const colorPalettes = [
-        { bg: 'rgba(99, 102, 241, 0.25)', border: 'rgba(99, 102, 241, 0.6)' },
-        { bg: 'rgba(139, 92, 246, 0.25)', border: 'rgba(139, 92, 246, 0.6)' },
-        { bg: 'rgba(168, 85, 247, 0.25)', border: 'rgba(168, 85, 247, 0.6)' },
-        { bg: 'rgba(192, 132, 252, 0.25)', border: 'rgba(192, 132, 252, 0.6)' },
-        { bg: 'rgba(216, 180, 254, 0.25)', border: 'rgba(216, 180, 254, 0.6)' },
-      ];
-
-      dates.forEach((date, idx) => {
-        const dateArrivals = historicalByDate[date];
-        const colors = colorPalettes[idx % colorPalettes.length];
-        
-        const scatterData = dateArrivals.map(arrival => {
-          const [hours, minutes] = arrival.time.split(':').map(Number);
-          const arrivalLocalMinutes = hours * 60 + minutes;
-          
-          const selectedLocalTime = utcToAirportLocal(selectedTime, airportCode, baseline);
-          const selectedLocalMinutes = selectedLocalTime.getUTCHours() * 60 + selectedLocalTime.getUTCMinutes();
-          
-          const diffMinutes = arrivalLocalMinutes - selectedLocalMinutes;
-          const hoursFromSelected = diffMinutes / 60;
-          const xValue = hoursAhead + hoursFromSelected;
-
-          return {
-            x: xValue,
-            y: arrival.duration,
-            historicalArrival: arrival,
-          };
-        }).filter(d => d.x >= -2 && d.x <= hoursAhead + 3);
-
-        if (scatterData.length > 0) {
-          datasets.push({
-            label: `${date} (${scatterData.length})`,
-            data: scatterData,
-            backgroundColor: colors.bg,
-            borderColor: colors.border,
-            pointRadius: 4,
-            pointHoverRadius: 6,
-            pointStyle: 'circle',
-          } as ChartData<'scatter'>['datasets'][0]);
-        }
-      });
-    }
-
     const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
     if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
       const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
@@ -217,7 +162,7 @@ export function ArrivalTimeline({
       const nowLocalHoursSinceMidnight = nowLocalHours + nowLocalMinutes / 60;
       
       const baselinePoints: Array<{ x: number; y: number }> = [];
-      const maxHours = isAtNow ? 0 : hoursAhead + 2;
+      const maxHours = isAtNow ? 0.5 : hoursAhead + 0.5;
       
       for (const [slot, slotData] of Object.entries(seasonalBaseline.byTimeSlot)) {
         if (!slotData.medianTimeFrom50nm) continue;
@@ -252,7 +197,7 @@ export function ArrivalTimeline({
           label: seasonLabel,
           data: baselinePoints,
           type: 'line' as const,
-          borderColor: 'rgba(255, 255, 255, 0.6)',
+          borderColor: 'rgba(255, 255, 255, 0.5)',
           backgroundColor: 'rgba(255, 255, 255, 0.1)',
           borderWidth: 2,
           borderDash: [8, 4],
@@ -265,71 +210,14 @@ export function ArrivalTimeline({
       }
     }
 
-    if (matchedDaysData?.aggregatedStats && !isAtNow) {
-      const stats = matchedDaysData.aggregatedStats;
-      const xMin = -2;
-      const xMax = hoursAhead + 2;
-      
-      if (stats.p10 !== null && stats.p90 !== null) {
-        datasets.push({
-          label: 'P10-P90 Range',
-          data: [
-            { x: xMin, y: stats.p10 },
-            { x: xMax, y: stats.p10 },
-          ],
-          type: 'line' as const,
-          borderColor: 'rgba(99, 102, 241, 0.4)',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderDash: [4, 4],
-          pointRadius: 0,
-          showLine: true,
-          fill: false,
-        } as unknown as ChartData<'scatter'>['datasets'][0]);
-        
-        datasets.push({
-          label: 'P90',
-          data: [
-            { x: xMin, y: stats.p90 },
-            { x: xMax, y: stats.p90 },
-          ],
-          type: 'line' as const,
-          borderColor: 'rgba(99, 102, 241, 0.4)',
-          backgroundColor: 'transparent',
-          borderWidth: 1,
-          borderDash: [4, 4],
-          pointRadius: 0,
-          showLine: true,
-          fill: false,
-        } as unknown as ChartData<'scatter'>['datasets'][0]);
-      }
-      
-      if (stats.p50 !== null) {
-        datasets.push({
-          label: 'Historical Median (P50)',
-          data: [
-            { x: xMin, y: stats.p50 },
-            { x: xMax, y: stats.p50 },
-          ],
-          type: 'line' as const,
-          borderColor: 'rgba(99, 102, 241, 0.8)',
-          backgroundColor: 'transparent',
-          borderWidth: 2,
-          pointRadius: 0,
-          showLine: true,
-          fill: false,
-        } as unknown as ChartData<'scatter'>['datasets'][0]);
-      }
-    }
-
     return { 
       datasets, 
       timeRange: { 
         min: -2, 
-        max: isAtNow ? 0.5 : Math.max(hoursAhead + 2, 1) 
+        max: isAtNow ? 0.5 : Math.max(hoursAhead + 0.5, 1) 
       } 
     };
-  }, [arrivals, airportCode, baseline, matchedDaysData, selectedTime, isAtNow, hoursAhead]);
+  }, [arrivals, airportCode, baseline, selectedTime, isAtNow, hoursAhead]);
 
   const options = useMemo((): ChartOptions<'scatter'> => {
     const annotations: Record<string, unknown> = {};
@@ -353,11 +241,23 @@ export function ArrivalTimeline({
     };
 
     if (!isAtNow) {
-      annotations['selectedTimeLine'] = {
+      const bgColor = WEATHER_COLORS[weatherCategory] || WEATHER_COLORS.unknown;
+      annotations['weatherBackground'] = {
+        type: 'box',
+        xMin: 0,
+        xMax: hoursAhead + 0.5,
+        yMin: 0,
+        yMax: 50,
+        backgroundColor: bgColor,
+        borderColor: 'transparent',
+        drawTime: 'beforeDatasetsDraw',
+      };
+
+      annotations['etaLine'] = {
         type: 'line',
         xMin: hoursAhead,
         xMax: hoursAhead,
-        borderColor: 'rgba(59, 130, 246, 0.8)',
+        borderColor: 'rgba(59, 130, 246, 0.6)',
         borderWidth: 2,
         label: {
           display: true,
@@ -369,18 +269,85 @@ export function ArrivalTimeline({
           padding: 3,
         },
       };
-      
-      const bgColor = WEATHER_COLORS[weatherCategory] || WEATHER_COLORS.unknown;
-      annotations['weatherBackground'] = {
-        type: 'box',
-        xMin: 0,
-        xMax: hoursAhead + 2,
-        yMin: 0,
-        yMax: 50,
-        backgroundColor: bgColor,
-        borderColor: 'transparent',
-        drawTime: 'beforeDatasetsDraw',
-      };
+
+      if (matchedDaysData?.aggregatedStats) {
+        const stats = matchedDaysData.aggregatedStats;
+        const etaX = hoursAhead;
+        const markerWidth = 0.15;
+
+        if (stats.p10 !== null && stats.p90 !== null) {
+          annotations['etaRangeBox'] = {
+            type: 'box',
+            xMin: etaX - markerWidth,
+            xMax: etaX + markerWidth,
+            yMin: stats.p10,
+            yMax: stats.p90,
+            backgroundColor: 'rgba(99, 102, 241, 0.25)',
+            borderColor: 'rgba(99, 102, 241, 0.6)',
+            borderWidth: 2,
+            borderRadius: 4,
+          };
+
+          annotations['etaP10'] = {
+            type: 'line',
+            xMin: etaX - markerWidth - 0.05,
+            xMax: etaX + markerWidth + 0.05,
+            yMin: stats.p10,
+            yMax: stats.p10,
+            borderColor: 'rgba(34, 197, 94, 0.9)',
+            borderWidth: 3,
+            label: {
+              display: true,
+              content: `${stats.p10.toFixed(0)}m`,
+              position: 'end',
+              backgroundColor: 'rgba(34, 197, 94, 0.9)',
+              color: 'white',
+              font: { size: 9, weight: 'bold' },
+              padding: 2,
+            },
+          };
+
+          annotations['etaP90'] = {
+            type: 'line',
+            xMin: etaX - markerWidth - 0.05,
+            xMax: etaX + markerWidth + 0.05,
+            yMin: stats.p90,
+            yMax: stats.p90,
+            borderColor: 'rgba(249, 115, 22, 0.9)',
+            borderWidth: 3,
+            label: {
+              display: true,
+              content: `${stats.p90.toFixed(0)}m`,
+              position: 'end',
+              backgroundColor: 'rgba(249, 115, 22, 0.9)',
+              color: 'white',
+              font: { size: 9, weight: 'bold' },
+              padding: 2,
+            },
+          };
+        }
+
+        if (stats.p50 !== null) {
+          annotations['etaP50'] = {
+            type: 'line',
+            xMin: etaX - markerWidth - 0.08,
+            xMax: etaX + markerWidth + 0.08,
+            yMin: stats.p50,
+            yMax: stats.p50,
+            borderColor: 'rgba(255, 255, 255, 0.95)',
+            borderWidth: 4,
+            label: {
+              display: true,
+              content: `Typical: ${stats.p50.toFixed(0)}m`,
+              position: 'start',
+              backgroundColor: 'rgba(55, 65, 81, 0.95)',
+              color: 'white',
+              font: { size: 10, weight: 'bold' },
+              padding: 3,
+            },
+          };
+        }
+      }
     }
 
     return {
@@ -395,7 +362,7 @@ export function ArrivalTimeline({
             font: { size: 11 },
             color: 'rgba(156, 163, 175, 0.9)',
             filter: (item) => {
-              return !item.text?.includes('P90') && !item.text?.includes('Range');
+              return !item.text?.includes('Baseline');
             },
           },
         },
@@ -403,7 +370,7 @@ export function ArrivalTimeline({
           enabled: true,
           callbacks: {
             label: (context) => {
-              const point = context.raw as { x: number; y: number; arrival?: Arrival; historicalArrival?: HistoricalArrival };
+              const point = context.raw as { x: number; y: number; arrival?: Arrival };
               
               if (point.arrival) {
                 const arrival = point.arrival;
@@ -411,16 +378,6 @@ export function ArrivalTimeline({
                   `${arrival.callsign || arrival.icao}`,
                   `Type: ${arrival.aircraftType || 'Unknown'}`,
                   `Duration: ${point.y.toFixed(1)} min`,
-                ];
-              }
-              
-              if (point.historicalArrival) {
-                const historical = point.historicalArrival;
-                return [
-                  `${historical.callsign}`,
-                  `Date: ${historical.sourceDate}`,
-                  `Time: ${historical.time}`,
-                  `Duration: ${historical.duration.toFixed(1)} min`,
                 ];
               }
               
@@ -474,20 +431,18 @@ export function ArrivalTimeline({
         },
       },
       onClick: (event, elements) => {
-        if (elements.length > 0) {
+        if (elements.length > 0 && onPointClick) {
           const element = elements[0];
           const dataset = chartData?.datasets[element.datasetIndex];
-          const point = (dataset?.data as Array<{ arrival?: Arrival; historicalArrival?: HistoricalArrival }>)?.[element.index];
+          const point = (dataset?.data as Array<{ arrival?: Arrival }>)?.[element.index];
           
-          if (point?.arrival && onPointClick) {
+          if (point?.arrival) {
             onPointClick(point.arrival);
-          } else if (point?.historicalArrival && onHistoricalPointClick) {
-            onHistoricalPointClick(point.historicalArrival);
           }
         }
       },
     };
-  }, [chartData, isAtNow, hoursAhead, weatherCategory, onPointClick, onHistoricalPointClick]);
+  }, [chartData, isAtNow, hoursAhead, weatherCategory, matchedDaysData, onPointClick, onHistoricalPointClick]);
 
   if (!chartData || chartData.datasets.length === 0) {
     return (
@@ -503,7 +458,7 @@ export function ArrivalTimeline({
         <h3 className="text-sm font-semibold text-gray-200">
           Arrival Duration Timeline
         </h3>
-        {!isAtNow && matchedDaysData && (
+        {!isAtNow && matchedDaysData?.aggregatedStats && (
           <div className="flex items-center gap-2 text-xs">
             <span 
               className="px-2 py-0.5 rounded font-medium"
@@ -516,7 +471,7 @@ export function ArrivalTimeline({
               {weatherCategory}
             </span>
             <span className="text-gray-400">
-              {matchedDaysData.matchCount} historical days, {matchedDaysData.totalArrivals} arrivals
+              Based on {matchedDaysData.matchCount} similar days
             </span>
           </div>
         )}
