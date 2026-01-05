@@ -92,7 +92,7 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
   const chartOptions = useMemo(() => {
     const annotations: Record<string, unknown> = {};
     
-    if (selectedHour !== undefined && selectedHour >= 6 && selectedHour <= 24) {
+    if (selectedHour !== undefined && selectedHour >= 0 && selectedHour <= 24) {
       annotations.etaLine = {
         type: 'line',
         xMin: selectedHour,
@@ -159,7 +159,7 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
       },
       scales: {
         x: {
-          min: 6,
+          min: 0,
           max: 24,
           title: { display: false },
           grid: { color: 'rgba(255, 255, 255, 0.05)' },
