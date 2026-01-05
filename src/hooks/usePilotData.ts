@@ -3,17 +3,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pilotApi, ApiError } from '@/services/api';
 import {
-  Airport,
-  AirportOverview,
-  PiRep,
-  GroundTrack,
   SituationSummary,
   ConnectionStatus,
   PilotAppState,
   BaselineData,
-  BaselineResponse,
-  ArrivalForecast,
-  ArrivalForecastResponse
+  ArrivalForecast
 } from '@/types';
 
 export function usePilotData() {

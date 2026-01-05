@@ -88,7 +88,6 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
   useEffect(() => {
     if (!chartRef.current) return;
     
-    const chart = chartRef.current;
     const handleResize = () => {
       calculatePositions();
     };
@@ -401,7 +400,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
             const isBottom = index === graphs.length - 1;
             const isVisibility = graph.title === 'Visibility';
             const isCeiling = graph.title === 'Ceiling';
-            const isWind = graph.title === 'Wind Speed';
 
             return (
               <div key={graph.title} className={isBottom ? '' : 'mb-0'}>
@@ -494,7 +492,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             autoSkip: true,
                             maxTicksLimit: 8,
                             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            callback: function(value: any, index: number) {
+                            callback: function(value: any) {
                               const label = this.getLabelForValue(value);
                               return label || undefined;
                             },
@@ -745,7 +743,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                                 autoSkip: true,
                                 maxTicksLimit: 8,
                                 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                            callback: function(value: any, index: number) {
+                            callback: function(value: any) {
                                   const label = this.getLabelForValue(value);
                                   return label || undefined;
                                 },

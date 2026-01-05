@@ -88,7 +88,7 @@ export class WaypointService {
     let validEntries = 0;
     let expiredEntries = 0;
     
-    for (const [key, cached] of this.cache.entries()) {
+    for (const [_key, cached] of this.cache.entries()) {
       if (now - cached.timestamp < this.CACHE_DURATION) {
         validEntries++;
       } else {

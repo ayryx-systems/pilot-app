@@ -2,11 +2,10 @@
 
 import React, { useState, useMemo, memo } from 'react';
 import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
-import { AlertTriangle, CheckCircle, Info, Cloud, Wind, Plane, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
+import { AlertTriangle, CheckCircle, Info, Cloud, Plane, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
-import { utcToAirportLocal, formatAirportLocalTime } from '@/utils/airportTime';
 import { HelpButton } from './HelpButton';
 
 interface WeatherData {
@@ -73,8 +72,8 @@ export const SituationOverview = memo(function SituationOverview({
   connectionStatus,
   airportCode,
   summaryMetadata,
-  baseline,
-  baselineLoading,
+  baseline: _baseline,
+  baselineLoading: _baselineLoading,
   isDemo,
   selectedTime,
 }: SituationOverviewProps) {

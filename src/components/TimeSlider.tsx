@@ -18,7 +18,7 @@ export function TimeSlider({
   airportCode,
   selectedTime,
   onTimeChange,
-  minHoursAhead = 0,
+  minHoursAhead: _minHoursAhead = 0,
   maxHoursAhead = 24,
   baseline,
 }: TimeSliderProps) {

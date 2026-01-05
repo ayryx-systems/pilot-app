@@ -4,7 +4,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures, BaselineData } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
-import { weatherService, type SigmetAirmet, type WeatherForecast } from '@/services/weatherService';
+import { weatherService } from '@/services/weatherService';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
@@ -133,7 +133,7 @@ export function PilotMap({
   arrivals,
   displayOptions,
   onFullscreenChange,
-  isDemo,
+  isDemo: _isDemo,
   loading,
   selectedAirport,
   selectedTrackId,
@@ -839,7 +839,7 @@ export function PilotMap({
       }
       
       // Clean up all highlight overlays
-      highlightOverlaysRef.current.forEach((highlight, trackId) => {
+      highlightOverlaysRef.current.forEach((highlight) => {
         if (layerGroupsRef.current.tracks) {
           layerGroupsRef.current.tracks.removeLayer(highlight);
         }
@@ -1138,8 +1138,7 @@ export function PilotMap({
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
     const updateWeatherRadar = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
+      const _leafletModule = await import('leaflet');
 
       // Clear existing radar layer (old static layer)
       const existingRadarLayer = activeWeatherLayers.get('radar');
@@ -1435,10 +1434,10 @@ export function PilotMap({
           // Get wind data with airport code for timezone formatting
           const windsData = await weatherService.getWindsAloft(airport?.code);
           
-          // Group winds by station to avoid superimposition
-          const stationGroups = new Map();
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          windsData.forEach((wind: any) => {
+            // Group winds by station to avoid superimposition
+            const stationGroups = new Map();
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            windsData.forEach((wind: any) => {
             // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
             if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) {
               return;
@@ -1542,9 +1541,9 @@ export function PilotMap({
         const leafletModule = await import('leaflet');
         const L = leafletModule.default;
 
-        // Remove existing wind layers
-        const existingLayers = layerGroupsRef.current.weather.getLayers();
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // Remove existing wind layers
+      const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
           if (layer._windStationId) {
             layerGroupsRef.current.weather.removeLayer(layer);
@@ -1566,7 +1565,6 @@ export function PilotMap({
             
             // Group winds by station to avoid superimposition
             const stationGroups = new Map();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
           windsData.forEach((wind: any) => {
               // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly

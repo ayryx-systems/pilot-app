@@ -14,7 +14,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { BaselineData, ArrivalForecast } from '@/types';
-import { utcToAirportLocal, getAirportUTCOffset, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
 import { HelpButton } from './HelpButton';
 
 ChartJS.register(
@@ -193,9 +193,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
   useEffect(() => {
     const baselineChanged = prevBaselineRef.current !== baseline;
-    const timeChanged = !prevSelectedTimeRef.current || 
+    const _timeChanged = !prevSelectedTimeRef.current || 
       Math.abs(prevSelectedTimeRef.current.getTime() - selectedTime.getTime()) > 1000;
-    const loadingChanged = loading !== undefined;
+    const _loadingChanged = loading !== undefined;
 
     // Don't clear chart data if we're just loading other data (not baseline)
     // Only clear if baseline is missing or we're actually loading baseline

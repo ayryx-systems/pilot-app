@@ -119,7 +119,7 @@ export function airportLocalToUTC(localDate: Date, airportCode: string, baseline
  * Get the current time at an airport (returns UTC Date representing current moment)
  * For display purposes, use utcToAirportLocal() to convert to local time components
  */
-export function getAirportLocalTime(airportCode: string, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): Date {
+export function getAirportLocalTime(_airportCode: string, _baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): Date {
   return getCurrentUTCTime();
 }
 

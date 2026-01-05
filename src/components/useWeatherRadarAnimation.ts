@@ -181,7 +181,7 @@ export function useWeatherRadarAnimation({
         radarBlobUrlsRef.current.forEach(url => {
           try {
             URL.revokeObjectURL(url);
-          } catch (error) {
+          } catch {
             // Ignore errors
           }
         });
@@ -236,7 +236,7 @@ export function useWeatherRadarAnimation({
             radarOverlaysRef.current.forEach(overlay => {
               try {
                 layerGroupsRef.current.weather?.removeLayer(overlay);
-              } catch (error) {
+              } catch {
                 // Ignore
               }
             });
@@ -246,7 +246,7 @@ export function useWeatherRadarAnimation({
           radarBlobUrlsRef.current.forEach(url => {
             try {
               URL.revokeObjectURL(url);
-            } catch (error) {
+            } catch {
               // Ignore
             }
           });
@@ -315,7 +315,7 @@ export function useWeatherRadarAnimation({
             if (radarTimeIndicatorRef.current) {
               try {
                 radarTimeIndicatorRef.current.remove();
-              } catch (e) {
+              } catch {
                 // Element already removed, ignore
               }
               radarTimeIndicatorRef.current = null;
@@ -407,7 +407,7 @@ export function useWeatherRadarAnimation({
       radarBlobUrlsRef.current.forEach(url => {
         try {
           URL.revokeObjectURL(url);
-        } catch (error) {
+        } catch {
           // Ignore
         }
       });
