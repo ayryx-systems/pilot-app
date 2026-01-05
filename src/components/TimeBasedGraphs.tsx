@@ -15,6 +15,7 @@ import {
 import { Line } from 'react-chartjs-2';
 import { BaselineData, ArrivalForecast } from '@/types';
 import { utcToAirportLocal, getAirportUTCOffset, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
+import { HelpButton } from './HelpButton';
 
 ChartJS.register(
   CategoryScale,
@@ -611,6 +612,38 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
   return (
     <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
+      <div className="flex items-center justify-between mb-2">
+        <h4 className="text-xs font-semibold text-slate-400 uppercase">Traffic Forecast</h4>
+        <HelpButton
+          title="Traffic Forecast Graph"
+          size="sm"
+          content={
+            <div className="space-y-2">
+              <p>
+                Shows expected arrival traffic at your selected time based on historical patterns and FAA forecasts.
+              </p>
+              <p>
+                <strong className="text-blue-400">Blue Line:</strong> Average for this day of the week (e.g., Thursday average)
+              </p>
+              <p>
+                <strong className="text-green-400">Green Line:</strong> Seasonal average across all days
+              </p>
+              <p>
+                <strong className="text-orange-400">Orange Line:</strong> FAA arrival forecast (when available)
+              </p>
+              <p>
+                <strong>White Dot:</strong> Your selected arrival time
+              </p>
+              <p className="text-xs text-gray-400">
+                Hover over points to see sample sizes. Larger samples mean more reliable data.
+              </p>
+              <p className="text-blue-300">
+                💡 Click anywhere on the graph to jump to that time.
+              </p>
+            </div>
+          }
+        />
+      </div>
       <div style={{ height: '200px', position: 'relative' }}>
         <Line ref={chartRef} data={chartData} options={options} />
       </div>

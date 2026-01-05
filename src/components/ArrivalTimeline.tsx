@@ -22,6 +22,7 @@ import { utcToAirportLocal, getSeason } from '@/utils/airportTime';
 import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
 import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { ExampleDayCard } from './ExampleDayCard';
+import { HelpButton } from './HelpButton';
 
 ChartJS.register(
   CategoryScale,
@@ -490,6 +491,38 @@ export function ArrivalTimeline({
           <h3 className="text-sm font-semibold text-gray-200">
             Arrival Duration Timeline
           </h3>
+          <HelpButton
+            title="Arrival Duration Timeline"
+            size="sm"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on historical data.
+                </p>
+                <p>
+                  <strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown
+                </p>
+                <p>
+                  <strong>Horizontal Axis:</strong> Time of landing (hours from now)
+                </p>
+                <p>
+                  <strong>Colored Dots:</strong> Individual aircraft grouped by type (light, regional, narrowbody, widebody, etc.)
+                </p>
+                <p>
+                  <strong className="text-white/70">White Dashed Line:</strong> Historical seasonal median - typical duration for this time
+                </p>
+                <p>
+                  <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times
+                </p>
+                <p>
+                  <strong className="text-blue-400">Blue Points:</strong> Historical arrivals from similar weather days
+                </p>
+                <p className="text-blue-300">
+                  💡 Click on dots to see the aircraft's ground track on the map.
+                </p>
+              </div>
+            }
+          />
           <div className="flex items-center gap-1 text-[10px] text-gray-400">
             <span className="inline-block w-4 border-t-2 border-dashed border-white/50"></span>
             <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>

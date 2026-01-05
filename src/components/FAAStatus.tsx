@@ -5,6 +5,7 @@ import { AlertTriangle, Clock, Plane, XCircle, Cloud } from 'lucide-react';
 import { pilotApi } from '@/services/api';
 import { FAADelayForecast } from './FAADelayForecast';
 import { formatAirportLocalTimeFromString } from '@/utils/airportTime';
+import { HelpButton } from './HelpButton';
 
 interface FAAStatus {
   airportId: string;
@@ -147,6 +148,31 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
       <div className="flex items-center gap-2 mb-3">
         <AlertTriangle className="h-4 w-4 text-yellow-400" />
         <h3 className="text-sm font-semibold text-slate-200">FAA NAS Status</h3>
+        <HelpButton
+          title="FAA NAS Status"
+          size="sm"
+          content={
+            <div className="space-y-2">
+              <p>
+                Live status information from the <strong>FAA National Airspace System (NAS)</strong>.
+              </p>
+              <div className="space-y-1.5 text-xs">
+                <p><strong>Ground Stop:</strong> All departures to this airport are stopped</p>
+                <p><strong>Ground Delay:</strong> Departures are being delayed before takeoff</p>
+                <p><strong>Arrival/Departure Delays:</strong> Expected delays for arriving or departing aircraft</p>
+                <p><strong>Airport Configuration:</strong> Active runway configuration and arrival/departure rates</p>
+                <p><strong>Airport Closure:</strong> Full or partial airport closure</p>
+                <p><strong>De-icing:</strong> Active de-icing operations</p>
+              </div>
+              <p className="text-xs text-gray-400">
+                Data is updated every 5 minutes from FAA sources.
+              </p>
+              <p className="text-blue-300">
+                💡 This shows official FAA advisories and may differ from your flight planning.
+              </p>
+            </div>
+          }
+        />
       </div>
 
       {status.groundStop && (

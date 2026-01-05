@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MapDisplayOptions } from '@/types';
 import { Settings, Eye, EyeOff, Layers } from 'lucide-react';
+import { HelpButton } from './HelpButton';
 
 interface MapControlsProps {
   displayOptions: MapDisplayOptions;
@@ -78,6 +79,33 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
       {/* Expanded Controls */}
       {isExpanded && (
         <div className="border-t border-slate-600 p-2">
+          <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-600">
+            <span className="text-xs font-semibold text-gray-300">Map Layers</span>
+            <HelpButton
+              title="Map Layers"
+              size="sm"
+              content={
+                <div className="space-y-2">
+                  <p>
+                    Toggle map layers to customize what information you see.
+                  </p>
+                  <div className="space-y-1.5 text-xs">
+                    <p><strong>DME Rings:</strong> Distance circles from airport (10, 25, 50nm)</p>
+                    <p><strong>Waypoints:</strong> Navigational fixes and intersections</p>
+                    <p><strong>Extended Centerlines:</strong> Runway approach paths</p>
+                    <p><strong>PIREPs (ATC):</strong> Pilot reports extracted from ATC communications</p>
+                    <p><strong>PIREPs (Weather):</strong> Official weather pilot reports</p>
+                    <p><strong>Ground Tracks:</strong> Historical arrival paths from 50nm</p>
+                    <p><strong>Weather Radar:</strong> Live precipitation and storm data</p>
+                    <p><strong>Airport Features:</strong> Runways, taxiways, and airport structures</p>
+                  </div>
+                  <p className="text-blue-300">
+                    💡 Your layer preferences are saved automatically.
+                  </p>
+                </div>
+              }
+            />
+          </div>
           <div className="space-y-1">
             {controls.map(({ key, label, icon }) => (
               <button

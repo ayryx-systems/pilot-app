@@ -5,6 +5,7 @@ import { Clock, RotateCcw } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
 import { BaselineData, FlightCategory } from '@/types';
 import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
+import { HelpButton } from './HelpButton';
 
 interface ETASelectorProps {
   airportCode: string;
@@ -151,6 +152,29 @@ export function ETASelector({
             {formatTime(selectedTime)}
           </span>
           <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
+          <HelpButton
+            title="Arrival Time Selection"
+            size="sm"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Select your <strong>expected arrival time</strong> to see forecasted conditions and traffic patterns.
+                </p>
+                <p>
+                  <strong>NOW:</strong> Shows current real-time conditions at the airport.
+                </p>
+                <p>
+                  <strong>Future Time:</strong> Shows TAF weather forecast and historical traffic patterns for that time.
+                </p>
+                <p>
+                  <strong>What-if Scenarios:</strong> You can manually select weather conditions (VFR/MVFR/IFR/LIFR) to see how different weather affects arrival patterns.
+                </p>
+                <p className="text-blue-300">
+                  💡 Drag the slider or click on graphs to select a time.
+                </p>
+              </div>
+            }
+          />
           {isNow ? (
             <span className="px-1.5 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-[10px] font-medium text-blue-300">
               NOW

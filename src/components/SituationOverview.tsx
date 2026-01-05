@@ -7,6 +7,7 @@ import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
 import { utcToAirportLocal, formatAirportLocalTime } from '@/utils/airportTime';
+import { HelpButton } from './HelpButton';
 
 interface WeatherData {
   metar: string;
@@ -216,6 +217,38 @@ export const SituationOverview = memo(function SituationOverview({
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
             Conditions
           </span>
+          <HelpButton
+            title="Airport Conditions"
+            size="sm"
+            content={
+              <div className="space-y-2">
+                <p>
+                  Quick status indicators for key arrival factors at this airport.
+                </p>
+                <p>
+                  <strong className="text-green-400">🟢 Green:</strong> Normal conditions - no concerns
+                </p>
+                <p>
+                  <strong className="text-yellow-400">🟡 Yellow (Caution):</strong> Elevated conditions - plan accordingly
+                </p>
+                <p>
+                  <strong className="text-red-400">🔴 Red (Warning):</strong> Significant concerns - review carefully
+                </p>
+                <div className="border-t border-slate-600 pt-2 mt-2">
+                  <p className="font-semibold mb-1">Condition Types:</p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li><strong>Weather:</strong> Visibility, ceiling, wind, precipitation</li>
+                    <li><strong>Traffic:</strong> Arrival volume and congestion</li>
+                    <li><strong>Approach:</strong> Delays, approach procedures</li>
+                    <li><strong>Special:</strong> NOTAMs, TFRs, closures</li>
+                  </ul>
+                </div>
+                <p className="text-blue-300">
+                  💡 Click on any condition for detailed information.
+                </p>
+              </div>
+            }
+          />
           <div className="h-px flex-1 bg-slate-700"></div>
         </div>
 

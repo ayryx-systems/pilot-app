@@ -22,6 +22,7 @@ import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
 import { ClockDisplay } from './ClockDisplay';
 import { pilotApi } from '@/services/api';
+import { HelpButton } from './HelpButton';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -520,6 +521,35 @@ export function PilotDashboard() {
               loading={loading}
             />
           </div>
+          <HelpButton
+            title="AYRYX Pilot App"
+            size="md"
+            content={
+              <div className="space-y-2">
+                <p>
+                  A <strong>pre-flight planning tool</strong> for pilots to assess arrival conditions before departure.
+                </p>
+                <p>
+                  <strong>Key Features:</strong>
+                </p>
+                <ul className="list-disc list-inside space-y-1 text-xs">
+                  <li>Traffic forecast and historical arrival times</li>
+                  <li>Weather conditions and TAF forecasts</li>
+                  <li>Ground tracks showing actual arrival paths</li>
+                  <li>PIREPs from real ATC communications</li>
+                  <li>What-if weather scenarios (VFR/MVFR/IFR/LIFR)</li>
+                </ul>
+                <div className="bg-orange-900/30 border border-orange-500/50 rounded p-2 mt-2">
+                  <p className="text-orange-200 font-medium">
+                    ⚠️ DEMO ONLY - NOT FOR FLIGHT OPERATIONS
+                  </p>
+                  <p className="text-orange-300/80 text-xs mt-1">
+                    This is a demonstration system. Always use official FAA sources for flight planning.
+                  </p>
+                </div>
+              </div>
+            }
+          />
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
@@ -666,6 +696,26 @@ export function PilotDashboard() {
                   <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
                     Arrival Forecast
                   </span>
+                  <HelpButton
+                    title="Arrival Forecast"
+                    size="sm"
+                    content={
+                      <div className="space-y-2">
+                        <p>
+                          See how busy the airport will be at your arrival time based on historical data and FAA forecasts.
+                        </p>
+                        <p>
+                          <strong>Traffic Graph:</strong> Shows expected arrival volume with historical averages and FAA predictions.
+                        </p>
+                        <p>
+                          <strong>Duration Timeline:</strong> Displays how long arrivals typically take from 50nm out, helping you estimate your landing time.
+                        </p>
+                        <p className="text-blue-300">
+                          💡 Click on any time in the graphs to jump to that moment and see conditions.
+                        </p>
+                      </div>
+                    }
+                  />
                   <div className="h-px flex-1 bg-slate-700"></div>
                 </div>
 
@@ -765,6 +815,34 @@ export function PilotDashboard() {
           <div className="flex items-center justify-between mb-2">
             <div className="flex items-center gap-2">
               <h3 className="text-sm font-medium text-gray-300">PIREPs</h3>
+              <HelpButton
+                title="Pilot Reports (PIREPs)"
+                size="sm"
+                content={
+                  <div className="space-y-2">
+                    <p>
+                      Real-time pilot weather reports extracted from ATC communications using AI.
+                    </p>
+                    <p>
+                      <strong className="text-red-400">🔴 Urgent:</strong> Critical conditions (severe turbulence, icing)
+                    </p>
+                    <p>
+                      <strong className="text-yellow-400">🟡 High:</strong> Significant conditions (moderate turbulence, icing)
+                    </p>
+                    <p>
+                      <strong className="text-blue-400">🔵 Normal:</strong> Standard reports (smooth ride, light chop)
+                    </p>
+                    <div className="bg-orange-900/30 border border-orange-500/50 rounded p-2 mt-2">
+                      <p className="text-orange-200 text-xs">
+                        ⚠️ These are AI-extracted from ATC audio and are NOT official FAA PIREPs.
+                      </p>
+                    </div>
+                    <p className="text-blue-300">
+                      💡 PIREPs are shown on the map with their approximate location.
+                    </p>
+                  </div>
+                }
+              />
               {selectedAirport === 'KDEN' && (
                 <span className="px-1.5 py-0.5 bg-orange-600 text-white text-xs rounded-full font-medium">
                   STORM DEMO
