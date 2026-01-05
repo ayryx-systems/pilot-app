@@ -39,7 +39,7 @@ class WeatherApiError extends Error {
 }
 
 class WeatherService {
-  private cache = new Map<string, { data: any; timestamp: number; expiry: number }>();
+  private cache = new Map<string, { data: unknown; timestamp: number; expiry: number }>();
   private radarETag: string | null = null;
 
   // NOTE: Weather data services are now proxied through the backend API
@@ -111,7 +111,7 @@ class WeatherService {
 
       // Filter alerts by bounding box and relevance to aviation
       const relevantAlerts = (data.alerts || [])
-        .filter((alert: any) => {
+        .filter((alert: { geometry?: { coordinates?: unknown[][] } }) => {
           const geometry = alert.geometry;
           if (!geometry || !geometry.coordinates) return false;
 
@@ -125,7 +125,7 @@ class WeatherService {
               lon >= bounds.west && lon <= bounds.east;
           });
         })
-        .map((alert: any) => ({
+        .map((alert: { id: string; title: string; description: string; severity: string; urgency: string; certainty: string; areas: string[]; effective: string; expires: string; status: string }) => ({
           id: alert.id,
           title: alert.title,
           description: alert.description,
@@ -374,7 +374,7 @@ class WeatherService {
   /**
    * Get cached weather data
    */
-  private getCachedData(key: string, maxAgeMinutes: number): any | null {
+  private getCachedData(key: string, _maxAgeMinutes: number): unknown | null {
     const cached = this.cache.get(key);
     if (!cached) return null;
 
@@ -390,7 +390,7 @@ class WeatherService {
   /**
    * Set cached weather data
    */
-  private setCachedData(key: string, data: any, maxAgeMinutes: number): void {
+  private setCachedData(key: string, data: unknown, maxAgeMinutes: number): void {
     this.cache.set(key, {
       data,
       timestamp: Date.now(),

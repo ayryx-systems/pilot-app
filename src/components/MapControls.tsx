@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapDisplayOptions } from '@/types';
-import { Settings, Eye, EyeOff, Layers } from 'lucide-react';
+import { Eye, EyeOff, Layers } from 'lucide-react';
 import { HelpButton } from './HelpButton';
 
 interface MapControlsProps {

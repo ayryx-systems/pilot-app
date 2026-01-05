@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { PiRep, ConnectionStatus } from '@/types';
 import { AlertTriangle, Clock, Plane, ChevronDown, ChevronUp } from 'lucide-react';
-import { SimpleDataAge } from './SimpleDataAge';
 import { DebugTimestamp } from './DebugTimestamp';
 
 interface PirepsListProps {

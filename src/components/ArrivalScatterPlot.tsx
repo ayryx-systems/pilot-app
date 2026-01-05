@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -14,7 +14,7 @@ import {
 } from 'chart.js';
 import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData } from '@/types';
-import { utcToAirportLocal, getSeason, getAirportUTCOffset } from '@/utils/airportTime';
+import { utcToAirportLocal, getSeason } from '@/utils/airportTime';
 import { getAircraftCategoryFromType, categoryColors, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
 
 ChartJS.register(
@@ -58,7 +58,7 @@ const categoryNames: Record<string, string> = {
   widebody: 'Wide-body',
 };
 
-function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string): { season: string; byTimeSlot: Record<string, { medianTimeFrom50nm?: number }> } | null {
+function getSeasonalBaseline(baseline: BaselineData | null | undefined): { season: string; byTimeSlot: Record<string, { medianTimeFrom50nm?: number }> } | null {
   if (!baseline) return null;
   
   const now = new Date();
@@ -67,7 +67,7 @@ function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportC
   
   if (!seasonData) return null;
   
-  const byTimeSlot = (seasonData as any).byTimeSlotLocal || seasonData.seasonalTimeSlots;
+  const byTimeSlot = (seasonData as Record<string, unknown>).byTimeSlotLocal as Record<string, { medianTimeFrom50nm?: number }> | undefined || seasonData.seasonalTimeSlots;
   if (!byTimeSlot) return null;
   
   return { season, byTimeSlot };
@@ -122,7 +122,6 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
 
     // Calculate time range: last 2 hours from now
     const now = new Date();
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
 
     // Group arrivals by category
     const categoryData: Record<string, Arrival[]> = {};
@@ -135,7 +134,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
     });
 
     // Create datasets for each category
-    const datasets: any[] = [];
+    const datasets: ChartData<'scatter'>['datasets'] = [];
     const categoryOrder = ['widebody', 'narrowbody', 'regional', 'small', 'light', 'heavy', 'large', 'other']; // Order by size
 
     categoryOrder.forEach(category => {
@@ -166,7 +165,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
       }
     });
 
-    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
+    const seasonalBaseline = getSeasonalBaseline(baseline);
     if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
       const baselineLineData = convertBaselineToHoursAgo(seasonalBaseline.byTimeSlot, airportCode, baseline);
       
@@ -229,7 +228,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
     return `${mins}m`;
   };
 
-  const createArrivalPopupContent = (arrival: Arrival): string => {
+  const createArrivalPopupContent = useCallback((arrival: Arrival): string => {
     const category = getAircraftCategory(arrival);
     const rgbaColor = getAircraftColor(category);
     const color = rgbaToHex(rgbaColor);
@@ -269,7 +268,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
         ` : ''}
       </div>
     `;
-  };
+  }, []);
 
   const options = useMemo(() => {
     return {
@@ -289,7 +288,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
           },
           ticks: {
             color: '#94a3b8',
-            callback: function(value: any) {
+            callback: function(value: string | number) {
               if (typeof value !== 'number') return '';
               // Value is in hours (negative = past, positive = future)
               if (Math.abs(value) < 0.01) return 'Now';
@@ -349,13 +348,13 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
         },
         tooltip: {
           enabled: false,
-          external: function(context: any) {
+          external: function(context: { tooltip: { opacity: number; dataPoints?: Array<{ datasetIndex: number; index: number; raw?: { arrival?: Arrival } }>; caretX: number; caretY: number } }): void {
             const tooltipEl = document.getElementById('chartjs-tooltip');
             const chart = chartRef.current;
             
             if (!chart) return;
             
-            let tooltipModel = context.tooltip;
+            const tooltipModel = context.tooltip;
             if (!tooltipModel.opacity) {
               if (tooltipEl) {
                 tooltipEl.style.opacity = '0';
@@ -404,7 +403,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
           },
         },
       },
-      onClick: (event: any, elements: any) => {
+      onClick: (_event: MouseEvent, elements: Array<{ datasetIndex: number; index: number }>) => {
         if (elements.length > 0 && onPointClick) {
           const element = elements[0];
           const datasetIndex = element.datasetIndex;
@@ -419,7 +418,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
         }
       },
     };
-  }, [chartData, onPointClick]);
+  }, [chartData, onPointClick, createArrivalPopupContent]);
 
   // Cleanup tooltip on unmount
   useEffect(() => {
@@ -442,16 +441,6 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
       </div>
     );
   }
-
-  // Cleanup tooltip on unmount
-  useEffect(() => {
-    return () => {
-      const tooltipEl = document.getElementById('chartjs-tooltip');
-      if (tooltipEl) {
-        tooltipEl.remove();
-      }
-    };
-  }, []);
 
   return (
     <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">

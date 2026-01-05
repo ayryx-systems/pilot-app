@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { ConnectionStatus as ConnectionStatusType } from '@/types';
-import { Wifi, WifiOff, Clock, Signal } from 'lucide-react';
+import { Wifi, WifiOff, Signal } from 'lucide-react';
 
 interface ConnectionStatusProps {
   connectionStatus: ConnectionStatusType;

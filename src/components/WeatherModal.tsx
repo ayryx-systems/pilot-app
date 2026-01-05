@@ -298,6 +298,7 @@ export function WeatherModal({
                                                             )}
                                                             {period.clouds && period.clouds.length > 0 && (
                                                                 <div className="text-blue-300 text-xs">
+                                                                    {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
                                                                     Clouds: {period.clouds.map((c: any) => `${c.coverage} ${c.altitude}ft`).join(', ')}
                                                                 </div>
                                                             )}

@@ -79,6 +79,7 @@ export const SituationOverview = memo(function SituationOverview({
   selectedTime,
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
   const [isWeatherExpanded, setIsWeatherExpanded] = useState(false);
 
@@ -102,6 +103,7 @@ export const SituationOverview = memo(function SituationOverview({
   })() : true;
 
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const openConditionModal = (key: string, condition: any) => {
     setSelectedCondition({ key, condition });
   };

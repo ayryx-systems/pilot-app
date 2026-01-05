@@ -80,7 +80,7 @@ class PilotApiService {
 
   private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      let errorData: any = {};
+      let errorData: Record<string, unknown> = {};
       let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
       try {
@@ -142,7 +142,7 @@ class PilotApiService {
   /**
    * Get FAA NAS status for an airport
    */
-  async getFAAStatus(airportId: string): Promise<any> {
+  async getFAAStatus(airportId: string): Promise<Record<string, unknown>> {
     try {
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/faa-status/${airportId}?t=${Date.now()}`, {
         cache: 'no-cache',
@@ -151,7 +151,7 @@ class PilotApiService {
           'Pragma': 'no-cache'
         }
       }, 8000);
-      return await this.handleResponse<any>(response);
+      return await this.handleResponse<Record<string, unknown>>(response);
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
         return { status: null };

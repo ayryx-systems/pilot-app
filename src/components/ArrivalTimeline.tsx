@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useRef, useCallback, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -84,7 +84,7 @@ const getAircraftCategory = (arrival: Arrival): string => {
   return getAircraftCategoryFromType(arrival.aircraftType);
 };
 
-function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string) {
+function getSeasonalBaseline(baseline: BaselineData | null | undefined) {
   if (!baseline) return null;
   
   const now = new Date();
@@ -108,7 +108,6 @@ export function ArrivalTimeline({
   selectedTime,
   weatherCategory = 'VFR',
   onPointClick,
-  onHistoricalPointClick,
 }: ArrivalTimelineProps) {
   const chartRef = useRef<ChartJS<'scatter'>>(null);
   
@@ -186,7 +185,7 @@ export function ArrivalTimeline({
         }
         
         if (!isAtNow && chartMax > 12) {
-          let hoursFromNowNextDay = hoursFromNow + 24;
+          const hoursFromNowNextDay = hoursFromNow + 24;
           if (hoursFromNowNextDay >= -2 && hoursFromNowNextDay <= chartMax) {
             baselinePoints.push({
               x: hoursFromNowNextDay,
@@ -222,7 +221,7 @@ export function ArrivalTimeline({
         max: chartMax 
       } 
     };
-  }, [arrivals, airportCode, baseline, selectedTime, isAtNow, hoursAhead]);
+  }, [arrivals, baseline, isAtNow, hoursAhead]);
 
   const options = useMemo((): ChartOptions<'scatter'> => {
     const annotations: Record<string, unknown> = {};
@@ -456,7 +455,7 @@ export function ArrivalTimeline({
         }
       },
     };
-  }, [chartData, isAtNow, hoursAhead, weatherCategory, matchedDaysData, onPointClick, onHistoricalPointClick]);
+  }, [chartData, isAtNow, hoursAhead, weatherCategory, matchedDaysData, onPointClick]);
 
   if (!chartData || chartData.datasets.length === 0) {
     return (
@@ -497,7 +496,7 @@ export function ArrivalTimeline({
                   <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times from similar weather days
                 </p>
                 <p className="text-blue-300">
-                  💡 Click on dots to see the aircraft's ground track on the map.
+                  💡 Click on dots to see the aircraft&apos;s ground track on the map.
                 </p>
               </div>
             }

@@ -119,6 +119,7 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
           font: {
             size: 10,
           },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           callback: (value: any) => `${value} min`,
         },
         grid: {

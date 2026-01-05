@@ -8,18 +8,24 @@
 
 import { AirportOSMFeatures } from '@/types';
 
+interface OSMFeature {
+  type: string;
+  coordinates: unknown;
+  properties?: Record<string, unknown>;
+}
+
 interface OSMResponse {
   airportId: string;
   osm: {
-    taxiways: any[];
-    terminals: any[];
-    gates: any[];
-    aprons: any[];
-    hangars: any[];
-    controlTowers: any[];
-    parkingPositions: any[];
-    runways: any[];
-    other: any[];
+    taxiways: OSMFeature[];
+    terminals: OSMFeature[];
+    gates: OSMFeature[];
+    aprons: OSMFeature[];
+    hangars: OSMFeature[];
+    controlTowers: OSMFeature[];
+    parkingPositions: OSMFeature[];
+    runways: OSMFeature[];
+    other: OSMFeature[];
     featureCount: number;
   };
   timestamp: string;

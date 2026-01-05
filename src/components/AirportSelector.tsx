@@ -16,7 +16,6 @@ export function AirportSelector({
   onSelectAirport,
   loading
 }: AirportSelectorProps) {
-  const selectedAirportData = airports.find(a => a.id === selectedAirport);
 
   return (
     <div className="relative">

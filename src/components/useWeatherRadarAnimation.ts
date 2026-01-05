@@ -45,7 +45,9 @@ export function useWeatherRadarAnimation({
     if (radarOverlaysRef.current.length <= 1) return;
     
     if (radarAnimationIntervalRef.current) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       clearTimeout(radarAnimationIntervalRef.current as any);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       clearInterval(radarAnimationIntervalRef.current as any);
       radarAnimationIntervalRef.current = null;
     }
@@ -57,6 +59,7 @@ export function useWeatherRadarAnimation({
     const animateFrame = () => {
       if (!displayOptions.showWeatherRadar) {
         if (radarAnimationIntervalRef.current) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           clearTimeout(radarAnimationIntervalRef.current as any);
           radarAnimationIntervalRef.current = null;
         }
@@ -135,11 +138,14 @@ export function useWeatherRadarAnimation({
       const delay = isLastFrame ? 3000 : 300;
       
       if (radarAnimationIntervalRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clearTimeout(radarAnimationIntervalRef.current as any);
       }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       radarAnimationIntervalRef.current = setTimeout(animateFrame, delay) as any;
     };
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
   };
 
@@ -165,7 +171,7 @@ export function useWeatherRadarAnimation({
                 if (mapInstance && mapInstance.hasLayer(overlay)) {
                   mapInstance.removeLayer(overlay);
                 }
-            } catch (error) {
+            } catch {
               // Layer might already be removed, ignore
             }
           });
@@ -379,7 +385,9 @@ export function useWeatherRadarAnimation({
 
     return () => {
       if (radarAnimationIntervalRef.current) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clearTimeout(radarAnimationIntervalRef.current as any);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clearInterval(radarAnimationIntervalRef.current as any);
         radarAnimationIntervalRef.current = null;
       }

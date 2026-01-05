@@ -201,11 +201,15 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   selectedTime,
   isNow,
 }: WeatherGraphsProps) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [visibilityData, setVisibilityData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [ceilingData, setCeilingData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [windData, setWindData] = useState<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollPositionRef = useRef<number>(0);
+  const eventChartRef = useRef<ChartJS<'line'>>(null);
 
   // Memoize graph data to prevent unnecessary recalculations
   const graphData = useMemo(() => {
@@ -420,21 +424,25 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' }
                             : true,
                           tension: 0.4,
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           pointRadius: (ctx: any) => {
                             const value = graph.data.data[ctx.dataIndex];
                             if (value === null || value === undefined) return 0;
                             return ctx.dataIndex === selectedIndex ? 6 : 0;
                           },
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           pointBackgroundColor: (ctx: any) => {
                             const value = graph.data.data[ctx.dataIndex];
                             if (value === null || value === undefined) return 'transparent';
                             return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
                           },
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           pointBorderColor: (ctx: any) => {
                             const value = graph.data.data[ctx.dataIndex];
                             if (value === null || value === undefined) return 'transparent';
                             return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
                           },
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           pointBorderWidth: (ctx: any) => {
                             const value = graph.data.data[ctx.dataIndex];
                             if (value === null || value === undefined) return 0;
@@ -485,6 +493,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             maxRotation: 0,
                             autoSkip: true,
                             maxTicksLimit: 8,
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             callback: function(value: any, index: number) {
                               const label = this.getLabelForValue(value);
                               return label || undefined;
@@ -506,6 +515,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             autoSkip: isVisibility ? false : true,
                             maxTicksLimit: isVisibility ? undefined : undefined,
                             includeBounds: isVisibility ? false : true,
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             callback: function(value: any) {
                               if (isVisibility) {
                                 if (value > 10) return undefined;
@@ -531,6 +541,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                               bottom: 0,
                             },
                           },
+                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
                           afterFit: function(scaleInstance: any) {
                             scaleInstance.width = 70;
                           },
@@ -634,8 +645,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         const visibleHeight = Math.min(totalHeight, headerHeight + (maxVisibleRows * rowHeight) + bottomPadding);
         const chartLabels = formattedLabels || graphData.timeSlots;
         const emptyData = new Array(graphData.timeSlots.length).fill(null);
-        
-        const eventChartRef = React.useRef<ChartJS<'line'>>(null);
 
         const eventRows: Array<Array<typeof laidOutEvents[0]>> = [];
         laidOutEvents.forEach(event => {
@@ -735,7 +744,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                                 maxRotation: 0,
                                 autoSkip: true,
                                 maxTicksLimit: 8,
-                                callback: function(value: any, index: number) {
+                                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                            callback: function(value: any, index: number) {
                                   const label = this.getLabelForValue(value);
                                   return label || undefined;
                                 },

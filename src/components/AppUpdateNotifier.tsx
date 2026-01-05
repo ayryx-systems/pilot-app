@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 /**
  * App Update Notifier - Simplified version without PWA functionality
  * Shows a manual refresh notice for regular web app updates

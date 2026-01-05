@@ -24,7 +24,7 @@ function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number
     const y = Math.sin(dLon) * Math.cos(lat2Rad);
     const x = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLon);
     
-    let bearing = toDegrees(Math.atan2(y, x));
+    const bearing = toDegrees(Math.atan2(y, x));
     return (bearing + 360) % 360; // Normalize to 0-360
 }
 
@@ -153,7 +153,7 @@ export function PilotMap({
   // Weather layers state
   const [weatherLayers, setWeatherLayers] = useState<WeatherLayer[]>([]);
   const [activeWeatherLayers, setActiveWeatherLayers] = useState<Map<string, L.TileLayer>>(new Map());
-  const [sigmetAirmetData, setSigmetAirmetData] = useState<any[]>([]);
+  const [_sigmetAirmetData, setSigmetAirmetData] = useState<unknown[]>([]);
 
 
   // OSM data state
@@ -508,7 +508,7 @@ export function PilotMap({
       // Always show runways - they are now permanently enabled
       // Use runways from airportConfig (static constants with correct coordinates) first, fallback to airportData
       const runways = airportConfig?.runways || airportData?.runways || [];
-      runways.forEach((runway: any) => {
+      runways.forEach((runway: { threshold?: { lat: number; lon: number }; oppositeEnd?: { lat: number; lon: number } }) => {
         if (runway.threshold && runway.oppositeEnd) {
           const runwayLine = L.polyline([
             [runway.threshold.lat, runway.threshold.lon],
@@ -1146,7 +1146,7 @@ export function PilotMap({
       if (existingRadarLayer && layerGroupsRef.current.weather) {
         try {
           layerGroupsRef.current.weather.removeLayer(existingRadarLayer);
-        } catch (error) {
+        } catch {
           // Layer might already be removed
         }
         setActiveWeatherLayers(prev => {
@@ -1268,6 +1268,8 @@ export function PilotMap({
 
       // Remove existing SIGMETs/AIRMETs layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._sigmetAirmetId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1326,7 +1328,9 @@ export function PilotMap({
             });
 
             // Store ID for cleanup on both elements
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (polygon as any)._sigmetAirmetId = sigmet.id;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (border as any)._sigmetAirmetId = sigmet.id;
 
             // Format time in Zulu (UTC)
@@ -1410,6 +1414,8 @@ export function PilotMap({
 
       // Remove existing wind layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._windStationId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1431,6 +1437,7 @@ export function PilotMap({
           
           // Group winds by station to avoid superimposition
           const stationGroups = new Map();
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           windsData.forEach((wind: any) => {
             // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
             if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) {
@@ -1447,6 +1454,7 @@ export function PilotMap({
           // Only show one wind barb per station (prefer lower altitude)
           stationGroups.forEach((stationWinds) => {
             // Sort by altitude and take the lowest one
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             stationWinds.sort((a: any, b: any) => a.level - b.level);
             const wind = stationWinds[0];
 
@@ -1483,11 +1491,14 @@ export function PilotMap({
               pane: 'overlayPane'
             });
 
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (windMarker as any)._windStationId = wind.id;
 
             // Create popup content showing all altitude levels for this station
             // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             const allLevelsHTML = sortedLevels.map((w: any) => 
               `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                 <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
@@ -1533,7 +1544,8 @@ export function PilotMap({
 
         // Remove existing wind layers
         const existingLayers = layerGroupsRef.current.weather.getLayers();
-        existingLayers.forEach((layer: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      existingLayers.forEach((layer: any) => {
           if (layer._windStationId) {
             layerGroupsRef.current.weather.removeLayer(layer);
           }
@@ -1554,7 +1566,9 @@ export function PilotMap({
             
             // Group winds by station to avoid superimposition
             const stationGroups = new Map();
-            windsData.forEach((wind: any) => {
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          windsData.forEach((wind: any) => {
               // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
               if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) return;
               
@@ -1568,6 +1582,7 @@ export function PilotMap({
             // Only show one wind barb per station (prefer lower altitude)
             stationGroups.forEach((stationWinds) => {
               // Sort by altitude and take the lowest one
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               stationWinds.sort((a: any, b: any) => a.level - b.level);
               const wind = stationWinds[0];
 
@@ -1604,11 +1619,14 @@ export function PilotMap({
                 pane: 'overlayPane'
               });
 
-              (windMarker as any)._windStationId = wind.id;
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            (windMarker as any)._windStationId = wind.id;
 
               // Create popup content showing all altitude levels for this station
               // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const allLevelsHTML = sortedLevels.map((w: any) => 
                 `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
                   <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
@@ -1661,6 +1679,7 @@ export function PilotMap({
 
       // Remove existing Icing layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._icingId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1716,7 +1735,9 @@ export function PilotMap({
             });
 
             // Store ID for cleanup on both elements
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (polygon as any)._icingId = icing.id;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (border as any)._icingId = icing.id;
 
             const formatZulu = (dateString: string) => {
@@ -1765,6 +1786,7 @@ export function PilotMap({
 
       // Remove existing Turbulence layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._turbulenceId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1820,7 +1842,9 @@ export function PilotMap({
             });
 
             // Store ID for cleanup on both elements
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (polygon as any)._turbulenceId = turbulence.id;
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (border as any)._turbulenceId = turbulence.id;
 
             const formatZulu = (dateString: string) => {
@@ -1872,6 +1896,7 @@ export function PilotMap({
 
       // Remove existing weather PIREP layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._weatherPirepId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1886,6 +1911,7 @@ export function PilotMap({
         try {
           const weatherPireps = await weatherService.getWeatherPireps();
           
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           weatherPireps.forEach((pirep: any) => {
             if (!pirep.lat || !pirep.lon || isNaN(pirep.lat) || isNaN(pirep.lon)) return;
 
@@ -1995,6 +2021,7 @@ export function PilotMap({
               conditions.push(`Weather: ${pirep.wxString}`);
             }
             if (pirep.clouds && Array.isArray(pirep.clouds) && pirep.clouds.length > 0) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               const cloudDesc = pirep.clouds.map((c: any) => `${c.cover}${c.base ? ` ${c.base}ft` : ''}`).join(', ');
               conditions.push(`Clouds: ${cloudDesc}`);
             }
@@ -2070,6 +2097,7 @@ export function PilotMap({
               });
             });
             
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (marker as any)._weatherPirepId = pirep.id;
             layerGroupsRef.current.weather.addLayer(marker);
           });
@@ -2107,6 +2135,7 @@ export function PilotMap({
 
       // Remove existing METAR layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._metarId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -2122,12 +2151,12 @@ export function PilotMap({
         try {
           const metars = await weatherService.getMetars();
           
-          metars.forEach((metar: any) => {
+          metars.forEach((metar: { lat?: number; lon?: number; flightCategory?: string }) => {
             if (!metar.lat || !metar.lon || isNaN(metar.lat) || isNaN(metar.lon)) return;
 
             // Determine color based on flight category
             let color = '#6b7280'; // Gray for unknown
-            let borderColor = '#ffffff';
+            const borderColor = '#ffffff';
             
             switch (metar.flightCategory) {
               case 'LIFR':
@@ -2227,6 +2256,7 @@ export function PilotMap({
               : 'N/A';
 
             const cloudsStr = metar.clouds && Array.isArray(metar.clouds) && metar.clouds.length > 0
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               ? metar.clouds.map((c: any) => {
                   if (c.cover === 'CLR' || c.cover === 'SKC') return 'Clear';
                   if (c.cover === 'FEW') return `Few ${c.base ? c.base + 'ft' : ''}`;
@@ -2265,6 +2295,7 @@ export function PilotMap({
               keepInView: true
             });
             
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (marker as any)._metarId = metar.id;
             layerGroupsRef.current.weather.addLayer(marker);
           });
@@ -2289,7 +2320,9 @@ export function PilotMap({
     };
   }, [mapInstance, displayOptions.showMetars]);
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderRunways = (mapInstance: L.Map, osmData: any, currentZoom: number, Leaflet: typeof L) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     mapInstance.eachLayer((layer: any) => {
       if (layer._runwayLabel || layer._runwayPolyline) {
         mapInstance.removeLayer(layer);
@@ -2306,13 +2339,16 @@ export function PilotMap({
     
     const runwayWeight = getRunwayWeight(currentZoom);
     
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     osmData.runways.forEach((way: any) => {
       if (way.geometry && way.geometry.length > 1) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const coordinates = way.geometry.map((point: any) => {
           if (!point || !point.lat || !point.lon || isNaN(point.lat) || isNaN(point.lon)) {
             return null;
           }
           return [point.lat, point.lon] as [number, number];
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         }).filter((coord: any) => coord !== null);
         
         if (coordinates.length < 2) return;
@@ -2325,6 +2361,7 @@ export function PilotMap({
           pane: 'markerPane',
           zIndexOffset: 10 // Set z-index to 610 (10 + markerPane base 600), below tracks at 630
         });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (runway as any)._runwayPolyline = true;
         runway.addTo(mapInstance);
 
@@ -2356,6 +2393,7 @@ export function PilotMap({
               interactive: false, pane: 'popupPane'
             });
             startLabel.addTo(mapInstance);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (startLabel as any)._runwayLabel = true;
 
             const endLabel = Leaflet.marker(endPoint, {
@@ -2379,6 +2417,7 @@ export function PilotMap({
               interactive: false, pane: 'popupPane'
             });
             endLabel.addTo(mapInstance);
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (endLabel as any)._runwayLabel = true;
           }
         }
@@ -2387,7 +2426,9 @@ export function PilotMap({
   };
 
   const renderExtendedCenterlines = (
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     osmData: any,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     displayOptions: any,
     layerGroupsRef: React.MutableRefObject<Record<string, L.LayerGroup>>,
     Leaflet: typeof L
@@ -2395,6 +2436,7 @@ export function PilotMap({
     if (displayOptions.showExtendedCenterlines && layerGroupsRef.current.extendedCenterlines) {
       layerGroupsRef.current.extendedCenterlines.clearLayers();
       
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       osmData.runways.forEach((runway: any) => {
         try {
           const coordinates = runway.geometry || [];

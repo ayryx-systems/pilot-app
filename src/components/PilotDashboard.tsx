@@ -3,14 +3,13 @@
 import React, { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react';
 import { PilotMap } from './PilotMap';
 import { AirportSelector } from './AirportSelector';
-import { ConnectionStatus } from './ConnectionStatus';
 import { SituationOverview } from './SituationOverview';
 import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalTimeline } from './ArrivalTimeline';
 import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
 import { ETASelector } from './ETASelector';
-import { Arrival, ArrivalSituationResponse, MatchedDaysResponse, FlightCategory } from '@/types';
+import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory } from '@/types';
 import { MapControls } from './MapControls';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
@@ -50,7 +49,7 @@ export function PilotDashboard() {
     loading,
     error,
     pirepsMetadata,
-    tracksMetadata,
+    tracksMetadata: _tracksMetadata,
     summaryMetadata,
     refreshData
   } = usePilotData();
@@ -102,9 +101,9 @@ export function PilotDashboard() {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
-  const [arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
-  const [arrivalSituationLoading, setArrivalSituationLoading] = useState(false);
-  const [arrivalSituationError, setArrivalSituationError] = useState<string | null>(null);
+  const [_arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
+  const [_arrivalSituationLoading, setArrivalSituationLoading] = useState(false);
+  const [_arrivalSituationError, setArrivalSituationError] = useState<string | null>(null);
   const lastSituationFetchRef = useRef<{ airport: string; time: number; conditions?: string } | null>(null);
   const situationAbortControllerRef = useRef<AbortController | null>(null);
   
@@ -112,7 +111,7 @@ export function PilotDashboard() {
   const [matchedDaysLoading, setMatchedDaysLoading] = useState(false);
   const [weatherCategory, setWeatherCategory] = useState<FlightCategory>('VFR');
   const [isManualWeather, setIsManualWeather] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
+  const [_collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     weather: false,
     pireps: true,
   });
@@ -122,7 +121,7 @@ export function PilotDashboard() {
   const prevSelectedTimeRef = useRef<number>(selectedTime.getTime());
   const prevWeatherCategoryRef = useRef<FlightCategory>(weatherCategory);
 
-  const toggleSection = (section: string) => {
+  const _toggleSection = (section: string) => {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
@@ -475,13 +474,13 @@ export function PilotDashboard() {
     }
   };
 
-  const getConnectionStatusColor = () => {
+  const _getConnectionStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
     if (connectionStatus.latency && connectionStatus.latency > 2000) return 'text-yellow-400';
     return 'text-green-400';
   };
 
-  const getConnectionStatusIcon = () => {
+  const _getConnectionStatusIcon = () => {
     if (!connectionStatus.connected) {
       return <WifiOff className="w-4 h-4" />;
     }

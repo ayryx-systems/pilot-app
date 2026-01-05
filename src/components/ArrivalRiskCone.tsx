@@ -114,8 +114,8 @@ function getWindLabel(kt?: number): string {
 interface DropdownProps {
   label: string;
   value: string;
-  options: { label: string; value: any }[];
-  onChange: (value: any) => void;
+  options: { label: string; value: string | number }[];
+  onChange: (value: string | number) => void;
   disabled?: boolean;
   categoryColor?: string;
 }
@@ -200,7 +200,7 @@ export default function ArrivalRiskCone({
     }
   };
 
-  const handleConditionChange = (key: keyof CustomConditions, value: any) => {
+  const handleConditionChange = (key: keyof CustomConditions, value: string | number | undefined) => {
     const newConditions = { ...customConditions, [key]: value };
     setCustomConditions(newConditions);
     if (isCustomMode) {
@@ -308,7 +308,7 @@ export default function ArrivalRiskCone({
     );
   }
 
-  const { distribution, goAroundRate, extendedApproachProbability, referenceDays, conditions, explanation, matchCount } = situation || {};
+  const { distribution, goAroundRate, extendedApproachProbability, referenceDays, explanation, matchCount } = situation || {};
 
   return (
     <div className={`bg-slate-800/60 rounded-lg border overflow-hidden ${isCustomMode ? 'border-amber-500/50' : 'border-slate-700'}`}>

@@ -1,13 +1,13 @@
-import { useEffect, useRef, useCallback, useState } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { waypointService } from "@/services/waypointService";
 import { FormattedWaypoint } from "@/types/waypoints";
 import { Z_INDEX_LAYERS } from "@/types/zIndexLayers";
 
 interface FAAWaypointLayerProps {
-  map: any; // Use any to avoid Leaflet import issues
+  map: unknown; // Leaflet Map instance
   airportCode: string;
   showWaypoints: boolean;
-  layerGroup: any; // Use any to avoid Leaflet import issues
+  layerGroup: unknown; // Leaflet LayerGroup instance
 }
 
 export function FAAWaypointLayer({

@@ -137,8 +137,8 @@ export function formatAirportLocalTime(date: Date, airportCode: string, baseline
   
   // Calculate local time by adding offset
   let localHours = utcHours + offsetHours;
-  let localMinutes = utcMinutes;
-  let localSeconds = utcSeconds;
+  const localMinutes = utcMinutes;
+  const localSeconds = utcSeconds;
   
   // Calculate local date - start with UTC date and adjust for timezone
   let localYear = date.getUTCFullYear();
@@ -199,7 +199,7 @@ export function formatAirportLocalTimeShort(utcTimeString: string, airportCode: 
   const utcMinutes = date.getUTCMinutes();
   
   let localHours = utcHours + offsetHours;
-  let localMinutes = utcMinutes;
+  const localMinutes = utcMinutes;
   
   while (localHours < 0) {
     localHours += 24;
