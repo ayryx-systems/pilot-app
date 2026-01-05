@@ -383,16 +383,7 @@ export function ArrivalTimeline({
       maintainAspectRatio: false,
       plugins: {
         legend: {
-          position: 'bottom' as const,
-          labels: {
-            usePointStyle: true,
-            padding: 12,
-            font: { size: 11 },
-            color: 'rgba(156, 163, 175, 0.9)',
-            filter: (item) => {
-              return !item.text?.includes('Baseline');
-            },
-          },
+          display: false,
         },
         tooltip: {
           enabled: false
@@ -409,14 +400,15 @@ export function ArrivalTimeline({
           title: {
             display: true,
             text: 'Hours from Now',
-            font: { weight: 'bold' },
-            color: 'rgba(209, 213, 219, 0.9)',
+            font: { size: 10 },
+            color: '#94a3b8',
           },
           grid: {
-            color: 'rgba(255, 255, 255, 0.08)',
+            color: 'rgba(148, 163, 184, 0.1)',
           },
           ticks: {
-            color: 'rgba(156, 163, 175, 0.9)',
+            color: '#94a3b8',
+            font: { size: 9 },
             stepSize: 2,
             callback: (value) => {
               const v = Math.round(Number(value) * 10) / 10;
@@ -432,14 +424,15 @@ export function ArrivalTimeline({
           title: {
             display: true,
             text: 'Duration from 50nm (min)',
-            font: { weight: 'bold' },
-            color: 'rgba(209, 213, 219, 0.9)',
+            font: { size: 10 },
+            color: '#94a3b8',
           },
           grid: {
-            color: 'rgba(255, 255, 255, 0.08)',
+            color: 'rgba(148, 163, 184, 0.1)',
           },
           ticks: {
-            color: 'rgba(156, 163, 175, 0.9)',
+            color: '#94a3b8',
+            font: { size: 10 },
           },
         },
       },
@@ -468,32 +461,7 @@ export function ArrivalTimeline({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-3">
-          <h3 className="text-sm font-semibold text-gray-200">
-            Arrival Duration Timeline
-          </h3>
-          <div className="flex items-center gap-1 text-[10px] text-gray-400">
-            <span className="inline-block w-4 border-t-2 border-dashed border-white/50"></span>
-            <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>
-          </div>
-          {!isAtNow && matchedDaysData?.aggregatedStats && (
-            <div className="flex items-center gap-2 text-xs">
-              <span 
-                className="px-2 py-0.5 rounded font-medium"
-                style={{ 
-                  backgroundColor: WEATHER_COLORS[weatherCategory],
-                  color: WEATHER_BORDER_COLORS[weatherCategory],
-                  border: `1px solid ${WEATHER_BORDER_COLORS[weatherCategory]}`,
-                }}
-              >
-                {weatherCategory}
-              </span>
-              <span className="text-gray-400">
-                Based on {matchedDaysData.matchCount} similar days
-              </span>
-            </div>
-          )}
-        </div>
+        <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Duration Timeline</h4>
         <HelpButton
           title="Arrival Duration Timeline"
           size="sm"
@@ -524,8 +492,47 @@ export function ArrivalTimeline({
           }
         />
       </div>
+
+      {/* Compact legend row */}
+      <div className="flex items-center justify-between mb-1.5 text-[10px]">
+        <div className="flex items-center gap-3 text-gray-400">
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.narrowbody }}></span>
+            <span>Narrow-body</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.regional }}></span>
+            <span>Regional</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.widebody }}></span>
+            <span>Wide-body</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="inline-block w-3 border-t-2 border-dashed border-white/50"></span>
+            <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>
+          </div>
+        </div>
+        {!isAtNow && matchedDaysData?.aggregatedStats && (
+          <div className="flex items-center gap-1.5">
+            <span 
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{ 
+                backgroundColor: WEATHER_COLORS[weatherCategory],
+                color: WEATHER_BORDER_COLORS[weatherCategory],
+                border: `1px solid ${WEATHER_BORDER_COLORS[weatherCategory]}`,
+              }}
+            >
+              {weatherCategory}
+            </span>
+            <span className="text-gray-500">
+              {matchedDaysData.matchCount} similar days
+            </span>
+          </div>
+        )}
+      </div>
       
-      <div className="h-72 bg-gray-800/50 rounded-lg border border-gray-700 p-2">
+      <div style={{ height: '200px' }}>
         <Scatter 
           ref={chartRef} 
           data={{ datasets: chartData.datasets }} 
@@ -534,28 +541,28 @@ export function ArrivalTimeline({
       </div>
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
-        <div className="mt-3 grid grid-cols-4 gap-2 text-center">
-          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
-            <div className="text-xs text-gray-400">Best Case (P10)</div>
-            <div className="text-lg font-semibold text-green-400">
+        <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
+          <div className="bg-gray-800/40 rounded py-1.5 px-1">
+            <div className="text-[10px] text-gray-500">Best Case</div>
+            <div className="text-sm font-semibold text-green-400">
               {matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
-            <div className="text-xs text-gray-400">Typical (P50)</div>
-            <div className="text-lg font-semibold text-gray-200">
+          <div className="bg-gray-800/40 rounded py-1.5 px-1">
+            <div className="text-[10px] text-gray-500">Typical</div>
+            <div className="text-sm font-semibold text-gray-200">
               {matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
-            <div className="text-xs text-gray-400">Extended (P90)</div>
-            <div className="text-lg font-semibold text-orange-400">
+          <div className="bg-gray-800/40 rounded py-1.5 px-1">
+            <div className="text-[10px] text-gray-500">Extended</div>
+            <div className="text-sm font-semibold text-orange-400">
               {matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m
             </div>
           </div>
-          <div className="bg-gray-800/60 rounded p-2 border border-gray-700">
-            <div className="text-xs text-gray-400">Baseline</div>
-            <div className="text-lg font-semibold text-gray-300">
+          <div className="bg-gray-800/40 rounded py-1.5 px-1">
+            <div className="text-[10px] text-gray-500">Baseline</div>
+            <div className="text-sm font-semibold text-gray-400">
               {matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m
             </div>
           </div>
