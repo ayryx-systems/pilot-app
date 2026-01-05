@@ -512,13 +512,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         }
       },
       title: {
-        display: true,
-        text: chartData.title,
-        color: '#e2e8f0',
-        font: {
-          size: 13,
-          weight: 'bold' as const
-        }
+        display: false,
       },
       tooltip: {
         enabled: false

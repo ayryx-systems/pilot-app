@@ -152,6 +152,33 @@ export function ETASelector({
             {formatTime(selectedTime)}
           </span>
           <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
+          {isNow ? (
+            <span className="px-1.5 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-[10px] font-medium text-blue-300">
+              NOW
+            </span>
+          ) : (
+            <span 
+              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              style={{
+                backgroundColor: categoryColors.bg,
+                color: categoryColors.color,
+                border: `1px solid ${categoryColors.border}`,
+              }}
+            >
+              +{hoursAhead.toFixed(1)}h
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          {!isNow && (
+            <button
+              onClick={() => onTimeChange(getCurrentUTCTime())}
+              className="flex items-center gap-1 text-[10px] text-blue-400"
+            >
+              <RotateCcw className="w-3 h-3" />
+              NOW
+            </button>
+          )}
           <HelpButton
             title="Arrival Time Selection"
             size="sm"
@@ -175,32 +202,7 @@ export function ETASelector({
               </div>
             }
           />
-          {isNow ? (
-            <span className="px-1.5 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-[10px] font-medium text-blue-300">
-              NOW
-            </span>
-          ) : (
-            <span 
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{
-                backgroundColor: categoryColors.bg,
-                color: categoryColors.color,
-                border: `1px solid ${categoryColors.border}`,
-              }}
-            >
-              +{hoursAhead.toFixed(1)}h
-            </span>
-          )}
         </div>
-        {!isNow && (
-          <button
-            onClick={() => onTimeChange(getCurrentUTCTime())}
-            className="flex items-center gap-1 text-[10px] text-blue-400"
-          >
-            <RotateCcw className="w-3 h-3" />
-            NOW
-          </button>
-        )}
       </div>
 
       <div className="relative mb-1">

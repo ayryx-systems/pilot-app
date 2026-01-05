@@ -472,57 +472,57 @@ export function ArrivalTimeline({
           <h3 className="text-sm font-semibold text-gray-200">
             Arrival Duration Timeline
           </h3>
-          <HelpButton
-            title="Arrival Duration Timeline"
-            size="sm"
-            content={
-              <div className="space-y-2">
-                <p>
-                  Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on historical data.
-                </p>
-                <p>
-                  <strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown
-                </p>
-                <p>
-                  <strong>Horizontal Axis:</strong> Time of landing (hours from now)
-                </p>
-                <p>
-                  <strong>Colored Dots:</strong> Each aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical arrivals
-                </p>
-                <p>
-                  <strong className="text-white/70">White Dashed Line:</strong> Historical seasonal median - typical duration for this time
-                </p>
-                <p>
-                  <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times from similar weather days
-                </p>
-                <p className="text-blue-300">
-                  💡 Click on dots to see the aircraft&apos;s ground track on the map.
-                </p>
-              </div>
-            }
-          />
           <div className="flex items-center gap-1 text-[10px] text-gray-400">
             <span className="inline-block w-4 border-t-2 border-dashed border-white/50"></span>
             <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>
           </div>
+          {!isAtNow && matchedDaysData?.aggregatedStats && (
+            <div className="flex items-center gap-2 text-xs">
+              <span 
+                className="px-2 py-0.5 rounded font-medium"
+                style={{ 
+                  backgroundColor: WEATHER_COLORS[weatherCategory],
+                  color: WEATHER_BORDER_COLORS[weatherCategory],
+                  border: `1px solid ${WEATHER_BORDER_COLORS[weatherCategory]}`,
+                }}
+              >
+                {weatherCategory}
+              </span>
+              <span className="text-gray-400">
+                Based on {matchedDaysData.matchCount} similar days
+              </span>
+            </div>
+          )}
         </div>
-        {!isAtNow && matchedDaysData?.aggregatedStats && (
-          <div className="flex items-center gap-2 text-xs">
-            <span 
-              className="px-2 py-0.5 rounded font-medium"
-              style={{ 
-                backgroundColor: WEATHER_COLORS[weatherCategory],
-                color: WEATHER_BORDER_COLORS[weatherCategory],
-                border: `1px solid ${WEATHER_BORDER_COLORS[weatherCategory]}`,
-              }}
-            >
-              {weatherCategory}
-            </span>
-            <span className="text-gray-400">
-              Based on {matchedDaysData.matchCount} similar days
-            </span>
-          </div>
-        )}
+        <HelpButton
+          title="Arrival Duration Timeline"
+          size="sm"
+          content={
+            <div className="space-y-2">
+              <p>
+                Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on historical data.
+              </p>
+              <p>
+                <strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown
+              </p>
+              <p>
+                <strong>Horizontal Axis:</strong> Time of landing (hours from now)
+              </p>
+              <p>
+                <strong>Colored Dots:</strong> Each aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical arrivals
+              </p>
+              <p>
+                <strong className="text-white/70">White Dashed Line:</strong> Historical seasonal median - typical duration for this time
+              </p>
+              <p>
+                <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times from similar weather days
+              </p>
+              <p className="text-blue-300">
+                💡 Click on dots to see the aircraft&apos;s ground track on the map.
+              </p>
+            </div>
+          }
+        />
       </div>
       
       <div className="h-72 bg-gray-800/50 rounded-lg border border-gray-700 p-2">
