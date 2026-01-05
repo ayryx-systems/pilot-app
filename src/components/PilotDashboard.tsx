@@ -544,7 +544,7 @@ export function PilotDashboard() {
                     ⚠️ DEMO ONLY - NOT FOR FLIGHT OPERATIONS
                   </p>
                   <p className="text-orange-300/80 text-xs mt-1">
-                    This is a demonstration system. Always use official FAA sources for flight planning.
+                    This is a demonstration system. Always use official aviation authorities for flight planning.
                   </p>
                 </div>
               </div>

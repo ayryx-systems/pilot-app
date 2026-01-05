@@ -48,7 +48,7 @@ import { HelpButton } from './HelpButton';
 **Content:**
 - Pre-flight planning tool overview
 - Key features list (traffic, weather, ground tracks, PIREPs, what-if scenarios)
-- Demo-only warning with prominent disclaimer
+- Demo-only warning with disclaimer to use official aviation authorities
 
 ### 2. ETA Selector
 **Location:** Next to time display in selector  
