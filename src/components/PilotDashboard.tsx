@@ -498,12 +498,12 @@ export function PilotDashboard() {
               loading={loading}
             />
             <HelpButton
-              title="AYRYX Pilot App"
+              title="AYRYX Pilot"
               size="md"
               content={
                 <div className="space-y-2">
                   <p>
-                    A <strong>pre-flight planning tool</strong> for pilots to assess arrival conditions before departure.
+                    A <strong>situational awareness system</strong> providing precise operational information about your destination airport, including how current operations are responding to conditions and how they're expected to evolve.
                   </p>
                   <p>
                     <strong>Key Features:</strong>
@@ -511,9 +511,9 @@ export function PilotDashboard() {
                   <ul className="list-disc list-inside space-y-1 text-xs">
                     <li>Traffic forecast and historical arrival times</li>
                     <li>Weather conditions and TAF forecasts</li>
-                    <li>Ground tracks showing actual arrival paths</li>
-                    <li>PIREPs from real ATC communications</li>
-                    <li>What-if weather scenarios (VFR/MVFR/IFR/LIFR)</li>
+                    <li>Ground tracks showing recent arrival paths</li>
+                    <li>PIREPs from live ATC communications</li>
+                    <li>What-if weather scenarios to explore how arrival patterns change under different conditions</li>
                   </ul>
                   <div className="bg-orange-900/30 border border-orange-500/50 rounded p-2 mt-2">
                     <p className="text-orange-200 font-medium">
