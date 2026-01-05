@@ -15,7 +15,7 @@ import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, RefreshCw, AlertTriangle, Menu, X } from 'lucide-react';
+import { Wifi, WifiOff, AlertTriangle, Menu, X } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
@@ -97,7 +97,6 @@ export function PilotDashboard() {
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
@@ -452,27 +451,6 @@ export function PilotDashboard() {
     }
   }, [connectionStatus.connected, selectedAirport, refreshData]);
 
-  // Smart refresh that always tries to get the best available data
-  const handleRefresh = async () => {
-    if (isRefreshing) return; // Prevent multiple simultaneous refreshes
-
-    // Preserve scroll position before refresh
-    const container = scrollContainerRef.current;
-    if (container) {
-      scrollPositionRef.current = container.scrollTop;
-    }
-
-    console.log('[PilotDashboard] Starting manual refresh...');
-    setIsRefreshing(true);
-    try {
-      await refreshData();
-      console.log('[PilotDashboard] Manual refresh completed successfully');
-    } catch (error) {
-      console.error('[PilotDashboard] Manual refresh failed:', error);
-    } finally {
-      setIsRefreshing(false);
-    }
-  };
 
   const _getConnectionStatusColor = () => {
     if (!connectionStatus.connected) return 'text-red-400';
@@ -562,31 +540,11 @@ export function PilotDashboard() {
               size="sm"
             />
           )}
-
-          <button
-            onClick={handleRefresh}
-            disabled={loading || isRefreshing}
-            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 disabled:bg-blue-800 disabled:opacity-50 
-                     rounded text-xs transition-colors"
-          >
-            <RefreshCw className={`w-3 h-3 ${loading || isRefreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{loading || isRefreshing ? 'Updating...' : 'Refresh'}</span>
-          </button>
         </div>
       </header>
 
       {/* App Update Notifier */}
       <AppUpdateNotifier />
-
-      {/* Refresh Notification */}
-      {isRefreshing && (
-        <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">
-          <div className="flex items-center text-blue-200">
-            <RefreshCw className="w-3 h-3 mr-1 animate-spin" />
-            <span className="font-medium">Refreshing data...</span>
-          </div>
-        </div>
-      )}
 
       {/* Demo Disclaimer */}
       <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">
