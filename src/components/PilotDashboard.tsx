@@ -649,7 +649,7 @@ export function PilotDashboard() {
                   airportCode={selectedAirport}
                   selectedTime={selectedTime}
                   onTimeChange={setSelectedTime}
-                  maxHoursAhead={48}
+                  maxHoursAhead={24}
                   baseline={baseline}
                   tafCategory={tafCategory}
                   isManualWeather={isManualWeather}

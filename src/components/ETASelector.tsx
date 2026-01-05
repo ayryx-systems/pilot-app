@@ -86,6 +86,48 @@ export function ETASelector({
     return `${monthNames[dateLocal.getUTCMonth()]} ${dateLocal.getUTCDate()}`;
   };
 
+  const formatTimeForMark = (date: Date) => {
+    const hours = date.getUTCHours();
+    const minutes = date.getUTCMinutes();
+    const period = hours >= 12 ? 'PM' : 'AM';
+    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
+    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+  };
+
+  const getSliderMarks = () => {
+    const marks: Array<{ position: number; label: string; isDayBoundary: boolean }> = [];
+    
+    const currentTime = airportNowLocal.getTime();
+    
+    const targetHours = [6, 12, 18, 0];
+    
+    for (const targetHour of targetHours) {
+      const targetLocalTime = new Date(airportNowLocal);
+      targetLocalTime.setUTCMinutes(0, 0, 0);
+      targetLocalTime.setUTCHours(targetHour, 0, 0, 0);
+      
+      if (targetLocalTime.getTime() <= currentTime) {
+        targetLocalTime.setUTCDate(targetLocalTime.getUTCDate() + 1);
+      }
+      
+      const hoursAhead = (targetLocalTime.getTime() - currentTime) / (1000 * 60 * 60);
+      
+      if (hoursAhead > 0 && hoursAhead <= maxHoursAhead) {
+        const position = (hoursAhead / maxHoursAhead) * 100;
+        const isDayBoundary = targetHour === 0;
+        marks.push({
+          position,
+          label: formatTimeForMark(targetLocalTime),
+          isDayBoundary,
+        });
+      }
+    }
+    
+    return marks.sort((a, b) => a.position - b.position);
+  };
+
+  const sliderMarks = getSliderMarks();
+
   const isNowRef = useRef(isNow);
   const onTimeChangeRef = useRef(onTimeChange);
   isNowRef.current = isNow;
@@ -154,6 +196,32 @@ export function ETASelector({
               #475569 100%)`
           }}
         />
+        <div className="absolute top-0 left-0 right-0 h-1.5 pointer-events-none">
+          {sliderMarks.map((mark, index) => (
+            <div
+              key={index}
+              className="absolute top-0 bottom-0 flex flex-col items-center"
+              style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
+            >
+              <div
+                className={`w-px ${mark.isDayBoundary ? 'h-full bg-blue-400/60' : 'h-2 bg-slate-500/50'}`}
+              />
+            </div>
+          ))}
+        </div>
+        <div className="relative mt-1.5 h-3">
+          {sliderMarks.map((mark, index) => (
+            <div
+              key={index}
+              className="absolute flex flex-col items-center"
+              style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
+            >
+              <span className={`text-[9px] ${mark.isDayBoundary ? 'text-blue-400 font-medium' : 'text-slate-400'}`}>
+                {mark.label}
+              </span>
+            </div>
+          ))}
+        </div>
         <style dangerouslySetInnerHTML={{
           __html: `
             .eta-slider::-webkit-slider-thumb {
