@@ -111,7 +111,7 @@ import { HelpButton } from './HelpButton';
 - Extended centerlines: runway approach paths
 - PIREPs (ATC): AI-extracted from communications
 - PIREPs (Weather): official weather reports
-- Ground tracks: historical arrival paths from 50nm
+- Ground tracks: arrival paths from 50nm for the last 30 minutes
 - Weather radar: live precipitation data
 - Airport features: runways, taxiways, structures
 - Auto-saved preferences

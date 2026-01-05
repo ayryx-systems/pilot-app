@@ -94,7 +94,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
                     <p><strong>Extended Centerlines:</strong> Runway approach paths</p>
                     <p><strong>PIREPs (ATC):</strong> Pilot reports extracted from ATC communications</p>
                     <p><strong>PIREPs (Weather):</strong> Official weather pilot reports</p>
-                    <p><strong>Ground Tracks:</strong> Historical arrival paths from 50nm</p>
+                    <p><strong>Ground Tracks:</strong> Arrival paths from 50nm for the last 30 minutes</p>
                     <p><strong>Weather Radar:</strong> Live precipitation and storm data</p>
                     <p><strong>Airport Features:</strong> Runways, taxiways, and airport structures</p>
                   </div>
