@@ -91,7 +91,7 @@ export function WeatherOutlook({
             className="w-4 h-4 text-blue-500 bg-gray-700 border-gray-600 focus:ring-blue-500 focus:ring-2"
           />
           <div className="flex-1 flex items-center justify-between">
-            <span className="text-sm text-gray-200 group-hover:text-white">TAF Forecast</span>
+            <span className="text-sm text-gray-200">TAF Forecast</span>
             <div className="flex items-center gap-2">
               <span
                 className="text-xs font-semibold px-2 py-0.5 rounded"
@@ -120,7 +120,7 @@ export function WeatherOutlook({
           />
           <div className="flex-1">
             <div className="flex items-center gap-2 mb-2">
-              <span className="text-sm text-gray-200 group-hover:text-white">What-if scenario</span>
+              <span className="text-sm text-gray-200">What-if scenario</span>
               {isManual && manualCategory !== tafCategory && (
                 <span className="text-xs text-amber-400 flex items-center gap-1">
                   <Zap className="w-3 h-3" />
@@ -142,7 +142,7 @@ export function WeatherOutlook({
                       className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded transition-all ${
                         isSelected 
                           ? 'ring-2 ring-offset-1 ring-offset-gray-900' 
-                          : 'opacity-60 hover:opacity-100'
+                          : 'opacity-60'
                       }`}
                       style={{
                         backgroundColor: isSelected ? catColors.bg : 'rgba(55, 65, 81, 0.5)',

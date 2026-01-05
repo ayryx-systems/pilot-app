@@ -195,7 +195,7 @@ export function ETASelector({
         {!isNow && (
           <button
             onClick={() => onTimeChange(getCurrentUTCTime())}
-            className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300"
+            className="flex items-center gap-1 text-[10px] text-blue-400"
           >
             <RotateCcw className="w-3 h-3" />
             NOW
@@ -312,7 +312,7 @@ export function ETASelector({
                   key={cat}
                   onClick={() => { onManualWeatherChange(true); onCategoryChange(cat); }}
                   className={`px-1.5 py-0.5 text-[10px] font-semibold rounded transition-all ${
-                    isSelected ? '' : 'opacity-50 hover:opacity-80'
+                    isSelected ? '' : 'opacity-50'
                   }`}
                   style={{
                     backgroundColor: isSelected ? colors.bg : 'transparent',

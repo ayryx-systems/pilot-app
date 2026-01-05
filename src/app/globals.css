@@ -60,7 +60,3 @@ html {
   background: #475569;
   border-radius: 4px;
 }
-
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}

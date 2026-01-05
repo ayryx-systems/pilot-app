@@ -567,7 +567,7 @@ export function PilotDashboard() {
           <button
             onClick={handleRefresh}
             disabled={loading || isRefreshing}
-            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-800 disabled:opacity-50 
+            className="flex items-center space-x-1 px-2 py-1 bg-blue-600 disabled:bg-blue-800 disabled:opacity-50 
                      rounded text-xs transition-colors"
           >
             <RefreshCw className={`w-3 h-3 ${loading || isRefreshing ? 'animate-spin' : ''}`} />
@@ -822,7 +822,7 @@ export function PilotDashboard() {
             </div>
             <button
               onClick={() => setShowPirepPanel(false)}
-              className="p-1 hover:bg-slate-700/50 rounded transition-colors"
+              className="p-1 rounded transition-colors"
             >
               <X className="w-4 h-4 text-gray-400" />
             </button>
@@ -843,7 +843,7 @@ export function PilotDashboard() {
         <button
           onClick={() => setShowPirepPanel(true)}
           className={`absolute left-2 bottom-16 lg:bottom-14 px-3 py-2 rounded-lg 
-                   hover:bg-slate-700/95 transition-colors flex items-center space-x-2 backdrop-blur-sm border
+                   transition-colors flex items-center space-x-2 backdrop-blur-sm border
                    ${pireps && pireps.length > 0
               ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200'
               : 'bg-slate-800/95 border-slate-700/50 text-gray-300'}`}
@@ -866,7 +866,7 @@ export function PilotDashboard() {
       {selectedAirport === 'KDEN' && !showPirepPanel && (
         <button
           className="absolute left-2 bottom-16 lg:bottom-14 ml-32 px-3 py-2 rounded-lg 
-                   bg-orange-600/90 hover:bg-orange-700/90 transition-colors flex items-center space-x-2 
+                   bg-orange-600/90 transition-colors flex items-center space-x-2 
                    backdrop-blur-sm border border-orange-500/60 text-white"
           style={{ zIndex: 1000 }}
         >

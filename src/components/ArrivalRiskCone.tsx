@@ -131,7 +131,7 @@ function Dropdown({ label, value, options, onChange, disabled, categoryColor }: 
         className={`flex items-center gap-1 px-2 py-1.5 rounded text-xs transition-colors ${
           disabled
             ? 'bg-slate-700/50 text-slate-500 cursor-not-allowed'
-            : 'bg-slate-700 hover:bg-slate-600 text-white cursor-pointer'
+            : 'bg-slate-700 text-white cursor-pointer'
         }`}
         style={categoryColor && !disabled ? { borderLeft: `3px solid ${categoryColor}` } : undefined}
       >
@@ -146,7 +146,7 @@ function Dropdown({ label, value, options, onChange, disabled, categoryColor }: 
             {options.map((opt) => (
               <button
                 key={String(opt.value)}
-                className="w-full text-left px-3 py-2 text-xs hover:bg-slate-700 text-slate-200 first:rounded-t last:rounded-b"
+                className="w-full text-left px-3 py-2 text-xs text-slate-200 first:rounded-t last:rounded-b"
                 onClick={() => {
                   onChange(opt.value);
                   setOpen(false);
@@ -361,7 +361,7 @@ export default function ArrivalRiskCone({
           {isCustomMode && (
             <button
               onClick={handleReset}
-              className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 hover:text-white transition-colors"
+              className="flex items-center gap-1 px-2 py-1 text-xs text-slate-400 transition-colors"
             >
               <RotateCcw className="w-3 h-3" />
               Reset
@@ -550,7 +550,7 @@ export default function ArrivalRiskCone({
             <div className="grid grid-cols-2 gap-2">
               {referenceDays.typical && (
                 <button
-                  className="bg-slate-900/40 hover:bg-slate-900/60 rounded p-2 text-left transition-colors"
+                  className="bg-slate-900/40 rounded p-2 text-left transition-colors"
                   onClick={() => onReferenceDayClick?.(referenceDays.typical!.date, referenceDays.typical!.timeSlot)}
                 >
                   <div className="text-green-400 text-xs font-medium mb-1">Typical Day</div>
@@ -562,7 +562,7 @@ export default function ArrivalRiskCone({
               )}
               {referenceDays.worstCase && (
                 <button
-                  className="bg-slate-900/40 hover:bg-slate-900/60 rounded p-2 text-left transition-colors"
+                  className="bg-slate-900/40 rounded p-2 text-left transition-colors"
                   onClick={() => onReferenceDayClick?.(referenceDays.worstCase!.date, referenceDays.worstCase!.timeSlot)}
                 >
                   <div className="text-red-400 text-xs font-medium mb-1">Worst Case</div>

@@ -103,7 +103,7 @@ export function ConditionModal({
                     </div>
                     <button
                         onClick={onClose}
-                        className="text-gray-400 hover:text-white transition-colors"
+                        className="text-gray-400 transition-colors"
                     >
                         <X className="w-5 h-5" />
                     </button>
@@ -154,7 +154,7 @@ export function ConditionModal({
                     <div className="p-4 border-t border-slate-700">
                         <button
                             onClick={onClose}
-                            className="w-full px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white rounded-lg transition-colors"
+                            className="w-full px-4 py-2 bg-slate-700 text-white rounded-lg transition-colors"
                         >
                             Close
                         </button>

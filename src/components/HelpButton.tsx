@@ -68,7 +68,7 @@ export function HelpButton({ title, content, size = 'sm' }: HelpButtonProps) {
           <h4 className="text-base font-semibold text-blue-300 pr-4">{title}</h4>
           <button
             onClick={() => setIsOpen(false)}
-            className="flex-shrink-0 text-gray-400 hover:text-white transition-colors p-1 hover:bg-slate-700 rounded"
+            className="flex-shrink-0 text-gray-400 transition-colors p-1 rounded"
           >
             <X className="w-5 h-5" />
           </button>
@@ -87,8 +87,8 @@ export function HelpButton({ title, content, size = 'sm' }: HelpButtonProps) {
           e.stopPropagation();
           setIsOpen(!isOpen);
         }}
-        className="inline-flex items-center justify-center rounded-full bg-blue-500/20 hover:bg-blue-500/30 
-                   text-blue-400 hover:text-blue-300 transition-colors border border-blue-500/30 flex-shrink-0"
+        className="inline-flex items-center justify-center rounded-full bg-blue-500/20 
+                   text-blue-400 transition-colors border border-blue-500/30 flex-shrink-0"
         style={{ padding: size === 'sm' ? '2px' : size === 'md' ? '3px' : '4px' }}
         aria-label="Help"
       >

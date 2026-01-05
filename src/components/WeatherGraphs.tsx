@@ -123,7 +123,7 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
             }}
           >
             <div
-              className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 hover:opacity-100 transition-opacity border border-gray-600 shadow-sm`}
+              className={`h-full ${getWeatherEventColor(event.category)} rounded opacity-85 transition-opacity border border-gray-600 shadow-sm`}
               title={`${getWeatherEventLabel(event.weather)} - ${startTime} to ${endTime}`}
             />
           </div>
@@ -425,7 +425,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             if (value === null || value === undefined) return 0;
                             return ctx.dataIndex === selectedIndex ? 6 : 0;
                           },
-                          pointHoverRadius: 4,
                           pointBackgroundColor: (ctx: any) => {
                             const value = graph.data.data[ctx.dataIndex];
                             if (value === null || value === undefined) return 'transparent';
@@ -459,27 +458,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                           display: false,
                         },
                         tooltip: {
-                          enabled: true,
-                          callbacks: {
-                            label: function(context: any) {
-                              const value = context.parsed.y;
-                              if (value === null || value === undefined) {
-                                if (isCeiling) return 'No ceiling (clear skies)';
-                                return 'N/A';
-                              }
-                              if (isVisibility) {
-                                if (value >= 10) return '10+ km (unlimited)';
-                                return `${value.toFixed(1)} km`;
-                              }
-                              if (isCeiling) {
-                                return `${value.toLocaleString()} ft`;
-                              }
-                              if (isWind) {
-                                return `${value.toFixed(1)} knots`;
-                              }
-                              return value.toString();
-                            },
-                          },
+                          enabled: false
                         },
                       },
                       layout: {
@@ -556,12 +535,6 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                             scaleInstance.width = 70;
                           },
                         },
-                      },
-                      onHover: (event, activeElements) => {
-                        const canvas = event.native?.target as HTMLCanvasElement;
-                        if (canvas) {
-                          canvas.style.cursor = activeElements.length > 0 ? 'pointer' : 'default';
-                        }
                       },
                     }}
                   />

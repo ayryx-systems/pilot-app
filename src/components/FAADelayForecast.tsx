@@ -72,7 +72,6 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
           fill: true,
           tension: 0.4,
           pointRadius: 3,
-          pointHoverRadius: 5,
         },
       ],
     };
@@ -97,16 +96,7 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
         },
       },
       tooltip: {
-        backgroundColor: 'rgba(15, 23, 42, 0.9)',
-        titleColor: 'rgb(203, 213, 225)',
-        bodyColor: 'rgb(203, 213, 225)',
-        borderColor: 'rgb(51, 65, 85)',
-        borderWidth: 1,
-        callbacks: {
-          label: (context: any) => {
-            return `${context.parsed.y} minutes`;
-          },
-        },
+        enabled: false
       },
     },
     scales: {
@@ -155,6 +145,7 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
     </div>
   );
 }
+
 
 
 

@@ -507,25 +507,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         }
       },
       tooltip: {
-        mode: 'index' as const,
-        intersect: false,
-        callbacks: {
-          label: (context: any) => {
-            const value = context.parsed.y;
-            if (value === null) return null;
-            let label = `${context.dataset.label}: ${value.toFixed(1)} aircraft`;
-
-            if (context.datasetIndex === 0) {
-              const dayIdx = chartData.dayIndices[context.dataIndex];
-              const sampleSize = dayIdx !== undefined ? chartData.daySampleSizes[dayIdx] : null;
-              return sampleSize ? `${label} (${sampleSize} days)` : label;
-            } else {
-              const seasonalIdx = chartData.seasonalIndices[context.dataIndex];
-              const sampleSize = seasonalIdx !== undefined ? chartData.seasonalSampleSizes[seasonalIdx] : null;
-              return sampleSize ? `${label} (${sampleSize} days)` : label;
-            }
-          }
-        }
+        enabled: false
       }
     },
     scales: {
@@ -599,7 +581,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
                 <strong>White Dot:</strong> Your selected arrival time
               </p>
               <p className="text-xs text-gray-400">
-                Hover over points to see sample sizes. Larger samples mean more reliable data.
+                Larger sample sizes mean more reliable data.
               </p>
             </div>
           }

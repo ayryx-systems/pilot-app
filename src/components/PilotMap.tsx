@@ -3144,7 +3144,7 @@ export function PilotMap({
         {/* Fullscreen toggle button */}
         <button
           onClick={toggleFullscreen}
-          className="bg-gray-800/80 hover:bg-gray-700/80 text-white border border-gray-600 
+          className="bg-gray-800/80 text-white border border-gray-600 
                    px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors"
         >
           {isFullscreen ? (
@@ -3165,7 +3165,7 @@ export function PilotMap({
           onClick={() => {
             window.dispatchEvent(new CustomEvent('map-recenter'));
           }}
-          className="bg-gray-800/80 hover:bg-gray-700/80 text-white border border-gray-600 
+          className="bg-gray-800/80 text-white border border-gray-600 
                    px-3 py-2 rounded text-sm flex items-center gap-2 transition-colors"
         >
           <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">

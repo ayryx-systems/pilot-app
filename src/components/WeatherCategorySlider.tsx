@@ -136,7 +136,7 @@ export function WeatherCategorySlider({
             onClick={() => !disabled && onChange(cat)}
             disabled={disabled}
             className={`text-xs font-medium transition-all ${
-              disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer hover:opacity-80'
+              disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
             }`}
             style={{
               color: cat === value ? CATEGORY_INFO[cat].color : 'rgb(107, 114, 128)',

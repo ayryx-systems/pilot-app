@@ -67,7 +67,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
       {/* Toggle Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="flex items-center justify-center p-2 hover:bg-slate-700/50 rounded-lg relative"
+        className="flex items-center justify-center p-2 rounded-lg relative"
       >
         <Layers className="w-5 h-5 text-blue-400" />
         {isDemo && (
@@ -111,7 +111,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
                 key={key}
                 onClick={() => handleToggle(key)}
                 className={`w-full flex items-center justify-between py-1 px-2 rounded text-xs
-                  hover:bg-slate-700/50 transition-colors ${displayOptions[key]
+                  transition-colors ${displayOptions[key]
                     ? 'text-white bg-slate-700/30'
                     : 'text-gray-400'
                   }`}

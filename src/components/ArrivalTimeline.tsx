@@ -153,7 +153,6 @@ export function ArrivalTimeline({
             backgroundColor: categoryColors[category]?.replace('1)', '0.7)') || 'rgba(156, 163, 175, 0.7)',
             borderColor: categoryColors[category] || 'rgba(156, 163, 175, 1)',
             pointRadius: 5,
-            pointHoverRadius: 7,
           } as ChartData<'scatter'>['datasets'][0]);
         }
       });
@@ -209,7 +208,6 @@ export function ArrivalTimeline({
           borderWidth: 2,
           borderDash: [8, 4],
           pointRadius: 0,
-          pointHoverRadius: 3,
           fill: false,
           tension: 0.3,
           showLine: true,
@@ -398,23 +396,7 @@ export function ArrivalTimeline({
           },
         },
         tooltip: {
-          enabled: true,
-          callbacks: {
-            label: (context) => {
-              const point = context.raw as { x: number; y: number; arrival?: Arrival };
-              
-              if (point.arrival) {
-                const arrival = point.arrival;
-                return [
-                  `${arrival.callsign || arrival.icao}`,
-                  `Type: ${arrival.aircraftType || 'Unknown'}`,
-                  `Duration: ${point.y.toFixed(1)} min`,
-                ];
-              }
-              
-              return `${point.y.toFixed(1)} min`;
-            },
-          },
+          enabled: false
         },
         annotation: {
           annotations,
@@ -619,7 +601,7 @@ function ExampleDaysSection({ exampleDays, airportCode, isAtNow, selectedTime, b
     <div className="mt-4 border-t border-gray-700/50 pt-3">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full flex items-center justify-between text-sm text-gray-300 hover:text-gray-100 transition-colors"
+        className="w-full flex items-center justify-between text-sm text-gray-300 transition-colors"
       >
         <div className="flex items-center gap-2">
           <History className="w-4 h-4" />

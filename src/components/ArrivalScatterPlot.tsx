@@ -161,7 +161,6 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
           backgroundColor: categoryColors[category].replace('1)', '0.6)'),
           borderColor: categoryColors[category],
           pointRadius: 4,
-          pointHoverRadius: 6,
           category: category,
         });
       }
@@ -182,7 +181,6 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
           borderWidth: 2,
           borderDash: [10, 5],
           pointRadius: 2,
-          pointHoverRadius: 4,
           fill: false,
           tension: 0.1,
           showLine: true,

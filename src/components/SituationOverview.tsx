@@ -259,7 +259,7 @@ export const SituationOverview = memo(function SituationOverview({
               <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(summary.conditions.weather?.status)}`}>
                 <button
                   onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
-                  className="w-full flex flex-col p-2 hover:bg-slate-600/30 rounded-lg transition-colors"
+                  className="w-full flex flex-col p-2 rounded-lg transition-colors"
                 >
                   <div className="flex items-center justify-between w-full mb-1">
                     <div className="flex items-center">
@@ -301,7 +301,7 @@ export const SituationOverview = memo(function SituationOverview({
                   <button
                     key={key}
                     onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 hover:scale-105 border-2 border-slate-500 bg-slate-700/80 hover:bg-slate-600 ${getStatusColor(condition.status)}`}
+                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(condition.status)}`}
                   >
                     <div className="flex items-center justify-between w-full mb-1">
                       <div className="flex items-center">

@@ -84,7 +84,6 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
         backgroundColor: 'rgba(99, 102, 241, 0.5)',
         borderColor: 'rgba(99, 102, 241, 0.8)',
         pointRadius: 2,
-        pointHoverRadius: 4,
       }],
     };
   }, [arrivals]);
@@ -145,13 +144,7 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
       plugins: {
         legend: { display: false },
         tooltip: {
-          callbacks: {
-            label: (context: { parsed: { x: number; y: number } }) => {
-              const hour = Math.floor(context.parsed.x);
-              const min = Math.round((context.parsed.x - hour) * 60);
-              return `${hour}:${String(min).padStart(2, '0')} - ${context.parsed.y.toFixed(1)}min`;
-            },
-          },
+          enabled: false
         },
         annotation: {
           annotations,
@@ -195,7 +188,7 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
     <div className="bg-slate-800/60 rounded-lg border border-slate-700 overflow-hidden">
       <button
         onClick={handleExpand}
-        className="w-full px-3 py-2 flex items-center justify-between hover:bg-slate-700/30 transition-colors"
+        className="w-full px-3 py-2 flex items-center justify-between transition-colors"
       >
         <div className="flex items-center gap-2">
           <Calendar className="w-3.5 h-3.5 text-gray-400" />
