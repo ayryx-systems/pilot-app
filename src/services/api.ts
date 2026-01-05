@@ -430,7 +430,9 @@ class PilotApiService {
       );
       return await this.handleResponse<ArrivalSituationResponse>(response);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 408 && signal?.aborted) {
+      if (signal?.aborted || 
+          (error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof ApiError && error.message === 'Request cancelled')) {
         throw new ApiError('Request cancelled', 0);
       }
 
@@ -490,7 +492,9 @@ class PilotApiService {
       );
       return await this.handleResponse<MatchedDaysResponse>(response);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 408 && signal?.aborted) {
+      if (signal?.aborted || 
+          (error instanceof DOMException && error.name === 'AbortError') ||
+          (error instanceof ApiError && error.message === 'Request cancelled')) {
         throw new ApiError('Request cancelled', 0);
       }
 
