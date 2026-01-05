@@ -170,7 +170,7 @@ export function ETASelector({
                   <strong>What-if Scenarios:</strong> You can manually select weather conditions (VFR/MVFR/IFR/LIFR) to see how different weather affects arrival patterns.
                 </p>
                 <p className="text-blue-300">
-                  💡 Drag the slider or click on graphs to select a time.
+                  💡 Drag the slider to select a time.
                 </p>
               </div>
             }

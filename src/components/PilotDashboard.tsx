@@ -700,7 +700,6 @@ export function PilotDashboard() {
                     airportCode={selectedAirport}
                     selectedTime={selectedTime}
                     loading={baselineLoading || arrivalForecastLoading || loading}
-                    onTimeClick={setSelectedTime}
                   />
                 )}
 

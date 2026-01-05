@@ -34,7 +34,6 @@ interface TimeBasedGraphsProps {
   airportCode: string;
   selectedTime: Date;
   loading?: boolean;
-  onTimeClick?: (time: Date) => void;
 }
 
 function getDayOfWeekName(dateStr: string): string {
@@ -176,7 +175,6 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   airportCode,
   selectedTime,
   loading,
-  onTimeClick,
 }: TimeBasedGraphsProps) {
   const chartRef = useRef<ChartJS<'line'>>(null);
   const [chartData, setChartData] = useState<any>(null);
@@ -574,40 +572,6 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         }
       }
     },
-    onClick: (event: any, elements: any[]) => {
-      if (onTimeClick && chartData.alignedTimeSlots && chartRef.current) {
-        const chart = chartRef.current;
-        const canvasPosition = ChartJS.helpers.getRelativePosition(event, chart);
-        const xScale = chart.scales.x;
-        const value = xScale.getValueForPixel(canvasPosition.x);
-
-        if (value !== null && value !== undefined && isFinite(value)) {
-          const timeSlotIndex = Math.round(value);
-          if (timeSlotIndex >= 0 && timeSlotIndex < chartData.alignedTimeSlots.length) {
-            const selectedTimeSlot = chartData.alignedTimeSlots[timeSlotIndex];
-            if (selectedTimeSlot) {
-              const [hours, minutes] = selectedTimeSlot.split(':').map(Number);
-              const newTime = new Date(selectedTime);
-              newTime.setHours(hours, minutes, 0, 0);
-              onTimeClick(newTime);
-            }
-          }
-        }
-      }
-    },
-    onHover: (event: any, elements: any[]) => {
-      const chart = chartRef.current;
-      if (!chart) return;
-      
-      const canvas = chart.canvas;
-      if (!canvas) return;
-      
-      if (elements && elements.length > 0) {
-        canvas.style.cursor = 'default';
-      } else {
-        canvas.style.cursor = 'pointer';
-      }
-    },
   };
 
   return (
@@ -636,9 +600,6 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
               </p>
               <p className="text-xs text-gray-400">
                 Hover over points to see sample sizes. Larger samples mean more reliable data.
-              </p>
-              <p className="text-blue-300">
-                💡 Click anywhere on the graph to jump to that time.
               </p>
             </div>
           }
