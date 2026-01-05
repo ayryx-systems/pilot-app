@@ -691,34 +691,6 @@ export function PilotDashboard() {
 
               {/* ARRIVAL FORECAST SECTION */}
               <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <div className="h-px flex-1 bg-slate-700"></div>
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                    Arrival Forecast
-                  </span>
-                  <HelpButton
-                    title="Arrival Forecast"
-                    size="sm"
-                    content={
-                      <div className="space-y-2">
-                        <p>
-                          See how busy the airport will be at your arrival time based on historical data and FAA forecasts.
-                        </p>
-                        <p>
-                          <strong>Traffic Graph:</strong> Shows expected arrival volume with historical averages and FAA predictions.
-                        </p>
-                        <p>
-                          <strong>Duration Timeline:</strong> Displays how long arrivals typically take from 50nm out, helping you estimate your landing time.
-                        </p>
-                        <p className="text-blue-300">
-                          💡 Click on any time in the graphs to jump to that moment and see conditions.
-                        </p>
-                      </div>
-                    }
-                  />
-                  <div className="h-px flex-1 bg-slate-700"></div>
-                </div>
-
                 {/* Traffic Forecast */}
                 {selectedAirport && baseline && (
                   <TimeBasedGraphs

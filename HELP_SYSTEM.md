@@ -60,15 +60,7 @@ import { HelpButton } from './HelpButton';
 - What-if weather scenarios (VFR/MVFR/IFR/LIFR)
 - Interactive time selection via slider or graph clicks
 
-### 3. Arrival Forecast Section
-**Location:** Section header above traffic graphs  
-**Purpose:** Overview of arrival forecast features  
-**Content:**
-- Traffic volume predictions
-- Duration timeline overview
-- Interactive time selection by clicking graphs
-
-### 4. Traffic Forecast Graph
+### 3. Traffic Forecast Graph
 **Location:** Top-right of graph card  
 **Purpose:** Explains the traffic forecast visualization  
 **Content:**
@@ -79,7 +71,7 @@ import { HelpButton } from './HelpButton';
 - Sample sizes shown in tooltips
 - Click-to-select time functionality
 
-### 5. Arrival Duration Timeline
+### 4. Arrival Duration Timeline
 **Location:** Next to "Arrival Duration Timeline" title  
 **Purpose:** Explains the scatter plot and arrival metrics  
 **Content:**
@@ -91,7 +83,7 @@ import { HelpButton } from './HelpButton';
 - Blue points: historical arrivals from similar weather days
 - Click dots to view ground tracks on map
 
-### 6. Conditions Overview
+### 5. Conditions Overview
 **Location:** In the "Conditions" section header  
 **Purpose:** Explains status indicators and condition types  
 **Content:**
@@ -102,7 +94,7 @@ import { HelpButton } from './HelpButton';
 - Special: NOTAMs, TFRs, closures
 - Click conditions for detailed information
 
-### 7. Map Layers Control
+### 6. Map Layers Control
 **Location:** Inside expanded layers menu  
 **Purpose:** Explains available map layers  
 **Content:**
@@ -116,7 +108,7 @@ import { HelpButton } from './HelpButton';
 - Airport features: runways, taxiways, structures
 - Auto-saved preferences
 
-### 8. Pilot Reports (PIREPs)
+### 7. Pilot Reports (PIREPs)
 **Location:** In PIREP panel header  
 **Purpose:** Explains PIREP priorities and sources  
 **Content:**
