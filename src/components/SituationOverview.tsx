@@ -200,7 +200,7 @@ export const SituationOverview = memo(function SituationOverview({
   };
 
   return (
-    <div className="relative space-y-4" style={{ zIndex: 2147483647 }}>
+    <div className="relative space-y-4">
       {/* Current Situation Summary */}
       {summary && (
         <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(getOverallAlertLevel())} text-gray-200`}>

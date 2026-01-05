@@ -15,12 +15,14 @@ A reusable help button component that displays contextual help information in a 
 **Features:**
 - Configurable size (sm, md, lg)
 - Centered modal overlay (simpler and more robust than positioned popups)
+- **React Portal rendering** - modal renders directly to document.body, bypassing parent container constraints
 - Click-outside-to-close behavior
 - Escape key to close
 - Smooth animation on open/close
 - Scrollable content for longer help text
 - Modal backdrop prevents interaction with underlying content
 - Supports both text and JSX content
+- Not affected by parent overflow, transform, or stacking context properties
 
 **Usage:**
 ```tsx
@@ -172,6 +174,8 @@ import { HelpButton } from './HelpButton';
 
 ### Z-Index Management
 - Modal overlay: `z-[9999]` (Tailwind max z-index)
+- **Portal rendering to document.body** ensures modal is at root level
+- Not affected by parent stacking contexts
 - Ensures help always appears above all other elements
 - Modal backdrop prevents clicks on underlying content
 
@@ -187,6 +191,7 @@ import { HelpButton } from './HelpButton';
 - Click-outside detection via modal backdrop
 - Escape key handler for accessibility
 - Body scroll lock when modal is open
+- Portal mounted/unmounted cleanly with component lifecycle
 - No impact on main app performance
 
 ## Future Enhancements

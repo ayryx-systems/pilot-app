@@ -61,8 +61,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
       className="bg-slate-800/90 backdrop-blur-sm rounded-lg border border-slate-600"
       style={{
         position: 'relative',
-        zIndex: 1001,
-        isolation: 'isolate'
+        zIndex: 1001
       }}
     >
       {/* Toggle Button */}
