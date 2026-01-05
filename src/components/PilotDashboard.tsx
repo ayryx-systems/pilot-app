@@ -483,14 +483,14 @@ export function PilotDashboard() {
   return (
     <div className="flex flex-col bg-slate-900 text-white overflow-hidden" style={{ height: '100dvh' }}>
       {/* Compact Header Bar */}
-      <header className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0">
-        <div className="flex items-center space-x-2 min-w-0 flex-1">
+      <header className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0" style={{ zIndex: 5000 }}>
+        <div className="flex items-center space-x-2 min-w-0 flex-1" style={{ overflow: 'visible' }}>
           <img
             src="/logo4.png"
             alt="AYRYX"
             className="h-6 w-6 flex-shrink-0"
           />
-          <div className="flex-1 min-w-0">
+          <div className="flex-1 min-w-0" style={{ overflow: 'visible' }}>
             <AirportSelector
               airports={airports}
               selectedAirport={selectedAirport}
