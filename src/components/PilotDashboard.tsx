@@ -490,43 +490,43 @@ export function PilotDashboard() {
             alt="AYRYX"
             className="h-6 w-6 flex-shrink-0"
           />
-          <div className="flex-1 min-w-0" style={{ overflow: 'visible' }}>
+          <div className="flex items-center gap-2 min-w-0" style={{ overflow: 'visible' }}>
             <AirportSelector
               airports={airports}
               selectedAirport={selectedAirport}
               onSelectAirport={setSelectedAirport}
               loading={loading}
             />
-          </div>
-          <HelpButton
-            title="AYRYX Pilot App"
-            size="md"
-            content={
-              <div className="space-y-2">
-                <p>
-                  A <strong>pre-flight planning tool</strong> for pilots to assess arrival conditions before departure.
-                </p>
-                <p>
-                  <strong>Key Features:</strong>
-                </p>
-                <ul className="list-disc list-inside space-y-1 text-xs">
-                  <li>Traffic forecast and historical arrival times</li>
-                  <li>Weather conditions and TAF forecasts</li>
-                  <li>Ground tracks showing actual arrival paths</li>
-                  <li>PIREPs from real ATC communications</li>
-                  <li>What-if weather scenarios (VFR/MVFR/IFR/LIFR)</li>
-                </ul>
-                <div className="bg-orange-900/30 border border-orange-500/50 rounded p-2 mt-2">
-                  <p className="text-orange-200 font-medium">
-                    ⚠️ DEMO ONLY - NOT FOR FLIGHT OPERATIONS
+            <HelpButton
+              title="AYRYX Pilot App"
+              size="md"
+              content={
+                <div className="space-y-2">
+                  <p>
+                    A <strong>pre-flight planning tool</strong> for pilots to assess arrival conditions before departure.
                   </p>
-                  <p className="text-orange-300/80 text-xs mt-1">
-                    This is a demonstration system. Always use official aviation authorities for flight planning.
+                  <p>
+                    <strong>Key Features:</strong>
                   </p>
+                  <ul className="list-disc list-inside space-y-1 text-xs">
+                    <li>Traffic forecast and historical arrival times</li>
+                    <li>Weather conditions and TAF forecasts</li>
+                    <li>Ground tracks showing actual arrival paths</li>
+                    <li>PIREPs from real ATC communications</li>
+                    <li>What-if weather scenarios (VFR/MVFR/IFR/LIFR)</li>
+                  </ul>
+                  <div className="bg-orange-900/30 border border-orange-500/50 rounded p-2 mt-2">
+                    <p className="text-orange-200 font-medium">
+                      ⚠️ DEMO ONLY - NOT FOR FLIGHT OPERATIONS
+                    </p>
+                    <p className="text-orange-300/80 text-xs mt-1">
+                      This is a demonstration system. Always use official aviation authorities for flight planning.
+                    </p>
+                  </div>
                 </div>
-              </div>
-            }
-          />
+              }
+            />
+          </div>
         </div>
 
         <div className="flex items-center space-x-2 flex-shrink-0">
