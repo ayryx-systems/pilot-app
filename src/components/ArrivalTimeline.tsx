@@ -488,16 +488,13 @@ export function ArrivalTimeline({
                   <strong>Horizontal Axis:</strong> Time of landing (hours from now)
                 </p>
                 <p>
-                  <strong>Colored Dots:</strong> Individual aircraft grouped by type (light, regional, narrowbody, widebody, etc.)
+                  <strong>Colored Dots:</strong> Each aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical arrivals
                 </p>
                 <p>
                   <strong className="text-white/70">White Dashed Line:</strong> Historical seasonal median - typical duration for this time
                 </p>
                 <p>
-                  <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times
-                </p>
-                <p>
-                  <strong className="text-blue-400">Blue Points:</strong> Historical arrivals from similar weather days
+                  <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times from similar weather days
                 </p>
                 <p className="text-blue-300">
                   💡 Click on dots to see the aircraft's ground track on the map.

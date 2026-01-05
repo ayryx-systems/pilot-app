@@ -77,10 +77,9 @@ import { HelpButton } from './HelpButton';
 **Content:**
 - Vertical axis: duration from 50nm to touchdown
 - Horizontal axis: landing time (hours from now)
-- Colored dots: aircraft categories (light, regional, narrowbody, widebody, etc.)
+- Colored dots: aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical
 - White dashed line: seasonal median duration
-- Gray shaded areas: risk zones (P10-P90 range)
-- Blue points: historical arrivals from similar weather days
+- Gray shaded areas: risk zones (P10-P90 range) from similar weather days
 - Click dots to view ground tracks on map
 
 ### 5. Conditions Overview
