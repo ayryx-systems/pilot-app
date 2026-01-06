@@ -639,18 +639,21 @@ export function PilotDashboard() {
             >
               {/* ETA Selector - Always at top, acts as mode switch */}
               {selectedAirport && (
-                <ETASelector
-                  airportCode={selectedAirport}
-                  selectedTime={selectedTime}
-                  onTimeChange={setSelectedTime}
-                  maxHoursAhead={24}
-                  baseline={baseline}
-                  tafCategory={tafCategory}
-                  isManualWeather={isManualWeather}
-                  onManualWeatherChange={setIsManualWeather}
-                  manualCategory={weatherCategory}
-                  onCategoryChange={setWeatherCategory}
-                />
+                <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">Select Arrival Time</h3>
+                  <ETASelector
+                    airportCode={selectedAirport}
+                    selectedTime={selectedTime}
+                    onTimeChange={setSelectedTime}
+                    maxHoursAhead={24}
+                    baseline={baseline}
+                    tafCategory={tafCategory}
+                    isManualWeather={isManualWeather}
+                    onManualWeatherChange={setIsManualWeather}
+                    manualCategory={weatherCategory}
+                    onCategoryChange={setWeatherCategory}
+                  />
+                </div>
               )}
 
               {/* Mode-aware content layout */}

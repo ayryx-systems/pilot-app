@@ -144,7 +144,7 @@ export function ETASelector({
   }, [isNow]);
 
   return (
-    <div className="bg-slate-800/80 rounded-lg border border-slate-700 p-2">
+    <div>
       <div className="flex items-center justify-between mb-1.5">
         <div className="flex items-center gap-2">
           <Clock className="w-3.5 h-3.5 text-gray-400" />
