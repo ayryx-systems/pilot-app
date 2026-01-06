@@ -22,6 +22,7 @@ import { DebugTimestamp } from './DebugTimestamp';
 import { ClockDisplay } from './ClockDisplay';
 import { pilotApi } from '@/services/api';
 import { HelpButton } from './HelpButton';
+import { CollapsibleSection } from './CollapsibleSection';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -630,7 +631,7 @@ export function PilotDashboard() {
                 }
               }}
             >
-              {/* ETA Selector with integrated weather scenario */}
+              {/* ETA Selector - Always at top, acts as mode switch */}
               {selectedAirport && (
                 <ETASelector
                   airportCode={selectedAirport}
@@ -646,81 +647,151 @@ export function PilotDashboard() {
                 />
               )}
 
-              {/* ARRIVAL FORECAST SECTION */}
-              <div className="space-y-2">
-                {/* Traffic Forecast */}
-                {selectedAirport && baseline && (
-                  <TimeBasedGraphs
-                    key={`traffic-${selectedAirport}`}
+              {/* Mode-aware content layout */}
+              {(() => {
+                const isNowMode = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
+                
+                const arrivalTimelineContent = (
+                  <ArrivalTimeline
+                    arrivals={arrivals || []}
+                    airportCode={selectedAirport || ''}
                     baseline={baseline}
-                    arrivalForecast={arrivalForecast}
-                    airportCode={selectedAirport}
+                    matchedDaysData={matchedDaysData}
                     selectedTime={selectedTime}
-                    loading={baselineLoading || arrivalForecastLoading || loading}
+                    weatherCategory={activeWeatherCategory}
+                    onPointClick={(arrival) => {
+                      const landingTime = new Date(arrival.timestampLanding);
+                      const matchingTrack = tracks.find(track => {
+                        const trackLandingTime = track.createdAt ? new Date(track.createdAt) : null;
+                        return track.callsign === arrival.callsign && 
+                               trackLandingTime && 
+                               Math.abs(trackLandingTime.getTime() - landingTime.getTime()) < 60000;
+                      });
+                      
+                      if (matchingTrack) {
+                        setSelectedTrackId(matchingTrack.id);
+                        setTimeout(() => {
+                          const mapElement = document.querySelector('[data-map-container]');
+                          if (mapElement) {
+                            mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                          }
+                        }, 100);
+                      }
+                    }}
+                    onHistoricalPointClick={(historical) => {
+                      console.log('[PilotDashboard] Historical arrival clicked:', historical);
+                    }}
                   />
-                )}
+                );
 
-                {/* Unified Arrival Timeline */}
-                {selectedAirport && (
-                  <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
-                    <ArrivalTimeline
-                      arrivals={arrivals || []}
-                      airportCode={selectedAirport}
-                      baseline={baseline}
-                      matchedDaysData={matchedDaysData}
-                      selectedTime={selectedTime}
-                      weatherCategory={activeWeatherCategory}
-                      onPointClick={(arrival) => {
-                        const landingTime = new Date(arrival.timestampLanding);
-                        const matchingTrack = tracks.find(track => {
-                          const trackLandingTime = track.createdAt ? new Date(track.createdAt) : null;
-                          return track.callsign === arrival.callsign && 
-                                 trackLandingTime && 
-                                 Math.abs(trackLandingTime.getTime() - landingTime.getTime()) < 60000;
-                        });
-                        
-                        if (matchingTrack) {
-                          setSelectedTrackId(matchingTrack.id);
-                          setTimeout(() => {
-                            const mapElement = document.querySelector('[data-map-container]');
-                            if (mapElement) {
-                              mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                            }
-                          }, 100);
-                        }
-                      }}
-                      onHistoricalPointClick={(historical) => {
-                        console.log('[PilotDashboard] Historical arrival clicked:', historical);
-                      }}
-                    />
-                    {matchedDaysLoading && (
-                      <div className="mt-2 text-center text-sm text-gray-400">
-                        Loading historical data...
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                if (isNowMode) {
+                  // NOW MODE: Focus on current situation
+                  return (
+                    <div className="space-y-3">
+                      {/* Current Situation - Primary in NOW mode */}
+                      <SituationOverview
+                        key={`situation-${selectedAirport}`}
+                        summary={summary}
+                        weather={airportOverview?.weather}
+                        loading={loading}
+                        connectionStatus={connectionStatus}
+                        airportCode={selectedAirport || undefined}
+                        summaryMetadata={summaryMetadata}
+                        baseline={baseline}
+                        baselineLoading={baselineLoading}
+                        isDemo={selectedAirport === 'KDEN'}
+                        selectedTime={selectedTime}
+                      />
 
-              {/* Situation Overview */}
-              <SituationOverview
-                key={`situation-${selectedAirport}`}
-                summary={summary}
-                weather={airportOverview?.weather}
-                loading={loading}
-                connectionStatus={connectionStatus}
-                airportCode={selectedAirport || undefined}
-                summaryMetadata={summaryMetadata}
-                baseline={baseline}
-                baselineLoading={baselineLoading}
-                isDemo={selectedAirport === 'KDEN'}
-                selectedTime={selectedTime}
-              />
+                      {/* Recent Arrivals */}
+                      {selectedAirport && (
+                        <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
+                          {arrivalTimelineContent}
+                          {matchedDaysLoading && (
+                            <div className="mt-2 text-center text-sm text-gray-400">
+                              Loading historical data...
+                            </div>
+                          )}
+                        </div>
+                      )}
 
-              {/* FAA NAS Status */}
-              {selectedAirport && (
-                <FAAStatus airportId={selectedAirport} />
-              )}
+                      {/* Traffic Patterns - Collapsible in NOW mode */}
+                      {selectedAirport && baseline && (
+                        <CollapsibleSection title="Traffic Patterns" defaultOpen={false}>
+                          <TimeBasedGraphs
+                            key={`traffic-${selectedAirport}`}
+                            baseline={baseline}
+                            arrivalForecast={arrivalForecast}
+                            airportCode={selectedAirport}
+                            selectedTime={selectedTime}
+                            loading={baselineLoading || arrivalForecastLoading || loading}
+                          />
+                        </CollapsibleSection>
+                      )}
+
+                      {/* FAA Status - Collapsible */}
+                      {selectedAirport && (
+                        <CollapsibleSection title="FAA NAS Status" defaultOpen={false}>
+                          <FAAStatus airportId={selectedAirport} />
+                        </CollapsibleSection>
+                      )}
+                    </div>
+                  );
+                } else {
+                  // ETA MODE: Focus on arrival planning
+                  return (
+                    <div className="space-y-3">
+                      {/* Traffic Forecast - Primary in ETA mode */}
+                      {selectedAirport && baseline && (
+                        <TimeBasedGraphs
+                          key={`traffic-${selectedAirport}`}
+                          baseline={baseline}
+                          arrivalForecast={arrivalForecast}
+                          airportCode={selectedAirport}
+                          selectedTime={selectedTime}
+                          loading={baselineLoading || arrivalForecastLoading || loading}
+                        />
+                      )}
+
+                      {/* Arrival Duration Predictions */}
+                      {selectedAirport && (
+                        <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
+                          {arrivalTimelineContent}
+                          {matchedDaysLoading && (
+                            <div className="mt-2 text-center text-sm text-gray-400">
+                              Loading historical data...
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Current Situation - Collapsible in ETA mode */}
+                      <CollapsibleSection title="Current Situation" defaultOpen={false}>
+                        <SituationOverview
+                          key={`situation-${selectedAirport}`}
+                          summary={summary}
+                          weather={airportOverview?.weather}
+                          loading={loading}
+                          connectionStatus={connectionStatus}
+                          airportCode={selectedAirport || undefined}
+                          summaryMetadata={summaryMetadata}
+                          baseline={baseline}
+                          baselineLoading={baselineLoading}
+                          isDemo={selectedAirport === 'KDEN'}
+                          selectedTime={selectedTime}
+                        />
+                      </CollapsibleSection>
+
+                      {/* FAA Status - Collapsible */}
+                      {selectedAirport && (
+                        <CollapsibleSection title="FAA NAS Status" defaultOpen={false}>
+                          <FAAStatus airportId={selectedAirport} />
+                        </CollapsibleSection>
+                      )}
+                    </div>
+                  );
+                }
+              })()}
             </div>
           </div>
         )}
