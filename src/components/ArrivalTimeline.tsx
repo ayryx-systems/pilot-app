@@ -541,31 +541,11 @@ export function ArrivalTimeline({
       </div>
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
-        <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
-          <div className="bg-gray-800/40 rounded py-1.5 px-1">
-            <div className="text-[10px] text-gray-500">Best Case</div>
-            <div className="text-sm font-semibold text-green-400">
-              {matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m
-            </div>
-          </div>
-          <div className="bg-gray-800/40 rounded py-1.5 px-1">
-            <div className="text-[10px] text-gray-500">Typical</div>
-            <div className="text-sm font-semibold text-gray-200">
-              {matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m
-            </div>
-          </div>
-          <div className="bg-gray-800/40 rounded py-1.5 px-1">
-            <div className="text-[10px] text-gray-500">Extended</div>
-            <div className="text-sm font-semibold text-orange-400">
-              {matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m
-            </div>
-          </div>
-          <div className="bg-gray-800/40 rounded py-1.5 px-1">
-            <div className="text-[10px] text-gray-500">Baseline</div>
-            <div className="text-sm font-semibold text-gray-400">
-              {matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m
-            </div>
-          </div>
+        <div className="mt-1.5 flex items-center justify-center gap-4 text-[11px]">
+          <span className="text-gray-500">Best <span className="font-semibold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-500">Typical <span className="font-semibold text-gray-200">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-500">Extended <span className="font-semibold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-500">Baseline <span className="font-semibold text-gray-400">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
         </div>
       )}
       
