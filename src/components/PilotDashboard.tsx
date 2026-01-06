@@ -15,10 +15,9 @@ import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
+import { WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
-import { DebugTimestamp } from './DebugTimestamp';
 import { ClockDisplay } from './ClockDisplay';
 import { pilotApi } from '@/services/api';
 import { HelpButton } from './HelpButton';
@@ -462,18 +461,6 @@ export function PilotDashboard() {
   }, [connectionStatus.connected, selectedAirport, refreshData]);
 
 
-  const _getConnectionStatusColor = () => {
-    if (!connectionStatus.connected) return 'text-red-400';
-    if (connectionStatus.latency && connectionStatus.latency > 2000) return 'text-yellow-400';
-    return 'text-green-400';
-  };
-
-  const _getConnectionStatusIcon = () => {
-    if (!connectionStatus.connected) {
-      return <WifiOff className="w-4 h-4" />;
-    }
-    return <Wifi className="w-4 h-4" />;
-  };
 
   // Get the most recent data timestamp
   const getDataStatus = (): { timestamp: Date; isLive: boolean } => {
@@ -495,6 +482,7 @@ export function PilotDashboard() {
       {/* Compact Header Bar */}
       <header className="flex items-center justify-between px-3 py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0" style={{ zIndex: 5000 }}>
         <div className="flex items-center space-x-2 min-w-0 flex-1" style={{ overflow: 'visible' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo4.png"
             alt="AYRYX"
@@ -513,7 +501,7 @@ export function PilotDashboard() {
               content={
                 <div className="space-y-2">
                   <p>
-                    A <strong>situational awareness system</strong> providing precise operational information about your destination airport, including how current operations are responding to conditions and how they're expected to evolve.
+                    A <strong>situational awareness system</strong> providing precise operational information about your destination airport, including how current operations are responding to conditions and how they&apos;re expected to evolve.
                   </p>
                   <p>
                     <strong>Key Features:</strong>

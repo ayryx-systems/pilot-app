@@ -157,7 +157,7 @@ export function ArrivalTimeline({
       });
     }
 
-    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
+    const seasonalBaseline = getSeasonalBaseline(baseline);
     if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
       const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
       const nowLocalHours = nowLocal.getUTCHours();
@@ -221,7 +221,7 @@ export function ArrivalTimeline({
         max: chartMax 
       } 
     };
-  }, [arrivals, baseline, isAtNow, hoursAhead]);
+  }, [arrivals, baseline, isAtNow, hoursAhead, airportCode]);
 
   const options = useMemo((): ChartOptions<'scatter'> => {
     const annotations: Record<string, unknown> = {};

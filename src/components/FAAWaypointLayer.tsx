@@ -130,7 +130,7 @@ export function FAAWaypointLayer({
         console.error("Error drawing FAA waypoint:", error, waypoint);
       }
     });
-  }, [map, showWaypoints, waypoints, airportCode, layerGroup]);
+  }, [map, showWaypoints, waypoints, layerGroup]);
 
   // Load waypoints when airport changes
   useEffect(() => {

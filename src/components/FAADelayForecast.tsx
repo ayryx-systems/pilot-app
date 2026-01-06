@@ -75,7 +75,7 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
         },
       ],
     };
-  }, [delayForecast, forecastStartTime]);
+  }, [delayForecast, forecastStartTime, airportCode]);
 
   if (!chartData) {
     return null;

@@ -193,9 +193,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
   useEffect(() => {
     const baselineChanged = prevBaselineRef.current !== baseline;
-    const _timeChanged = !prevSelectedTimeRef.current || 
-      Math.abs(prevSelectedTimeRef.current.getTime() - selectedTime.getTime()) > 1000;
-    const _loadingChanged = loading !== undefined;
+    
+    // Check if arrivalForecast reference changed (but data might be the same)
+    const forecastChanged = prevChartDataRef.current?.arrivalForecastRef !== arrivalForecast;
 
     // Don't clear chart data if we're just loading other data (not baseline)
     // Only clear if baseline is missing or we're actually loading baseline
@@ -208,13 +208,13 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       return;
     }
 
-    // Skip recalculation if baseline and selectedTime haven't actually changed
+    // Skip recalculation if baseline, selectedTime, and arrivalForecast haven't actually changed
     // Use reference equality for baseline (should be stable if backend caching works)
     // Compare using selectedTimeKey (rounded to minute) to prevent micro-updates
     const timeKeyChanged = !prevSelectedTimeRef.current || 
       Math.abs(prevSelectedTimeRef.current.getTime() - selectedTimeKey) > 60000; // 1 minute threshold
     
-    if (!baselineChanged && !timeKeyChanged && chartData) {
+    if (!baselineChanged && !timeKeyChanged && !forecastChanged && chartData) {
       return; // No need to recalculate - data hasn't meaningfully changed
     }
 
@@ -456,22 +456,32 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       title: `Traffic Forecast - ${dayLabel}`,
       currentTimeSlotIndex,
       alignedTimeSlots: alignment.alignedTimeSlots,
+      arrivalForecastRef: arrivalForecast, // Store reference to detect changes
     };
 
     // Only update chartData if it's actually different to prevent unnecessary Chart.js updates
+    // Also check if arrivalForecast dataset changed
+    const prevForecastDataset = prevChartDataRef.current?.datasets?.[2];
+    const newForecastDataset = newChartData.datasets[2];
+    const forecastDatasetChanged = !prevForecastDataset || !newForecastDataset ||
+      JSON.stringify(prevForecastDataset.data) !== JSON.stringify(newForecastDataset.data);
+    
     const shouldUpdate = !prevChartDataRef.current || 
         JSON.stringify(prevChartDataRef.current.labels) !== JSON.stringify(newChartData.labels) ||
         JSON.stringify(prevChartDataRef.current.datasets?.[0]?.data) !== JSON.stringify(newChartData.datasets[0]?.data) ||
         JSON.stringify(prevChartDataRef.current.datasets?.[1]?.data) !== JSON.stringify(newChartData.datasets[1]?.data) ||
+        forecastDatasetChanged ||
         prevChartDataRef.current.currentTimeSlotIndex !== newChartData.currentTimeSlotIndex;
     
     if (shouldUpdate) {
       setChartData(newChartData);
       prevChartDataRef.current = newChartData;
     }
-  }, [baseline, airportCode, selectedTimeKey]);
+  }, [baseline, airportCode, selectedTimeKey, arrivalForecast, selectedTime]);
 
-  if (loading) {
+  // Show loading state only if we don't have chart data yet
+  // If we have chart data, keep showing it even during refresh to prevent flashing
+  if (loading && !chartData) {
     return (
       <div className="p-4 bg-slate-800 rounded-lg border border-slate-700">
         <div className="animate-pulse">

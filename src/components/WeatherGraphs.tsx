@@ -75,7 +75,8 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
     });
     
     setPositions(newPositions);
-  }, [events, graphData, chartRef]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [events, graphData]); // chartRef is a ref and doesn't need to be in dependencies
   
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -83,7 +84,7 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
     }, 100);
     
     return () => clearTimeout(timer);
-  }, [calculatePositions]);
+  }, [calculatePositions]); // chartRef is a ref and doesn't need to be in dependencies
   
   useEffect(() => {
     if (!chartRef.current) return;
@@ -94,7 +95,8 @@ const EventBarsOverlay = memo(function EventBarsOverlay({
     
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
-  }, [calculatePositions]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [calculatePositions]); // chartRef is a ref and doesn't need to be in dependencies
   
   return (
     <div className="absolute inset-0 pointer-events-none z-10" style={{ paddingBottom: `${bottomPadding}px` }}>

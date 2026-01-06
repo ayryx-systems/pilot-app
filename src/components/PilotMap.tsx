@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useMemo } from 'react';
 import * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures, BaselineData } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
@@ -165,6 +165,9 @@ export function PilotMap({
   // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
   
+  // Track current airport code to prevent unnecessary map recreation
+  const currentAirportCodeRef = useRef<string | null>(null);
+  
   // Weather radar animation
   const { radarFrames, currentRadarFrameIndex } = useWeatherRadarAnimation({
     mapInstance,
@@ -183,8 +186,10 @@ export function PilotMap({
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  // Get airport configuration from constants
-  const airportConfig = airport ? AIRPORTS[airport.code] : null;
+  // Get airport configuration from constants (memoized to prevent unnecessary re-renders)
+  const airportConfig = useMemo(() => {
+    return airport ? AIRPORTS[airport.code] : null;
+  }, [airport?.code]);
 
   // Inject custom CSS for map elements
   useEffect(() => {
@@ -352,20 +357,37 @@ export function PilotMap({
     loadOSMData();
   }, [airport?.id]);
 
-  // Create/destroy map when airport changes
+  // Create/destroy map when airport code changes
   useEffect(() => {
-    if (!leafletLoaded || !airport) {
+    const airportCode = airport?.code;
+    
+    if (!leafletLoaded || !airportCode) {
       if (mapInstance) {
-        mapInstance.remove();
+        try {
+          mapInstance.remove();
+        } catch (error) {
+          console.warn('[PilotMap] Error removing map instance:', error);
+        }
         setMapInstance(null);
         setMapReady(false);
+        currentAirportCodeRef.current = null;
       }
       return;
     }
 
-    // Clean up existing map
-    if (mapInstance) {
-      mapInstance.remove();
+    // Don't recreate map if we already have one for this airport code
+    if (mapInstance && currentAirportCodeRef.current === airportCode) {
+      // Map already exists for this airport, skip recreation
+      return;
+    }
+
+    // Clean up existing map before creating new one (only if airport code changed)
+    if (mapInstance && currentAirportCodeRef.current !== airportCode) {
+      try {
+        mapInstance.remove();
+      } catch (error) {
+        console.warn('[PilotMap] Error removing existing map instance:', error);
+      }
       setMapInstance(null);
       setMapReady(false);
     }
@@ -376,7 +398,7 @@ export function PilotMap({
 
       if (!mapRef.current) return;
 
-      console.log('[PilotMap] Creating map for', airport.code);
+      console.log('[PilotMap] Creating map for', airportCode);
 
       // Convert position format - API uses {lat, lon}, constants use [lat, lon]
       const mapCenter: [number, number] = airport.position
@@ -474,15 +496,21 @@ export function PilotMap({
 
       setMapInstance(map);
       setMapReady(true);
+      currentAirportCodeRef.current = airportCode;
     };
 
     createMap();
 
     return () => {
-      if (mapInstance) {
-        mapInstance.remove();
+      if (mapInstance && mapRef.current) {
+        try {
+          mapInstance.remove();
+        } catch (error) {
+          console.warn('[PilotMap] Error removing map instance:', error);
+        }
         setMapInstance(null);
         setMapReady(false);
+        currentAirportCodeRef.current = null;
       }
       layerGroupsRef.current = {};
     };
@@ -562,7 +590,7 @@ export function PilotMap({
     };
 
     updateRunways();
-  }, [mapInstance, displayOptions.showRunways, airportConfig]);
+  }, [mapInstance, displayOptions.showRunways, airportConfig, airportData?.runways]);
 
   // Update DME rings display
   useEffect(() => {
@@ -711,7 +739,7 @@ export function PilotMap({
     return () => {
       mapInstance.off('zoomend', handleZoomEnd);
     };
-  }, [mapInstance, displayOptions.showDmeRings, airportConfig]);
+  }, [mapInstance, displayOptions.showDmeRings, airportConfig, airport?.position]);
 
   // Update waypoints display
   useEffect(() => {
@@ -1138,7 +1166,7 @@ export function PilotMap({
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
     const updateWeatherRadar = async () => {
-      const _leafletModule = await import('leaflet');
+      await import('leaflet');
 
       // Clear existing radar layer (old static layer)
       const existingRadarLayer = activeWeatherLayers.get('radar');
@@ -1206,7 +1234,7 @@ export function PilotMap({
     };
 
     updateWeatherAlerts();
-  }, [mapInstance, displayOptions.showWeatherAlerts, weatherLayers]);
+  }, [mapInstance, displayOptions.showWeatherAlerts, weatherLayers, activeWeatherLayers]);
 
   // Update visibility display - TEMPORARILY DISABLED
   useEffect(() => {
@@ -1255,7 +1283,7 @@ export function PilotMap({
     };
 
     updateVisibility();
-  }, [mapInstance, displayOptions.showVisibility, weatherLayers]);
+  }, [mapInstance, displayOptions.showVisibility, weatherLayers, activeWeatherLayers]);
 
   // Update SIGMETs/AIRMETs display
   useEffect(() => {
@@ -1267,7 +1295,6 @@ export function PilotMap({
 
       // Remove existing SIGMETs/AIRMETs layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._sigmetAirmetId) {
@@ -1414,7 +1441,6 @@ export function PilotMap({
       // Remove existing wind layers
       const existingLayers = layerGroupsRef.current.weather.getLayers();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       existingLayers.forEach((layer: any) => {
         if (layer._windStationId) {
           layerGroupsRef.current.weather.removeLayer(layer);
@@ -1529,7 +1555,7 @@ export function PilotMap({
     };
 
     updateWindsAloft();
-  }, [mapInstance, displayOptions.showWindsAloft]);
+  }, [mapInstance, displayOptions.showWindsAloft, airport?.code, airport?.position]);
 
   // Update winds aloft visibility on zoom changes
   useEffect(() => {
@@ -2794,7 +2820,7 @@ export function PilotMap({
     };
 
     updateOSMFeatures();
-  }, [mapInstance, displayOptions.showOSMFeatures, displayOptions.showExtendedCenterlines, osmData]);
+  }, [mapInstance, displayOptions, osmData]);
 
   // Redraw OSM features when zoom changes
   useEffect(() => {
@@ -3092,7 +3118,7 @@ export function PilotMap({
     return () => {
       mapInstance.off('zoomend', handleZoomEnd);
     };
-  }, [mapInstance, displayOptions.showOSMFeatures, displayOptions.showExtendedCenterlines, osmData]);
+  }, [mapInstance, displayOptions, osmData]);
 
   // Handle recenter events (similar to ATC dashboard)
   useEffect(() => {
@@ -3246,3 +3272,4 @@ export function PilotMap({
     </div>
   );
 }
+

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { weatherService } from '../services/weatherService';
 import { formatAirportLocalTimeShort } from '../utils/airportTime';
@@ -41,7 +41,7 @@ export function useWeatherRadarAnimation({
   const fadeAnimationFrameRef = useRef<number | null>(null);
   const frameIndexRef = useRef<number>(0);
 
-  const startAnimation = () => {
+  const startAnimation = useCallback(() => {
     if (radarOverlaysRef.current.length <= 1) return;
     
     if (radarAnimationIntervalRef.current) {
@@ -147,7 +147,7 @@ export function useWeatherRadarAnimation({
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
-  };
+  }, [displayOptions.showWeatherRadar, airportCode, baseline]);
 
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current?.weather) return;
@@ -399,7 +399,7 @@ export function useWeatherRadarAnimation({
       if (radarTimeIndicatorRef.current) {
         try {
           radarTimeIndicatorRef.current.remove();
-        } catch (e) {
+        } catch {
           // Element already removed, ignore
         }
         radarTimeIndicatorRef.current = null;
@@ -413,7 +413,7 @@ export function useWeatherRadarAnimation({
       });
       radarBlobUrlsRef.current = [];
     };
-  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline]);
+  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline, layerGroupsRef, mapRef, setActiveWeatherLayers, startAnimation]);
 
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;

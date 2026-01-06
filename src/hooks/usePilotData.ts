@@ -3,8 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { pilotApi, ApiError } from '@/services/api';
 import {
-  SituationSummary,
-  ConnectionStatus,
   PilotAppState,
   BaselineData,
   ArrivalForecast
@@ -400,7 +398,7 @@ export function usePilotData() {
   // Initial load
   useEffect(() => {
     refreshData();
-  }, []);
+  }, [refreshData]);
 
   // Load airport data when selection changes
   useEffect(() => {
@@ -409,7 +407,7 @@ export function usePilotData() {
       const skipBaseline = state.baseline !== null;
       loadAirportData(state.selectedAirport, { skipBaseline });
     }
-  }, [state.selectedAirport, state.connectionStatus.connected, loadAirportData]);
+  }, [state.selectedAirport, state.connectionStatus.connected, state.baseline, loadAirportData]);
 
   // Periodic connection test
   useEffect(() => {
