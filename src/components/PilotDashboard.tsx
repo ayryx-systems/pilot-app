@@ -15,7 +15,7 @@ import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
-import { Wifi, WifiOff, AlertTriangle, Menu, X } from 'lucide-react';
+import { Wifi, WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
 import { AppUpdateNotifier } from './AppUpdateNotifier';
 import { DebugTimestamp } from './DebugTimestamp';
@@ -99,6 +99,15 @@ export function PilotDashboard() {
   const [showPirepPanel, setShowPirepPanel] = useState(false);
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
+  const [mobileActiveTab, setMobileActiveTab] = useState<'map' | 'planning'>('map');
+  const [isDesktop, setIsDesktop] = useState(false);
+  
+  useEffect(() => {
+    const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
+    checkDesktop();
+    window.addEventListener('resize', checkDesktop);
+    return () => window.removeEventListener('resize', checkDesktop);
+  }, []);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const [_arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
@@ -585,10 +594,13 @@ export function PilotDashboard() {
         </div>
       )}
 
-      {/* Main Content: Split Screen Layout for Landscape */}
+      {/* Main Content: Split Screen Layout for Landscape, Tab-switched for Mobile */}
       <div className="flex-1 flex flex-col md:flex-row overflow-hidden">
-        {/* Map Section - Left Side (full width on mobile, flexible on desktop) */}
-        <div className="flex-1 relative min-w-0 md:flex-[0_0_55%] md:max-w-[55%]" style={{ paddingBottom: 'max(3rem, env(safe-area-inset-bottom))' }}>
+        {/* Map Section - Always visible on desktop, tab-controlled on mobile */}
+        <div 
+          className="flex-1 relative min-w-0 md:flex-[0_0_55%] md:max-w-[55%]"
+          style={!isDesktop && mobileActiveTab !== 'map' ? { display: 'none' } : undefined}
+        >
           <PilotMap
             airport={airportOverview?.airport}
             airportData={airportOverview || undefined}
@@ -616,9 +628,15 @@ export function PilotDashboard() {
           )}
         </div>
 
-        {/* Right Panel - Graphs and Info (hidden on mobile when fullscreen, visible on tablet/desktop) */}
+        {/* Right Panel - Always visible on desktop, tab-controlled on mobile */}
         {!mapFullscreen && (
-          <div key="right-panel" className="hidden md:flex md:w-[45%] md:min-w-[400px] md:max-w-[45%] bg-slate-800/95 backdrop-blur-sm border-l border-slate-700/50 flex-col overflow-hidden" style={{ zIndex: 1000 }}>
+          <div 
+            key="right-panel" 
+            className={`md:w-[45%] md:min-w-[400px] md:max-w-[45%] bg-slate-800/95 backdrop-blur-sm md:border-l border-slate-700/50 flex-col overflow-hidden ${
+              isDesktop || mobileActiveTab === 'planning' ? 'flex flex-1' : 'hidden'
+            }`} 
+            style={{ zIndex: 1000, paddingBottom: 'env(safe-area-inset-bottom)' }}
+          >
             {/* Scrollable Content Area */}
             <div 
               ref={scrollContainerRef} 
@@ -793,6 +811,32 @@ export function PilotDashboard() {
         )}
       </div>
 
+      {/* Mobile Bottom Tab Bar - Only visible on narrow screens */}
+      <div className="md:hidden flex items-center justify-around bg-slate-800 border-t border-slate-700 px-4 py-2 safe-area-bottom" style={{ paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+        <button
+          onClick={() => setMobileActiveTab('map')}
+          className={`flex flex-col items-center gap-1 px-6 py-1.5 rounded-lg transition-colors ${
+            mobileActiveTab === 'map' 
+              ? 'bg-blue-500/20 text-blue-400' 
+              : 'text-slate-400 hover:text-slate-300'
+          }`}
+        >
+          <Map className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Map</span>
+        </button>
+        <button
+          onClick={() => setMobileActiveTab('planning')}
+          className={`flex flex-col items-center gap-1 px-6 py-1.5 rounded-lg transition-colors ${
+            mobileActiveTab === 'planning' 
+              ? 'bg-blue-500/20 text-blue-400' 
+              : 'text-slate-400 hover:text-slate-300'
+          }`}
+        >
+          <BarChart3 className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Planning</span>
+        </button>
+      </div>
+
       {/* PIREP Panel Backdrop - Click outside to close */}
       {showPirepPanel && (
         <div
@@ -803,7 +847,7 @@ export function PilotDashboard() {
       )}
 
       {/* Left Side Panel - PIREPs (Collapsible, Fixed Width) */}
-      <div className={`absolute left-0 top-0 bottom-12 lg:bottom-0 w-80 max-w-[85vw] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
+      <div className={`absolute left-0 top-0 bottom-14 md:bottom-0 w-80 max-w-[85vw] bg-slate-800/95 backdrop-blur-sm border-r border-slate-700/50 
                       transform transition-transform duration-200 ease-in-out ${showPirepPanel ? 'translate-x-0' : '-translate-x-full'
         }`} style={{ zIndex: 1000 }}>
         <div className="p-2 sm:p-3 h-full">
@@ -863,10 +907,10 @@ export function PilotDashboard() {
       </div>
 
       {/* PIREP Panel Toggle Button (when panel is closed) - Bottom left position */}
-      {!showPirepPanel && (
+      {!showPirepPanel && mobileActiveTab === 'map' && (
         <button
           onClick={() => setShowPirepPanel(true)}
-          className={`absolute left-2 bottom-16 lg:bottom-14 px-3 py-2 rounded-lg 
+          className={`absolute left-2 bottom-16 md:bottom-4 px-3 py-2 rounded-lg 
                    transition-colors flex items-center space-x-2 backdrop-blur-sm border
                    ${pireps && pireps.length > 0
               ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200'
@@ -887,9 +931,9 @@ export function PilotDashboard() {
       )}
 
       {/* Storm Demo Button - Bottom left position, to the right of PIREP button */}
-      {selectedAirport === 'KDEN' && !showPirepPanel && (
+      {selectedAirport === 'KDEN' && !showPirepPanel && mobileActiveTab === 'map' && (
         <button
-          className="absolute left-2 bottom-16 lg:bottom-14 ml-32 px-3 py-2 rounded-lg 
+          className="absolute left-2 bottom-16 md:bottom-4 ml-32 px-3 py-2 rounded-lg 
                    bg-orange-600/90 transition-colors flex items-center space-x-2 
                    backdrop-blur-sm border border-orange-500/60 text-white"
           style={{ zIndex: 1000 }}
@@ -905,30 +949,6 @@ export function PilotDashboard() {
       )}
 
 
-      {/* Bottom Status Bar - Airport Info (only on map side) */}
-      {airportOverview && !mapFullscreen && (
-        <div className="absolute left-0 md:right-[45%] right-0 bg-slate-800/95 backdrop-blur-sm border-t border-slate-700/50 px-3 py-2" style={{ bottom: 'env(safe-area-inset-bottom)', zIndex: 1000 }}>
-          <div className="flex justify-between items-center text-xs">
-            <div className="flex items-center space-x-4">
-              <span className="text-gray-400 font-medium">{airportOverview.airport.code}</span>
-              <span>{airportOverview.runways.length} Runways</span>
-              <span className={`flex items-center space-x-1 ${airportOverview.operational.active ? 'text-green-400' : 'text-red-400'}`}>
-                <span>●</span>
-                <span>{airportOverview.operational.active ? 'Active' : 'Inactive'}</span>
-              </span>
-            </div>
-
-            {/* Debug info */}
-            {process.env.NODE_ENV === 'development' && (
-              <DebugTimestamp
-                serverTimestamp={airportOverview.timestamp}
-                source="live data"
-                className="opacity-60"
-              />
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
