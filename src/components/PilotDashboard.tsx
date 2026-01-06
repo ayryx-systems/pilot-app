@@ -729,11 +729,9 @@ export function PilotDashboard() {
                         </CollapsibleSection>
                       )}
 
-                      {/* FAA Status - Collapsible */}
+                      {/* FAA NAS Status - Always visible */}
                       {selectedAirport && (
-                        <CollapsibleSection title="FAA NAS Status" defaultOpen={false}>
-                          <FAAStatus airportId={selectedAirport} />
-                        </CollapsibleSection>
+                        <FAAStatus airportId={selectedAirport} />
                       )}
                     </div>
                   );
@@ -782,11 +780,9 @@ export function PilotDashboard() {
                         />
                       </CollapsibleSection>
 
-                      {/* FAA Status - Collapsible */}
+                      {/* FAA NAS Status - Always visible */}
                       {selectedAirport && (
-                        <CollapsibleSection title="FAA NAS Status" defaultOpen={false}>
-                          <FAAStatus airportId={selectedAirport} />
-                        </CollapsibleSection>
+                        <FAAStatus airportId={selectedAirport} />
                       )}
                     </div>
                   );
