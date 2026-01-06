@@ -51,22 +51,20 @@ export function ETASelector({
       onTimeChange(getCurrentUTCTime());
       return;
     }
-    const targetHours = (value / 100) * maxHoursAhead;
-    const roundedSlots = Math.round(targetHours * 4);
-    const next15MinBoundary = Math.ceil(airportNowLocal.getUTCMinutes() / 15) * 15;
-    const targetLocalTime = new Date(airportNowLocal);
     
-    if (next15MinBoundary >= 60) {
-      targetLocalTime.setUTCHours(airportNowLocal.getUTCHours() + 1, 0, 0, 0);
-      if (roundedSlots > 1) {
-        targetLocalTime.setTime(targetLocalTime.getTime() + (roundedSlots - 1) * 15 * 60 * 1000);
-      }
+    const targetHours = (value / 100) * maxHoursAhead;
+    const targetLocalTime = new Date(airportNowLocal);
+    targetLocalTime.setTime(targetLocalTime.getTime() + targetHours * 60 * 60 * 1000);
+    
+    const minutes = targetLocalTime.getUTCMinutes();
+    const roundedMinutes = Math.round(minutes / 15) * 15;
+    
+    if (roundedMinutes >= 60) {
+      targetLocalTime.setUTCHours(targetLocalTime.getUTCHours() + 1, 0, 0, 0);
     } else {
-      targetLocalTime.setUTCHours(airportNowLocal.getUTCHours(), next15MinBoundary, 0, 0);
-      if (roundedSlots > 1) {
-        targetLocalTime.setTime(targetLocalTime.getTime() + (roundedSlots - 1) * 15 * 60 * 1000);
-      }
+      targetLocalTime.setUTCMinutes(roundedMinutes, 0, 0);
     }
+    
     onTimeChange(airportLocalToUTC(targetLocalTime, airportCode, baseline));
   };
 
