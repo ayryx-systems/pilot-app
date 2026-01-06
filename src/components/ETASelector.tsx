@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
-import { Clock, RotateCcw } from 'lucide-react';
+import { Clock, RotateCcw, Radio, Compass } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
 import { BaselineData, FlightCategory } from '@/types';
 import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
@@ -153,19 +153,24 @@ export function ETASelector({
           </span>
           <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
           {isNow ? (
-            <span className="px-1.5 py-0.5 bg-blue-500/20 border border-blue-400/50 rounded text-[10px] font-medium text-blue-300">
-              NOW
-            </span>
+            <>
+              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-400/50 rounded text-[10px] font-medium text-emerald-300">
+                <Radio className="w-2.5 h-2.5 animate-pulse" />
+                LIVE
+              </span>
+              <span className="text-[10px] text-slate-500">· slide to plan →</span>
+            </>
           ) : (
             <span 
-              className="px-1.5 py-0.5 rounded text-[10px] font-medium"
+              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
               style={{
                 backgroundColor: categoryColors.bg,
                 color: categoryColors.color,
                 border: `1px solid ${categoryColors.border}`,
               }}
             >
-              +{hoursAhead.toFixed(1)}h
+              <Compass className="w-2.5 h-2.5" />
+              PLANNING +{hoursAhead.toFixed(1)}h
             </span>
           )}
         </div>
