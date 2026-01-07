@@ -609,6 +609,7 @@ export interface MatchedDaysResponse {
     p50: number | null;
     p75: number | null;
     p90: number | null;
+    p95: number | null;
     min: number | null;
     max: number | null;
   } | null;

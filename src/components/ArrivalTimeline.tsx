@@ -544,7 +544,8 @@ export function ArrivalTimeline({
         <div className="mt-1.5 flex items-center justify-center gap-4 text-[11px]">
           <span className="text-gray-500">Best <span className="font-semibold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
           <span className="text-gray-500">Typical <span className="font-semibold text-gray-200">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-500">Extended <span className="font-semibold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-500">Extended (90th %ile) <span className="font-semibold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-500">Extreme (95th %ile) <span className="font-semibold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span></span>
           <span className="text-gray-500">Baseline <span className="font-semibold text-gray-400">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
         </div>
       )}
