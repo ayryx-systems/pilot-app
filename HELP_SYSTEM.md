@@ -13,6 +13,7 @@ A comprehensive contextual help system has been added to the pilot app to guide 
 A reusable help button component that displays contextual help information in a centered modal popup.
 
 **Features:**
+
 - Configurable size (sm, md, lg)
 - Centered modal overlay (simpler and more robust than positioned popups)
 - **React Portal rendering** - modal renders directly to document.body, bypassing parent container constraints
@@ -25,8 +26,9 @@ A reusable help button component that displays contextual help information in a 
 - Not affected by parent overflow, transform, or stacking context properties
 
 **Usage:**
+
 ```tsx
-import { HelpButton } from './HelpButton';
+import { HelpButton } from "./HelpButton";
 
 <HelpButton
   title="Feature Name"
@@ -34,26 +36,32 @@ import { HelpButton } from './HelpButton';
   content={
     <div className="space-y-2">
       <p>Description of the feature...</p>
-      <p><strong>Key point:</strong> Important information</p>
+      <p>
+        <strong>Key point:</strong> Important information
+      </p>
     </div>
   }
-/>
+/>;
 ```
 
 ## Help Locations
 
 ### 1. Main Dashboard Header
+
 **Location:** Next to airport selector in top header  
 **Purpose:** Explains the overall app purpose and DEMO disclaimer  
 **Content:**
+
 - Pre-flight planning tool overview
 - Key features list (traffic, weather, ground tracks, PIREPs, what-if scenarios)
 - Demo-only warning with disclaimer to use official aviation authorities
 
 ### 2. ETA Selector
+
 **Location:** Next to time display in selector  
 **Purpose:** Explains arrival time selection and weather scenarios  
 **Content:**
+
 - How to select arrival time
 - NOW vs. Future time differences
 - TAF forecasts from weather data
@@ -61,9 +69,11 @@ import { HelpButton } from './HelpButton';
 - Interactive time selection via slider or graph clicks
 
 ### 3. Traffic Forecast Graph
+
 **Location:** Top-right of graph card  
 **Purpose:** Explains the traffic forecast visualization  
 **Content:**
+
 - Blue line: historical day-of-week average
 - Green line: seasonal average across all days
 - Orange line: FAA arrival forecast (when available)
@@ -72,9 +82,11 @@ import { HelpButton } from './HelpButton';
 - Click-to-select time functionality
 
 ### 4. Arrival Duration Timeline
+
 **Location:** Next to "Arrival Duration Timeline" title  
 **Purpose:** Explains the scatter plot and arrival metrics  
 **Content:**
+
 - Vertical axis: duration from 50nm to touchdown
 - Horizontal axis: landing time (hours from now)
 - Colored dots: aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical
@@ -83,9 +95,11 @@ import { HelpButton } from './HelpButton';
 - Click dots to view ground tracks on map
 
 ### 5. Conditions Overview
+
 **Location:** In the "Conditions" section header  
 **Purpose:** Explains status indicators and condition types  
 **Content:**
+
 - Green (normal), Yellow (caution), Red (warning) status meanings
 - Weather: visibility, ceiling, wind, precipitation
 - Traffic: arrival volume and congestion
@@ -94,9 +108,11 @@ import { HelpButton } from './HelpButton';
 - Click conditions for detailed information
 
 ### 6. Map Layers Control
+
 **Location:** Inside expanded layers menu  
 **Purpose:** Explains available map layers  
 **Content:**
+
 - DME rings: distance circles (10, 25, 50nm)
 - Waypoints: navigational fixes
 - Extended centerlines: runway approach paths
@@ -108,9 +124,11 @@ import { HelpButton } from './HelpButton';
 - Auto-saved preferences
 
 ### 7. Pilot Reports (PIREPs)
+
 **Location:** In PIREP panel header  
 **Purpose:** Explains PIREP priorities and sources  
 **Content:**
+
 - Urgent (red): critical conditions (severe turbulence/icing)
 - High (yellow): significant conditions (moderate turbulence/icing)
 - Normal (blue): standard reports (smooth, light chop)
@@ -119,9 +137,11 @@ import { HelpButton } from './HelpButton';
 - Map display with approximate locations
 
 ### 9. FAA NAS Status
+
 **Location:** In FAA Status section header  
 **Purpose:** Explains FAA status indicators  
 **Content:**
+
 - Ground stops: all departures stopped
 - Ground delays: pre-departure delays
 - Arrival/departure delays: expected delays
@@ -134,12 +154,14 @@ import { HelpButton } from './HelpButton';
 ## Design Principles
 
 ### Visual Consistency
+
 - Blue circular icon with question mark
 - Consistent hover states
 - Semi-transparent blue background
 - Border highlighting on hover
 
 ### Positioning Strategy
+
 - All help popups appear **centered on screen** with a modal overlay
 - This approach is simpler and more robust than position-based popups
 - Prevents positioning issues on different screen sizes
@@ -147,6 +169,7 @@ import { HelpButton } from './HelpButton';
 - Scrollable content for longer help text
 
 ### Content Guidelines
+
 - Start with a clear one-sentence description
 - Use bold text for key terms and values
 - Include color coding explanations where relevant
@@ -155,6 +178,7 @@ import { HelpButton } from './HelpButton';
 - Use aviation terminology appropriately
 
 ### Accessibility
+
 - High contrast colors (blue on dark slate)
 - Clear close button (X icon)
 - Click outside to close
@@ -164,6 +188,7 @@ import { HelpButton } from './HelpButton';
 ## Technical Details
 
 ### Z-Index Management
+
 - Modal overlay: `z-[9999]` (Tailwind max z-index)
 - **Portal rendering to document.body** ensures modal is at root level
 - Not affected by parent stacking contexts
@@ -171,12 +196,14 @@ import { HelpButton } from './HelpButton';
 - Modal backdrop prevents clicks on underlying content
 
 ### Animation
+
 - Tailwind's `animate-in fade-in zoom-in` utility classes
 - 200ms duration for smooth appearance
 - Fade and scale effect for professional feel
 - Modal backdrop fades in simultaneously
 
 ### Performance
+
 - Minimal re-renders
 - Event listeners cleaned up properly
 - Click-outside detection via modal backdrop
@@ -190,26 +217,31 @@ import { HelpButton } from './HelpButton';
 Potential improvements to consider:
 
 1. **Keyboard Support** ✅ IMPLEMENTED
+
    - Escape key to close ✅
    - Tab navigation (can be enhanced)
    - Focus management (can be enhanced)
 
 2. **Tour Mode**
+
    - Sequential help popups
    - "Next" button to guide through features
    - First-time user onboarding
 
 3. **Search**
+
    - Global help search
    - Help index
    - Quick access to specific topics
 
 4. **Videos/GIFs**
+
    - Embedded demonstration videos
    - Animated explanations
    - Interactive tutorials
 
 5. **Contextual Timing**
+
    - Auto-show help for new users
    - Show help on first visit to features
    - Remember dismissed helps
@@ -222,6 +254,7 @@ Potential improvements to consider:
 ## Maintenance
 
 ### Adding New Help
+
 1. Import HelpButton: `import { HelpButton } from './HelpButton';`
 2. Place next to the feature needing explanation
 3. Provide clear title and content
@@ -229,12 +262,14 @@ Potential improvements to consider:
 5. No need to worry about positioning - all popups are centered
 
 ### Updating Content
+
 - Edit the content prop in the component usage
 - Keep language clear and concise
 - Test readability with target users
 - Update this documentation
 
 ### Testing Checklist
+
 - [ ] Help button appears in correct position
 - [ ] Popup opens on click
 - [ ] Content is readable and formatted correctly
@@ -283,5 +318,4 @@ Terms used in help content:
 
 ---
 
-*This help system is designed to make the pilot app more accessible and user-friendly while maintaining the professional aviation context.*
-
+_This help system is designed to make the pilot app more accessible and user-friendly while maintaining the professional aviation context._

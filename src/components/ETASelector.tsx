@@ -208,7 +208,7 @@ export function ETASelector({
         </div>
       </div>
 
-      <div className="relative mb-1">
+      <div className="relative mb-1 py-2 -my-2">
         <input
           type="range"
           min="0"
@@ -255,17 +255,18 @@ export function ETASelector({
           __html: `
             .eta-slider::-webkit-slider-thumb {
               appearance: none;
-              width: 14px;
-              height: 14px;
+              width: 20px;
+              height: 20px;
               border-radius: 50%;
               background: ${isNow ? '#ffffff' : categoryColors.color};
               cursor: pointer;
               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
               border: ${isNow ? '2px solid #60a5fa' : `2px solid ${categoryColors.border}`};
+              margin-top: 0px;
             }
             .eta-slider::-moz-range-thumb {
-              width: 14px;
-              height: 14px;
+              width: 20px;
+              height: 20px;
               border-radius: 50%;
               background: ${isNow ? '#ffffff' : categoryColors.color};
               cursor: pointer;
