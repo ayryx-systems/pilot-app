@@ -253,7 +253,7 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
 }
 
 function WeatherTimelineBar({ timeline }: { timeline: Record<number, FlightCategory> }) {
-  const hours = Array.from({ length: 18 }, (_, i) => i + 6);
+  const hours = Array.from({ length: 25 }, (_, i) => i);
   
   return (
     <div className="mt-1 mx-2">
@@ -272,6 +272,7 @@ function WeatherTimelineBar({ timeline }: { timeline: Record<number, FlightCateg
         })}
       </div>
       <div className="flex justify-between text-[8px] text-gray-500 mt-0.5 px-0.5">
+        <span>0</span>
         <span>6</span>
         <span>12</span>
         <span>18</span>
