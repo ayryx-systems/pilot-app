@@ -36,32 +36,26 @@ interface OSMResponse {
 import { getApiBaseUrl } from '@/lib/apiConfig';
 
 class PilotOSMService {
-  private cache = new Map<string, { data: AirportOSMFeatures; timestamp: number }>();
-  private readonly CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
   private readonly BACKEND_API_URL = getApiBaseUrl();
 
   /**
    * Get OSM data for an airport from backend API
+   * Relies on browser caching (backend sets 1-hour cache)
    */
-  async getAirportOSMData(airportId: string): Promise<AirportOSMFeatures | null> {
-    const cacheKey = airportId;
-
-    // Check cache first
-    if (this.cache.has(cacheKey)) {
-      const cached = this.cache.get(cacheKey)!;
-      if (Date.now() - cached.timestamp < this.CACHE_DURATION) {
-        return cached.data;
-      }
-    }
-
+  async getAirportOSMData(airportId: string, forceRefresh = false): Promise<AirportOSMFeatures | null> {
     try {
+      const cacheBuster = forceRefresh ? `?t=${Date.now()}` : '';
       
-      const response = await fetch(`${this.BACKEND_API_URL}/api/airports/${airportId}/osm`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const response = await fetch(
+        `${this.BACKEND_API_URL}/api/airports/${airportId}/osm${cacheBuster}`,
+        {
+          method: 'GET',
+          cache: forceRefresh ? 'reload' : 'default',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      );
 
       if (!response.ok) {
         if (response.status === 404) {
@@ -86,39 +80,12 @@ class PilotOSMService {
         other: data.osm.other || [],
       };
 
-      // Cache the data
-      this.cache.set(cacheKey, {
-        data: features,
-        timestamp: Date.now()
-      });
-
       return features;
 
     } catch (error) {
       console.error(`[PilotOSMService] Error fetching OSM data for ${airportId}:`, error);
       return null;
     }
-  }
-
-  /**
-   * Clear cache for a specific airport or all airports
-   */
-  clearCache(airportId?: string): void {
-    if (airportId) {
-      this.cache.delete(airportId);
-    } else {
-      this.cache.clear();
-    }
-  }
-
-  /**
-   * Get cache statistics
-   */
-  getCacheStats(): { size: number; keys: string[] } {
-    return {
-      size: this.cache.size,
-      keys: Array.from(this.cache.keys())
-    };
   }
 
   /**
