@@ -2,17 +2,20 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { MapDisplayOptions } from '@/types';
-import { Eye, EyeOff, Layers } from 'lucide-react';
+import { Eye, EyeOff, Layers, RefreshCw } from 'lucide-react';
 import { HelpButton } from './HelpButton';
+import { pilotOSMService } from '@/services/osmService';
 
 interface MapControlsProps {
   displayOptions: MapDisplayOptions;
   onOptionsChange: (options: MapDisplayOptions) => void;
   isDemo?: boolean;
+  selectedAirport?: string;
 }
 
-export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapControlsProps) {
+export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedAirport }: MapControlsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Close panel when clicking outside
@@ -37,6 +40,20 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
       ...displayOptions,
       [key]: !displayOptions[key],
     });
+  };
+
+  const handleRefreshMapData = async () => {
+    if (!selectedAirport || isRefreshing) return;
+    
+    setIsRefreshing(true);
+    try {
+      await pilotOSMService.getAirportOSMData(selectedAirport, true);
+      window.location.reload();
+    } catch (error) {
+      console.error('Failed to refresh map data:', error);
+    } finally {
+      setIsRefreshing(false);
+    }
   };
 
   const controls = [
@@ -128,6 +145,22 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo }: MapCont
               </button>
             ))}
           </div>
+
+          {/* Refresh Map Data Button */}
+          {selectedAirport && (
+            <div className="mt-2 pt-2 border-t border-slate-600">
+              <button
+                onClick={handleRefreshMapData}
+                disabled={isRefreshing}
+                className="w-full flex items-center justify-center py-2 px-2 rounded text-xs
+                  bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 
+                  transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <RefreshCw className={`w-3 h-3 mr-1 ${isRefreshing ? 'animate-spin' : ''}`} />
+                <span>{isRefreshing ? 'Refreshing...' : 'Refresh Map Data'}</span>
+              </button>
+            </div>
+          )}
 
         </div>
       )}

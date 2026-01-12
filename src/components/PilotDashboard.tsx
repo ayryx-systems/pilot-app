@@ -611,6 +611,7 @@ export function PilotDashboard() {
                 displayOptions={mapDisplayOptions}
                 onOptionsChange={setMapDisplayOptions}
                 isDemo={selectedAirport === 'KDEN'}
+                selectedAirport={selectedAirport}
               />
             </div>
           )}
