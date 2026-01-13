@@ -272,155 +272,23 @@ export const SituationOverview = memo(function SituationOverview({
         </div>
       )}
 
-      {/* CONDITIONS Section */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2 mb-2">
-          <div className="h-px flex-1 bg-slate-700"></div>
-          <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-            Conditions
-          </span>
-          <HelpButton
-            title="Airport Conditions"
-            size="sm"
-            content={
-              <div className="space-y-2">
-                <p>
-                  Quick status indicators for key arrival factors at this airport.
-                </p>
-                <p>
-                  <strong className="text-green-400">🟢 Green:</strong> Normal conditions - no concerns
-                </p>
-                <p>
-                  <strong className="text-yellow-400">🟡 Yellow (Caution):</strong> Elevated conditions - plan accordingly
-                </p>
-                <p>
-                  <strong className="text-red-400">🔴 Red (Warning):</strong> Significant concerns - review carefully
-                </p>
-                <div className="border-t border-slate-600 pt-2 mt-2">
-                  <p className="font-semibold mb-1">Condition Types:</p>
-                  <ul className="list-disc list-inside space-y-1 text-xs">
-                    <li><strong>Weather:</strong> Visibility, ceiling, wind, precipitation</li>
-                    <li><strong>Traffic:</strong> Arrival volume and congestion</li>
-                    <li><strong>Approach:</strong> Delays, approach procedures</li>
-                    <li><strong>Special:</strong> NOTAMs, TFRs, closures</li>
-                  </ul>
-                </div>
-                <p className="text-blue-300">
-                  💡 Click on any condition for detailed information.
-                </p>
-              </div>
-            }
-          />
-          <div className="h-px flex-1 bg-slate-700"></div>
+      {/* Special Notices - Shows when there are alerts/notices */}
+      {summary && activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
+        <div className={`rounded-xl border-2 p-2 ${getStatusColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+          <div className="flex items-center justify-between w-full mb-1">
+            <div className="flex items-center">
+              <AlertTriangle className="w-5 h-5 text-white mr-2" />
+              <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+                Special Notices
+              </span>
+            </div>
+            {getStatusIcon(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}
+          </div>
+          <div className="text-xs text-gray-300 leading-tight">
+            {activeSegment.specialNotices.details || activeSegment.specialNotices.summary}
+          </div>
         </div>
-
-        {summary?.conditions ? (
-          <div className="space-y-2">
-            {/* Weather Card with Graphs */}
-            {(weather || summary.conditions.weather) && (
-              <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(summary.conditions.weather?.status)}`}>
-                <button
-                  onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
-                  className="w-full flex flex-col p-2 rounded-lg transition-colors"
-                >
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <div className="flex items-center">
-                      <Cloud className="w-5 h-5 text-white mr-2" />
-                      <span className={`text-sm font-semibold ${getStatusTextColor(summary.conditions.weather?.status)}`}>Weather</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {getStatusIcon(summary.conditions.weather?.status)}
-                      {isWeatherExpanded ? (
-                        <ChevronUp className="w-5 h-5 text-gray-400" />
-                      ) : (
-                        <ChevronDown className="w-5 h-5 text-gray-400" />
-                      )}
-                    </div>
-                  </div>
-                  <div className="text-xs text-gray-300 leading-tight mb-2 text-left">
-                    {summary.conditions.weather?.short_summary ||
-                      (summary.conditions.weather?.status === 'check-overview' ? 'Check METAR' :
-                        summary.conditions.weather?.status?.charAt(0).toUpperCase() +
-                        summary.conditions.weather?.status?.slice(1) || 'Normal conditions')}
-                  </div>
-                </button>
-                {isWeatherExpanded && weather && (
-                  <div className="px-2 pb-2 border-t border-slate-600/50">
-                    <WeatherGraphs
-                      weather={weather}
-                      selectedTime={currentTime}
-                      isNow={isNow}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Other Conditions - Traffic, Approach, Special */}
-            {filteredConditions.length > 0 && (
-              <div className="grid grid-cols-2 gap-2">
-                {filteredConditions.map(([key, condition]) => (
-                  <button
-                    key={key}
-                    onClick={() => openConditionModal(key, condition)}
-                    className={`flex flex-col p-2 rounded-xl text-left transition-all duration-200 border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(condition.status)}`}
-                  >
-                    <div className="flex items-center justify-between w-full mb-1">
-                      <div className="flex items-center">
-                        {getConditionIcon(key)}
-                        <span className={`text-sm font-semibold capitalize ml-2 ${getStatusTextColor(condition.status)}`}>{key}</span>
-                      </div>
-                      {getStatusIcon(condition.status)}
-                    </div>
-                    <div className="text-xs text-gray-300 leading-tight">
-                      {condition.short_summary ||
-                        (condition.status?.charAt(0).toUpperCase() +
-                          condition.status?.slice(1) || 'Normal conditions')}
-                    </div>
-                  </button>
-                ))}
-              </div>
-            )}
-
-            {/* Special Notices from time segment */}
-            {activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
-              <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
-                <div className="flex flex-col p-2">
-                  <div className="flex items-center justify-between w-full mb-1">
-                    <div className="flex items-center">
-                      <AlertTriangle className="w-5 h-5 text-white mr-2" />
-                      <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
-                        Special Notices
-                      </span>
-                    </div>
-                    {getStatusIcon(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}
-                  </div>
-                  <div className="text-xs text-gray-300 leading-tight">
-                    {activeSegment.specialNotices.summary || activeSegment.specialNotices.details}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-2">
-            {['Weather', 'Traffic', 'Approach', 'Special'].map((label) => (
-              <div key={label} className={`flex flex-col p-2 rounded-xl border-2 border-slate-600 bg-slate-700`}>
-                <div className="flex items-center justify-between w-full mb-1">
-                  <div className="flex items-center">
-                    <div className="w-5 h-5 rounded-full bg-slate-500 animate-pulse mr-2"></div>
-                    <span className="text-sm font-semibold text-gray-400">{label}</span>
-                  </div>
-                  <div className="w-4 h-4 rounded-full bg-slate-500 animate-pulse"></div>
-                </div>
-                <div className="text-xs text-gray-400 animate-pulse">
-                  Loading...
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Status Indicators */}
       {(summary?.fallback || (summaryMetadata && !summaryMetadata.active)) && (

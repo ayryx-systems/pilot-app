@@ -694,109 +694,54 @@ export function PilotDashboard() {
                   />
                 );
 
-                if (isNowMode) {
-                  // NOW MODE: Focus on current situation
-                  return (
-                    <div className="space-y-3">
-                      {/* Current Situation - Primary in NOW mode */}
-                      <SituationOverview
-                        key={`situation-${selectedAirport}`}
-                        summary={summary}
-                        weather={airportOverview?.weather}
-                        loading={loading}
-                        connectionStatus={connectionStatus}
-                        airportCode={selectedAirport || undefined}
-                        summaryMetadata={summaryMetadata}
+                // UNIFIED LAYOUT: Same structure for NOW and FUTURE
+                return (
+                  <div className="space-y-3">
+                    {/* Situation Overview - Always at top, adapts to time selection */}
+                    <SituationOverview
+                      key={`situation-${selectedAirport}`}
+                      summary={summary}
+                      weather={airportOverview?.weather}
+                      loading={loading}
+                      connectionStatus={connectionStatus}
+                      airportCode={selectedAirport || undefined}
+                      summaryMetadata={summaryMetadata}
+                      baseline={baseline}
+                      baselineLoading={baselineLoading}
+                      isDemo={selectedAirport === 'KDEN'}
+                      selectedTime={selectedTime}
+                    />
+
+                    {/* Traffic Forecast - Always visible */}
+                    {selectedAirport && baseline && (
+                      <TimeBasedGraphs
+                        key={`traffic-${selectedAirport}`}
                         baseline={baseline}
-                        baselineLoading={baselineLoading}
-                        isDemo={selectedAirport === 'KDEN'}
+                        arrivalForecast={arrivalForecast}
+                        airportCode={selectedAirport}
                         selectedTime={selectedTime}
+                        loading={baselineLoading || arrivalForecastLoading || loading}
                       />
+                    )}
 
-                      {/* Recent Arrivals */}
-                      {selectedAirport && (
-                        <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
-                          {arrivalTimelineContent}
-                          {matchedDaysLoading && (
-                            <div className="mt-2 text-center text-sm text-gray-400">
-                              Loading historical data...
-                            </div>
-                          )}
-                        </div>
-                      )}
+                    {/* Arrival Timeline - Always visible */}
+                    {selectedAirport && (
+                      <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
+                        {arrivalTimelineContent}
+                        {matchedDaysLoading && (
+                          <div className="mt-2 text-center text-sm text-gray-400">
+                            Loading historical data...
+                          </div>
+                        )}
+                      </div>
+                    )}
 
-                      {/* Traffic Patterns - Collapsible in NOW mode */}
-                      {selectedAirport && baseline && (
-                        <CollapsibleSection title="Traffic Patterns" defaultOpen={false}>
-                          <TimeBasedGraphs
-                            key={`traffic-${selectedAirport}`}
-                            baseline={baseline}
-                            arrivalForecast={arrivalForecast}
-                            airportCode={selectedAirport}
-                            selectedTime={selectedTime}
-                            loading={baselineLoading || arrivalForecastLoading || loading}
-                          />
-                        </CollapsibleSection>
-                      )}
-
-                      {/* FAA NAS Status - Always visible */}
-                      {selectedAirport && (
-                        <FAAStatus airportId={selectedAirport} />
-                      )}
-                    </div>
-                  );
-                } else {
-                  // ETA MODE: Focus on arrival planning
-                  return (
-                    <div className="space-y-3">
-                      {/* Traffic Forecast - Primary in ETA mode */}
-                      {selectedAirport && baseline && (
-                        <TimeBasedGraphs
-                          key={`traffic-${selectedAirport}`}
-                          baseline={baseline}
-                          arrivalForecast={arrivalForecast}
-                          airportCode={selectedAirport}
-                          selectedTime={selectedTime}
-                          loading={baselineLoading || arrivalForecastLoading || loading}
-                        />
-                      )}
-
-                      {/* Arrival Duration Predictions */}
-                      {selectedAirport && (
-                        <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
-                          {arrivalTimelineContent}
-                          {matchedDaysLoading && (
-                            <div className="mt-2 text-center text-sm text-gray-400">
-                              Loading historical data...
-                            </div>
-                          )}
-                        </div>
-                      )}
-
-                      {/* Current Situation - Collapsible in ETA mode */}
-                      <CollapsibleSection title="Current Situation" defaultOpen={false}>
-                        <SituationOverview
-                          key={`situation-${selectedAirport}`}
-                          summary={summary}
-                          weather={airportOverview?.weather}
-                          loading={loading}
-                          connectionStatus={connectionStatus}
-                          airportCode={selectedAirport || undefined}
-                          summaryMetadata={summaryMetadata}
-                          baseline={baseline}
-                          baselineLoading={baselineLoading}
-                          isDemo={selectedAirport === 'KDEN'}
-                          selectedTime={selectedTime}
-                        />
-                      </CollapsibleSection>
-
-                      {/* FAA NAS Status - Always visible */}
-                      {selectedAirport && (
-                        <FAAStatus airportId={selectedAirport} />
-                      )}
-                    </div>
-                  );
-                }
+                    {/* FAA NAS Status - Always visible */}
+                    {selectedAirport && (
+                      <FAAStatus airportId={selectedAirport} />
+                    )}
+                  </div>
+                );
               })()}
             </div>
           </div>
