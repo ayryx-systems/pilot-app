@@ -65,6 +65,50 @@ interface SituationOverviewProps {
   selectedTime?: Date;
 }
 
+// Helper function to select appropriate time segment based on selected time
+function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): {
+  situationOverview: string;
+  specialNotices: { summary: string | null; details: string | null; status: 'normal' | 'caution' | 'alert' };
+  isNow: boolean;
+} {
+  // Handle legacy format or missing data
+  if (!summary || !summary.timeSegments || summary.timeSegments.length === 0) {
+    return {
+      situationOverview: summary?.situation_overview || "Situation data unavailable",
+      specialNotices: {
+        summary: summary?.conditions?.special?.short_summary || null,
+        details: summary?.conditions?.special?.long_summary || null,
+        status: (summary?.conditions?.special?.status as 'normal' | 'caution' | 'alert') || 'normal',
+      },
+      isNow: true,
+    };
+  }
+
+  const targetTimeMs = targetTime.getTime();
+  const now = Date.now();
+  const isNow = Math.abs(targetTimeMs - now) <= 60000; // Within 1 minute
+
+  // Find the appropriate time segment
+  let selectedSegment = summary.timeSegments[0]; // Default to first segment
+
+  for (const segment of summary.timeSegments) {
+    const segmentStart = new Date(segment.timeFrom).getTime();
+    const segmentEnd = new Date(segment.timeTo).getTime();
+
+    // Check if target time falls within this segment
+    if (targetTimeMs >= segmentStart && targetTimeMs < segmentEnd) {
+      selectedSegment = segment;
+      break;
+    }
+  }
+
+  return {
+    situationOverview: selectedSegment.situationOverview,
+    specialNotices: selectedSegment.specialNotices,
+    isNow,
+  };
+}
+
 export const SituationOverview = memo(function SituationOverview({
   summary,
   weather,
@@ -93,6 +137,11 @@ export const SituationOverview = memo(function SituationOverview({
         )
       : [];
   }, [summary?.conditions]);
+
+  // Select appropriate time segment based on slider position
+  const activeSegment = useMemo(() => {
+    return selectTimeSegment(summary, selectedTime || new Date());
+  }, [summary, selectedTime]);
 
   const currentTime = selectedTime || new Date();
   const isNow = selectedTime ? (() => {
@@ -202,11 +251,23 @@ export const SituationOverview = memo(function SituationOverview({
 
   return (
     <div className="relative space-y-4">
-      {/* Current Situation Summary */}
+      {/* Current/Forecast Situation Summary */}
       {summary && (
-        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(getOverallAlertLevel())} text-gray-200`}>
+        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(activeSegment.specialNotices?.status || getOverallAlertLevel())} text-gray-200`}>
+          <div className="flex items-center gap-2 mb-1">
+            {activeSegment.isNow ? (
+              <span className="text-xs font-semibold text-green-400 uppercase tracking-wide flex items-center gap-1">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                Live
+              </span>
+            ) : (
+              <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
+                📅 Forecast
+              </span>
+            )}
+          </div>
           <div className="text-sm leading-relaxed">
-            {summary.situation_overview}
+            {activeSegment.situationOverview}
           </div>
         </div>
       )}
@@ -318,6 +379,26 @@ export const SituationOverview = memo(function SituationOverview({
                     </div>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* Special Notices from time segment */}
+            {activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
+              <div className={`rounded-xl border-2 border-slate-500 bg-slate-700/80 ${getStatusColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+                <div className="flex flex-col p-2">
+                  <div className="flex items-center justify-between w-full mb-1">
+                    <div className="flex items-center">
+                      <AlertTriangle className="w-5 h-5 text-white mr-2" />
+                      <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+                        Special Notices
+                      </span>
+                    </div>
+                    {getStatusIcon(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}
+                  </div>
+                  <div className="text-xs text-gray-300 leading-tight">
+                    {activeSegment.specialNotices.summary || activeSegment.specialNotices.details}
+                  </div>
+                </div>
               </div>
             )}
           </div>

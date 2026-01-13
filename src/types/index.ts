@@ -154,9 +154,36 @@ export interface Arrival {
   airportId: string;
 }
 
+export interface TimeSegment {
+  timeFrom: string;  // ISO 8601 UTC timestamp
+  timeTo: string;    // ISO 8601 UTC timestamp
+  localTimeFrom: string;  // Local time display (HH:MM AM/PM)
+  localTimeTo: string;    // Local time display (HH:MM AM/PM)
+  situationOverview: string;
+  specialNotices: {
+    summary: string | null;
+    details: string | null;
+    status: 'normal' | 'caution' | 'alert';
+  };
+}
+
 export interface SituationSummary {
-  situation_overview: string;
-  conditions: {
+  timeSegments: TimeSegment[];
+  timestamp: number;
+  airport: string;
+  _isTimeSegmented: boolean;
+  context_summary?: {
+    aircraft_count: number;
+    event_count: number;
+    active_runways: string[];
+    pirep_count: number;
+  };
+  active?: boolean;
+  processingAvailable?: boolean;
+  fallback?: boolean;
+  // Legacy fields for backward compatibility (will be removed)
+  situation_overview?: string;
+  conditions?: {
     processing?: {
       description: string;
       status: 'active' | 'inactive';
@@ -199,9 +226,6 @@ export interface SituationSummary {
       status: 'normal' | 'caution' | 'warning';
     };
   };
-  active?: boolean;
-  processingAvailable?: boolean;
-  fallback?: boolean;
 }
 
 export interface ConnectionStatus {
