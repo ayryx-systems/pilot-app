@@ -272,7 +272,53 @@ export const SituationOverview = memo(function SituationOverview({
         </div>
       )}
 
-      {/* Special Notices - Shows when there are alerts/notices */}
+      {/* Weather Card with Graphs - Always visible */}
+      {weather && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 mb-2">
+            <div className="h-px flex-1 bg-slate-700"></div>
+            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+              Weather
+            </span>
+            <div className="h-px flex-1 bg-slate-700"></div>
+          </div>
+          
+          <div className="rounded-xl border-2 border-slate-500 bg-slate-700/80">
+            <button
+              onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
+              className="w-full flex flex-col p-2 rounded-lg transition-colors"
+            >
+              <div className="flex items-center justify-between w-full mb-1">
+                <div className="flex items-center">
+                  <Cloud className="w-5 h-5 text-white mr-2" />
+                  <span className="text-sm font-semibold text-white">Conditions</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  {isWeatherExpanded ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  )}
+                </div>
+              </div>
+              <div className="text-xs text-gray-300 leading-tight mb-2 text-left">
+                Tap to view detailed forecast
+              </div>
+            </button>
+            {isWeatherExpanded && (
+              <div className="px-2 pb-2 border-t border-slate-600/50">
+                <WeatherGraphs
+                  weather={weather}
+                  selectedTime={currentTime}
+                  isNow={isNow}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Special Notices - Only show for truly exceptional situations */}
       {summary && activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
         <div className={`rounded-xl border-2 p-2 ${getStatusColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
           <div className="flex items-center justify-between w-full mb-1">
