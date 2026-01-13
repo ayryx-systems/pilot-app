@@ -1,36 +1,73 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AYRYX Pilot App
 
-## Getting Started
+Aviation situational awareness dashboard for pilots, providing real-time airport information, aircraft tracking, and weather data.
 
-First, run the development server:
+## Overview
 
+The Pilot App is a Next.js application that connects to the AYRYX core backend to provide pilots with:
+- Real-time airport operations and traffic
+- Aircraft tracking with ground traces
+- Weather information and trends
+- Airport infrastructure visualization (runways, taxiways, terminals)
+
+## Quick Start
+
+### Local Development
+
+1. Install dependencies:
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+2. Configure environment (create `.env.local`):
+```
+ACCESS_CODES=your-access-code-here
+NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+```
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+3. Start the development server:
+```bash
+npm run dev
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+4. Access the app:
+```
+http://localhost:3006/your-access-code-here
+```
 
-## Learn More
+## Access Control
 
-To learn more about Next.js, take a look at the following resources:
+The app uses a simple URL-based access control mechanism:
+- Access via: `https://pilot.ayryx.com/<ACCESS_CODE>`
+- Valid codes are set in the `ACCESS_CODES` environment variable (comma-separated)
+- On first access, a secure cookie is set for 30 days
+- Subsequent visits don't require the code in the URL
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment Variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Required
+- `ACCESS_CODES` - Comma-separated list of valid access codes
+- `NEXT_PUBLIC_API_BASE_URL` - Backend API URL (e.g., `https://api.ayryx.com`)
 
-## Deploy on Vercel
+## Production Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The app is deployed on AWS EC2 and served via nginx:
+- URL: `https://pilot.ayryx.com`
+- Uses CloudFlare for DNS and SSL
+- Process managed by PM2: `pm2 start npm --name pilot-app -- start`
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Building
+
+```bash
+npm run build
+npm start
+```
+
+## Tech Stack
+
+- Next.js 15
+- React 18
+- TypeScript
+- Tailwind CSS
+- Leaflet for maps
+- Socket.IO for real-time updates
