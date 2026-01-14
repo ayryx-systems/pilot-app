@@ -190,7 +190,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </p>
           {status.groundStop.probabilityOfExtension && status.groundStop.probabilityOfExtension !== 'NONE' && (
             <p className="text-slate-400 text-xs">
-              Extension: {status.groundStop.probabilityOfExtension}
+              Probability of extension: {status.groundStop.probabilityOfExtension}
             </p>
           )}
         </div>
