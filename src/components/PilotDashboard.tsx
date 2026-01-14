@@ -710,6 +710,7 @@ export function PilotDashboard() {
                       baselineLoading={baselineLoading}
                       isDemo={selectedAirport === 'KDEN'}
                       selectedTime={selectedTime}
+                      arrivalForecast={arrivalForecast}
                     />
 
                     {/* Traffic Forecast - Always visible */}

@@ -444,6 +444,49 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         },
         spanGaps: true
       });
+
+      // Add recent actuals overlay (last 1 hour of completed slots)
+      const now = new Date();
+      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
+      
+      const recentActualsData = alignment.alignedTimeSlots.map((slot, idx) => {
+        // Find the corresponding forecast slot
+        const forecastValue = alignedForecastCounts[idx];
+        if (forecastValue === null || forecastValue === undefined) return null;
+        
+        // Parse the slot time
+        const [hours, minutes] = slot.split(':').map(Number);
+        const slotTime = new Date(now);
+        slotTime.setHours(hours, minutes, 0, 0);
+        
+        // Only show if:
+        // 1. Slot is in the past (completed)
+        // 2. Slot is within the last hour
+        if (slotTime <= now && slotTime >= oneHourAgo) {
+          return forecastValue;
+        }
+        
+        return null;
+      });
+      
+      // Only add if there's at least one recent actual
+      const hasRecentActuals = recentActualsData.some(v => v !== null);
+      if (hasRecentActuals) {
+        datasets.push({
+          label: 'Recent Actuals (Last Hour)',
+          data: recentActualsData,
+          borderColor: 'transparent',
+          backgroundColor: 'transparent',
+          borderWidth: 0,
+          fill: false,
+          showLine: false, // Only show points, no line
+          pointRadius: 5,
+          pointBackgroundColor: '#3b82f6',
+          pointBorderColor: '#60a5fa',
+          pointBorderWidth: 2,
+          spanGaps: false
+        });
+      }
     }
 
     const newChartData = {

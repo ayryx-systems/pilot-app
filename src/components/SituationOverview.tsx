@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useMemo, memo } from 'react';
-import { SituationSummary, ConnectionStatus, BaselineData } from '@/types';
+import { SituationSummary, ConnectionStatus, BaselineData, ArrivalForecast } from '@/types';
 import { AlertTriangle, CheckCircle, Info, Cloud, Plane, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
 import { HelpButton } from './HelpButton';
+import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
+import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
 
 interface WeatherData {
   metar: string;
@@ -63,23 +65,20 @@ interface SituationOverviewProps {
   baselineLoading?: boolean;
   isDemo?: boolean;
   selectedTime?: Date;
+  arrivalForecast?: ArrivalForecast | null;
 }
 
 // Helper function to select appropriate time segment based on selected time
 function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): {
   situationOverview: string;
-  specialNotices: { summary: string | null; details: string | null; status: 'normal' | 'caution' | 'alert' };
+  status: 'normal' | 'caution' | 'alert';
   isNow: boolean;
 } {
   // Handle legacy format or missing data
   if (!summary || !summary.timeSegments || summary.timeSegments.length === 0) {
     return {
       situationOverview: summary?.situation_overview || "Situation data unavailable",
-      specialNotices: {
-        summary: summary?.conditions?.special?.short_summary || null,
-        details: summary?.conditions?.special?.long_summary || null,
-        status: (summary?.conditions?.special?.status as 'normal' | 'caution' | 'alert') || 'normal',
-      },
+      status: 'normal',
       isNow: true,
     };
   }
@@ -104,7 +103,7 @@ function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): 
 
   return {
     situationOverview: selectedSegment.situationOverview,
-    specialNotices: selectedSegment.specialNotices,
+    status: selectedSegment.status,
     isNow,
   };
 }
@@ -116,10 +115,11 @@ export const SituationOverview = memo(function SituationOverview({
   connectionStatus,
   airportCode,
   summaryMetadata,
-  baseline: _baseline,
+  baseline,
   baselineLoading: _baselineLoading,
   isDemo,
   selectedTime,
+  arrivalForecast,
 }: SituationOverviewProps) {
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,6 +143,14 @@ export const SituationOverview = memo(function SituationOverview({
     return selectTimeSegment(summary, selectedTime || new Date());
   }, [summary, selectedTime]);
 
+  // Derive flight category from weather data
+  const flightCategory = useMemo(() => {
+    if (!weather) return 'VFR';
+    return deriveWeatherCategoryFromTAF(weather, selectedTime || new Date());
+  }, [weather, selectedTime]);
+
+  const categoryColors = FLIGHT_CATEGORY_COLORS[flightCategory] || FLIGHT_CATEGORY_COLORS.unknown;
+
   const currentTime = selectedTime || new Date();
   const isNow = selectedTime ? (() => {
     const now = new Date();
@@ -150,6 +158,50 @@ export const SituationOverview = memo(function SituationOverview({
     return diff <= 60000;
   })() : true;
 
+  // Determine if traffic is heavy
+  const isHeavyTraffic = useMemo(() => {
+    if (!arrivalForecast || !baseline || !arrivalForecast.arrivalCounts.length) {
+      return false;
+    }
+
+    // Find the most recent completed 15-minute slot
+    // We look backwards from the current time to find the last non-null slot
+    const now = new Date();
+    let lastActualCount: number | null = null;
+    let lastActualSlot: string | null = null;
+
+    for (let i = arrivalForecast.timeSlots.length - 1; i >= 0; i--) {
+      const count = arrivalForecast.arrivalCounts[i];
+      if (count !== null && count !== undefined) {
+        // Check if this slot is in the past (completed)
+        const slotTime = arrivalForecast.timeSlots[i];
+        const [hours, minutes] = slotTime.split(':').map(Number);
+        const slotDate = new Date(now);
+        slotDate.setHours(hours, minutes, 0, 0);
+        
+        if (slotDate.getTime() <= now.getTime()) {
+          lastActualCount = count;
+          lastActualSlot = slotTime;
+          break;
+        }
+      }
+    }
+
+    if (lastActualCount === null || !baseline.arrivals) {
+      return false;
+    }
+
+    // Get baseline average for the same time slot
+    // Baseline is keyed by HH:MM (local time)
+    const baselineValue = baseline.arrivals[lastActualSlot];
+    if (!baselineValue || !baselineValue.average) {
+      return false;
+    }
+
+    // Consider "heavy" if actual is >150% of baseline average
+    const threshold = baselineValue.average * 1.5;
+    return lastActualCount > threshold;
+  }, [arrivalForecast, baseline]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const openConditionModal = (key: string, condition: any) => {
@@ -256,18 +308,39 @@ export const SituationOverview = memo(function SituationOverview({
     <div className="relative space-y-4">
       {/* Current/Forecast Situation Summary */}
       {summary && (
-        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(activeSegment.specialNotices?.status || 'normal')} text-gray-200`}>
-          <div className="flex items-center gap-2 mb-1">
-            {activeSegment.isNow ? (
-              <span className="text-xs font-semibold text-green-400 uppercase tracking-wide flex items-center gap-1">
-                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-                Live
-              </span>
-            ) : (
-              <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
-                📅 Forecast
-              </span>
-            )}
+        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(activeSegment.status)} text-gray-200`}>
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex items-center gap-2">
+              {activeSegment.isNow ? (
+                <span className="text-xs font-semibold text-green-400 uppercase tracking-wide flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                  Live
+                </span>
+              ) : (
+                <span className="text-xs font-semibold text-blue-400 uppercase tracking-wide">
+                  📅 Forecast
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Heavy Traffic Indicator */}
+              {isHeavyTraffic && (
+                <div className="px-2 py-0.5 rounded text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/60">
+                  Heavy Traffic
+                </div>
+              )}
+              {/* Flight Category Badge */}
+              <div 
+                className="px-2 py-0.5 rounded text-xs font-bold"
+                style={{ 
+                  backgroundColor: categoryColors.bg,
+                  color: categoryColors.color,
+                  border: `1px solid ${categoryColors.border}`
+                }}
+              >
+                {flightCategory}
+              </div>
+            </div>
           </div>
           <div className="text-sm leading-relaxed">
             {activeSegment.situationOverview}
@@ -321,23 +394,6 @@ export const SituationOverview = memo(function SituationOverview({
         </div>
       )}
 
-      {/* Special Notices - Only show for truly exceptional situations */}
-      {summary && activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
-        <div className={`rounded-xl border-2 p-2 ${getStatusColor(activeSegment.specialNotices.status)}`}>
-          <div className="flex items-center justify-between w-full mb-1">
-            <div className="flex items-center">
-              <AlertTriangle className="w-5 h-5 text-white mr-2" />
-              <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status)}`}>
-                Special Notices
-              </span>
-            </div>
-            {getStatusIcon(activeSegment.specialNotices.status)}
-          </div>
-          <div className="text-xs text-gray-300 leading-tight">
-            {activeSegment.specialNotices.details || activeSegment.specialNotices.summary}
-          </div>
-        </div>
-      )}
 
       {/* Status Indicators */}
       {(summary?.fallback || (summaryMetadata && !summaryMetadata.active)) && (

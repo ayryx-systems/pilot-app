@@ -160,11 +160,7 @@ export interface TimeSegment {
   localTimeFrom: string;  // Local time display (HH:MM AM/PM)
   localTimeTo: string;    // Local time display (HH:MM AM/PM)
   situationOverview: string;
-  specialNotices: {
-    summary: string | null;
-    details: string | null;
-    status: 'normal' | 'caution' | 'alert';
-  };
+  status: 'normal' | 'caution' | 'alert';
 }
 
 export interface SituationSummary {
@@ -451,8 +447,8 @@ export interface BaselineResponse {
 export interface ArrivalForecast {
   airportCode: string;
   timestamp: string;
-  timeSlots: string[]; // Array of time slots in HH:MM format
-  arrivalCounts: (number | null)[]; // Array of arrival counts per time slot (null for slots without FAA data)
+  timeSlots: string[]; // Array of time slots in HH:MM format (local time)
+  arrivalCounts: (number | null)[]; // Array of arrival counts per 15-min slot
   slotDates?: string[]; // Array of date strings (YYYY-MM-DD) corresponding to each time slot
   totalArrivals: number;
   source: string;
