@@ -182,6 +182,7 @@ interface WeatherGraphsProps {
       ceiling: (number | null)[];
       cloudbase?: (number | null)[];
       wind: (number | null)[];
+      gusts?: (number | null)[];
       metarRaw: string | null;
       tafRaw: string | null;
       weatherEvents?: Array<{
@@ -208,6 +209,8 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const [ceilingData, setCeilingData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [windData, setWindData] = useState<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [gustData, setGustData] = useState<any>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollPositionRef = useRef<number>(0);
   const eventChartRef = useRef<ChartJS<'line'>>(null);
@@ -284,10 +287,11 @@ export const WeatherGraphs = memo(function WeatherGraphs({
       setVisibilityData(null);
       setCeilingData(null);
       setWindData(null);
+      setGustData(null);
       return;
     }
 
-    const { timeSlots, visibility, ceiling, cloudbase, wind } = graphData;
+    const { timeSlots, visibility, ceiling, cloudbase, wind, gusts } = graphData;
     const ceilingData = ceiling || cloudbase;
 
     if (visibility.some(v => v !== null)) {
@@ -322,6 +326,17 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     } else {
       setWindData(null);
     }
+
+    if (gusts && gusts.some(g => g !== null)) {
+      setGustData({
+        labels: formattedLabels || timeSlots,
+        data: gusts,
+        selectedIndex,
+        selectedTime: selectedIndex >= 0 ? timeSlots[selectedIndex] : 'NOW',
+      });
+    } else {
+      setGustData(null);
+    }
   }, [graphData, selectedIndex, formattedLabels]);
 
   useEffect(() => {
@@ -347,7 +362,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const graphs = [
     { data: visibilityData, title: 'Visibility', yTitle: 'Kilometers', isBottom: false },
     { data: ceilingData, title: 'Ceiling', yTitle: 'Feet', isBottom: false },
-    { data: windData, title: 'Wind Speed', yTitle: 'Knots', isBottom: true },
+    { data: windData, title: 'Wind Speed', yTitle: 'Knots', isBottom: true, gustData: gustData },
   ].filter(g => g.data !== null);
 
   const getWeatherEventColor = (category: string) => {
@@ -402,6 +417,86 @@ export const WeatherGraphs = memo(function WeatherGraphs({
             const isBottom = index === graphs.length - 1;
             const isVisibility = graph.title === 'Visibility';
             const isCeiling = graph.title === 'Ceiling';
+            const isWind = graph.title === 'Wind Speed';
+            const hasGusts = isWind && (graph as { gustData?: any }).gustData !== null;
+
+            const datasets = [
+              {
+                label: `${graph.title} (${graph.yTitle.toLowerCase()})`,
+                data: graph.data.data,
+                borderColor: 'rgb(59, 130, 246)',
+                backgroundColor: isCeiling 
+                  ? 'rgba(59, 130, 246, 0.1)'
+                  : 'rgba(59, 130, 246, 0.1)',
+                fill: isCeiling 
+                  ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' }
+                  : true,
+                tension: 0.4,
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointRadius: (ctx: any) => {
+                  const value = graph.data.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 0;
+                  return ctx.dataIndex === selectedIndex ? 6 : 0;
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBackgroundColor: (ctx: any) => {
+                  const value = graph.data.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 'transparent';
+                  return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBorderColor: (ctx: any) => {
+                  const value = graph.data.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 'transparent';
+                  return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBorderWidth: (ctx: any) => {
+                  const value = graph.data.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 0;
+                  return ctx.dataIndex === selectedIndex ? 2 : 0;
+                },
+                spanGaps: false,
+              },
+            ];
+
+            if (hasGusts) {
+              const graphGustData = (graph as { gustData?: any }).gustData;
+              datasets.push({
+                label: 'Gusts (knots)',
+                data: graphGustData.data,
+                borderColor: 'rgb(251, 146, 60)',
+                backgroundColor: 'rgba(251, 146, 60, 0.1)',
+                fill: false,
+                tension: 0.4,
+                borderDash: [5, 5],
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointRadius: (ctx: any) => {
+                  const value = graphGustData.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 0;
+                  return ctx.dataIndex === selectedIndex ? 6 : 0;
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBackgroundColor: (ctx: any) => {
+                  const value = graphGustData.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 'transparent';
+                  return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBorderColor: (ctx: any) => {
+                  const value = graphGustData.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 'transparent';
+                  return ctx.dataIndex === selectedIndex ? 'rgb(251, 146, 60)' : 'transparent';
+                },
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                pointBorderWidth: (ctx: any) => {
+                  const value = graphGustData.data[ctx.dataIndex];
+                  if (value === null || value === undefined) return 0;
+                  return ctx.dataIndex === selectedIndex ? 2 : 0;
+                },
+                spanGaps: false,
+              });
+            }
 
             return (
               <div key={graph.title} className={isBottom ? '' : 'mb-0'}>
@@ -412,45 +507,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   <Line
                     data={{
                       labels: graph.data.labels,
-                      datasets: [
-                        {
-                          label: `${graph.title} (${graph.yTitle.toLowerCase()})`,
-                          data: graph.data.data,
-                          borderColor: 'rgb(59, 130, 246)',
-                          backgroundColor: isCeiling 
-                            ? 'rgba(59, 130, 246, 0.1)'
-                            : 'rgba(59, 130, 246, 0.1)',
-                          fill: isCeiling 
-                            ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' }
-                            : true,
-                          tension: 0.4,
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          pointRadius: (ctx: any) => {
-                            const value = graph.data.data[ctx.dataIndex];
-                            if (value === null || value === undefined) return 0;
-                            return ctx.dataIndex === selectedIndex ? 6 : 0;
-                          },
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          pointBackgroundColor: (ctx: any) => {
-                            const value = graph.data.data[ctx.dataIndex];
-                            if (value === null || value === undefined) return 'transparent';
-                            return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                          },
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          pointBorderColor: (ctx: any) => {
-                            const value = graph.data.data[ctx.dataIndex];
-                            if (value === null || value === undefined) return 'transparent';
-                            return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
-                          },
-                          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                          pointBorderWidth: (ctx: any) => {
-                            const value = graph.data.data[ctx.dataIndex];
-                            if (value === null || value === undefined) return 0;
-                            return ctx.dataIndex === selectedIndex ? 2 : 0;
-                          },
-                          spanGaps: false,
-                        },
-                      ],
+                      datasets: datasets,
                     }}
                     options={{
                       responsive: true,
