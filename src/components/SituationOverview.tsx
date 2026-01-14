@@ -426,7 +426,7 @@ export const SituationOverview = memo(function SituationOverview({
                     )}
                   </div>
                 </div>
-                {!isWeatherExpanded && weatherSummary && (
+                {weatherSummary && (
                   <div className="text-xs text-gray-200 leading-tight font-medium text-left">
                     {weatherSummary}
                   </div>

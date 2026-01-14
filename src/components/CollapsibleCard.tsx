@@ -41,11 +41,9 @@ export function CollapsibleCard({
             )}
           </div>
         </div>
-        {!isExpanded && (
-          <div className="text-xs text-gray-200 leading-tight font-medium text-left">
-            {summary}
-          </div>
-        )}
+        <div className="text-xs text-gray-200 leading-tight font-medium text-left">
+          {summary}
+        </div>
       </button>
       {isExpanded && (
         <div className="px-2 pb-2 border-t border-slate-600/50">
