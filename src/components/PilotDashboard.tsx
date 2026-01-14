@@ -713,6 +713,11 @@ export function PilotDashboard() {
                       arrivalForecast={arrivalForecast}
                     />
 
+                    {/* FAA NAS Status - Always visible */}
+                    {selectedAirport && (
+                      <FAAStatus airportId={selectedAirport} />
+                    )}
+
                     {/* Traffic Forecast - Always visible */}
                     {selectedAirport && baseline && (
                       <TimeBasedGraphs
@@ -735,11 +740,6 @@ export function PilotDashboard() {
                           </div>
                         )}
                       </div>
-                    )}
-
-                    {/* FAA NAS Status - Always visible */}
-                    {selectedAirport && (
-                      <FAAStatus airportId={selectedAirport} />
                     )}
                   </div>
                 );
