@@ -715,11 +715,6 @@ export function PilotDashboard() {
                       arrivalForecast={arrivalForecast}
                     />
 
-                    {/* FAA NAS Status - Always visible */}
-                    {selectedAirport && (
-                      <FAAStatus airportId={selectedAirport} />
-                    )}
-
                     {/* Traffic Forecast - Collapsible */}
                     {selectedAirport && baseline && (() => {
                       const now = new Date();
@@ -836,6 +831,11 @@ export function PilotDashboard() {
                         </CollapsibleCard>
                       );
                     })()}
+
+                    {/* FAA NAS Status - Always visible */}
+                    {selectedAirport && (
+                      <FAAStatus airportId={selectedAirport} />
+                    )}
                   </div>
                 );
               })()}
