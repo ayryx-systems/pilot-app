@@ -11,7 +11,9 @@ import {
   Tooltip,
   Legend,
   Filler,
+  ChartOptions,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { getCurrentUTCTime } from '@/utils/airportTime';
 
@@ -142,7 +144,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  annotationPlugin
 );
 
 interface WeatherGraphsProps {
@@ -214,6 +217,9 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const savedScrollPositionRef = useRef<number>(0);
   const eventChartRef = useRef<ChartJS<'line'>>(null);
+  const visibilityChartRef = useRef<ChartJS<'line'>>(null);
+  const ceilingChartRef = useRef<ChartJS<'line'>>(null);
+  const windChartRef = useRef<ChartJS<'line'>>(null);
 
   // Memoize graph data to prevent unnecessary recalculations
   const graphData = useMemo(() => {
@@ -360,9 +366,9 @@ export const WeatherGraphs = memo(function WeatherGraphs({
   const { metarRaw, tafRaw, weatherEvents } = weather.graph;
 
   const graphs = [
-    { data: visibilityData, title: 'Visibility', yTitle: 'Kilometers', isBottom: false },
-    { data: ceilingData, title: 'Ceiling', yTitle: 'Feet', isBottom: false },
-    { data: windData, title: 'Wind Speed', yTitle: 'Knots', isBottom: true, gustData: gustData },
+    { data: visibilityData, title: 'Visibility', yTitle: 'Kilometers', isBottom: false, chartRef: visibilityChartRef },
+    { data: ceilingData, title: 'Ceiling', yTitle: 'Feet', isBottom: false, chartRef: ceilingChartRef },
+    { data: windData, title: 'Wind Speed', yTitle: 'Knots', isBottom: true, gustData: gustData, chartRef: windChartRef },
   ].filter(g => g.data !== null);
 
   const getWeatherEventColor = (category: string) => {
@@ -420,6 +426,31 @@ export const WeatherGraphs = memo(function WeatherGraphs({
             const isWind = graph.title === 'Wind Speed';
             const hasGusts = isWind && (graph as { gustData?: any }).gustData !== null;
 
+            const nowIndex = graphData?.timeSlots ? graphData.timeSlots.indexOf('NOW') : -1;
+            const etaIndex = selectedIndex >= 0 ? selectedIndex : nowIndex;
+
+            const nowValue = nowIndex >= 0 && graph.data.data[nowIndex] !== null && graph.data.data[nowIndex] !== undefined 
+              ? graph.data.data[nowIndex] 
+              : null;
+            const etaValue = etaIndex >= 0 && graph.data.data[etaIndex] !== null && graph.data.data[etaIndex] !== undefined 
+              ? graph.data.data[etaIndex] 
+              : null;
+
+            const gustData = hasGusts ? (graph as { gustData?: any }).gustData : null;
+            const nowGustValue = hasGusts && gustData && nowIndex >= 0 && gustData.data[nowIndex] !== null && gustData.data[nowIndex] !== undefined
+              ? gustData.data[nowIndex]
+              : null;
+            const etaGustValue = hasGusts && gustData && etaIndex >= 0 && gustData.data[etaIndex] !== null && gustData.data[etaIndex] !== undefined
+              ? gustData.data[etaIndex]
+              : null;
+
+            const formatValue = (value: number | null, isVisibility: boolean, isCeiling: boolean) => {
+              if (value === null || value === undefined) return null;
+              if (isVisibility && value >= 10) return '10+';
+              if (isCeiling && value === 0) return 'ground';
+              return value.toString();
+            };
+
             const datasets = [
               {
                 label: `${graph.title} (${graph.yTitle.toLowerCase()})`,
@@ -432,79 +463,96 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                   ? { target: 'origin', above: 'rgba(59, 130, 246, 0.1)' }
                   : true,
                 tension: 0.4,
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointRadius: (ctx: any) => {
-                  const value = graph.data.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 0;
-                  return ctx.dataIndex === selectedIndex ? 6 : 0;
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBackgroundColor: (ctx: any) => {
-                  const value = graph.data.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 'transparent';
-                  return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBorderColor: (ctx: any) => {
-                  const value = graph.data.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 'transparent';
-                  return ctx.dataIndex === selectedIndex ? 'rgb(59, 130, 246)' : 'transparent';
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBorderWidth: (ctx: any) => {
-                  const value = graph.data.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 0;
-                  return ctx.dataIndex === selectedIndex ? 2 : 0;
-                },
+                pointRadius: 0,
                 spanGaps: false,
               },
             ];
 
-            if (hasGusts) {
-              const graphGustData = (graph as { gustData?: any }).gustData;
+            if (hasGusts && gustData) {
               datasets.push({
                 label: 'Gusts (knots)',
-                data: graphGustData.data,
+                data: gustData.data,
                 borderColor: 'rgb(251, 146, 60)',
                 backgroundColor: 'rgba(251, 146, 60, 0.1)',
                 fill: false,
                 tension: 0.4,
                 borderDash: [5, 5],
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointRadius: (ctx: any) => {
-                  const value = graphGustData.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 0;
-                  return ctx.dataIndex === selectedIndex ? 6 : 0;
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBackgroundColor: (ctx: any) => {
-                  const value = graphGustData.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 'transparent';
-                  return ctx.dataIndex === selectedIndex ? '#ffffff' : 'transparent';
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBorderColor: (ctx: any) => {
-                  const value = graphGustData.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 'transparent';
-                  return ctx.dataIndex === selectedIndex ? 'rgb(251, 146, 60)' : 'transparent';
-                },
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                pointBorderWidth: (ctx: any) => {
-                  const value = graphGustData.data[ctx.dataIndex];
-                  if (value === null || value === undefined) return 0;
-                  return ctx.dataIndex === selectedIndex ? 2 : 0;
-                },
+                pointRadius: 0,
                 spanGaps: false,
               });
             }
+
+            const annotations: Record<string, unknown> = {};
+
+            if (nowIndex >= 0 && nowIndex < graph.data.labels.length) {
+              const formattedNowValue = nowValue !== null ? formatValue(nowValue, isVisibility, isCeiling) : null;
+              let nowLabelText = 'NOW';
+              if (formattedNowValue !== null) {
+                if (hasGusts && nowGustValue !== null) {
+                  nowLabelText = `NOW: ${formattedNowValue}G${nowGustValue}`;
+                } else {
+                  nowLabelText = `NOW: ${formattedNowValue}`;
+                }
+              }
+              
+              annotations['nowLine'] = {
+                type: 'line',
+                xMin: nowIndex,
+                xMax: nowIndex,
+                borderColor: 'rgba(239, 68, 68, 0.8)',
+                borderWidth: 2,
+                borderDash: [6, 3],
+                label: {
+                  display: true,
+                  content: nowLabelText,
+                  position: 'end',
+                  backgroundColor: 'rgba(239, 68, 68, 0.9)',
+                  color: 'white',
+                  font: { size: 9, weight: 'bold' },
+                  padding: 2,
+                },
+              };
+            }
+
+            if (!isNow && etaIndex >= 0 && etaIndex < graph.data.labels.length && etaIndex !== nowIndex) {
+              const formattedEtaValue = etaValue !== null ? formatValue(etaValue, isVisibility, isCeiling) : null;
+              let etaLabelText = 'ETA';
+              if (formattedEtaValue !== null) {
+                if (hasGusts && etaGustValue !== null) {
+                  etaLabelText = `ETA: ${formattedEtaValue}G${etaGustValue}`;
+                } else {
+                  etaLabelText = `ETA: ${formattedEtaValue}`;
+                }
+              }
+              
+              annotations['etaLine'] = {
+                type: 'line',
+                xMin: etaIndex,
+                xMax: etaIndex,
+                borderColor: 'rgba(59, 130, 246, 0.8)',
+                borderWidth: 2,
+                label: {
+                  display: true,
+                  content: etaLabelText,
+                  position: 'end',
+                  backgroundColor: 'rgba(59, 130, 246, 0.9)',
+                  color: 'white',
+                  font: { size: 9, weight: 'bold' },
+                  padding: 2,
+                },
+              };
+            }
+
+            const graphChartRef = (graph as { chartRef?: React.RefObject<ChartJS<'line'>> }).chartRef;
 
             return (
               <div key={graph.title} className={isBottom ? '' : 'mb-0'}>
                 <div className="flex justify-between items-center mb-0.5">
                   <h3 className="text-xs font-semibold text-gray-300">{graph.title}</h3>
                 </div>
-                <div className="h-20 -mt-1">
+                <div className="h-20 -mt-1 relative">
                   <Line
+                    ref={graphChartRef}
                     data={{
                       labels: graph.data.labels,
                       datasets: datasets,
@@ -524,6 +572,9 @@ export const WeatherGraphs = memo(function WeatherGraphs({
                         },
                         tooltip: {
                           enabled: false
+                        },
+                        annotation: {
+                          annotations: annotations,
                         },
                       },
                       layout: {

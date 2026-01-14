@@ -22,6 +22,8 @@ import { ClockDisplay } from './ClockDisplay';
 import { pilotApi } from '@/services/api';
 import { HelpButton } from './HelpButton';
 import { CollapsibleSection } from './CollapsibleSection';
+import { CollapsibleCard } from './CollapsibleCard';
+import { TrendingUp, Plane as PlaneIcon } from 'lucide-react';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -718,29 +720,106 @@ export function PilotDashboard() {
                       <FAAStatus airportId={selectedAirport} />
                     )}
 
-                    {/* Traffic Forecast - Always visible */}
-                    {selectedAirport && baseline && (
-                      <TimeBasedGraphs
-                        key={`traffic-${selectedAirport}`}
-                        baseline={baseline}
-                        arrivalForecast={arrivalForecast}
-                        airportCode={selectedAirport}
-                        selectedTime={selectedTime}
-                        loading={baselineLoading || arrivalForecastLoading || loading}
-                      />
-                    )}
+                    {/* Traffic Forecast - Collapsible */}
+                    {selectedAirport && baseline && (() => {
+                      const trafficSummary = (() => {
+                        if (!arrivalForecast || arrivalForecast.arrivalCounts.length === 0) {
+                          return 'Loading traffic forecast...';
+                        }
+                        
+                        const now = new Date();
+                        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+                        
+                        let nextHourCount = 0;
+                        arrivalForecast.timeSlots.forEach((slot, idx) => {
+                          const [hours, minutes] = slot.split(':').map(Number);
+                          const slotDate = new Date(now);
+                          slotDate.setHours(hours, minutes, 0, 0);
+                          
+                          if (slotDate.getTime() >= now.getTime() && slotDate.getTime() < oneHourFromNow.getTime()) {
+                            const count = arrivalForecast.arrivalCounts[idx];
+                            if (count !== null && count !== undefined) {
+                              nextHourCount += count;
+                            }
+                          }
+                        });
+                        
+                        let trafficLevel = 'Light';
+                        if (nextHourCount > 20) trafficLevel = 'Heavy';
+                        else if (nextHourCount > 10) trafficLevel = 'Moderate';
+                        
+                        return `${trafficLevel}: ${nextHourCount} arrivals expected next hour`;
+                      })();
+                      
+                      return (
+                        <CollapsibleCard
+                          key={`traffic-${selectedAirport}`}
+                          title="Traffic Pattern"
+                          icon={TrendingUp}
+                          summary={trafficSummary}
+                          defaultExpanded={false}
+                        >
+                          <TimeBasedGraphs
+                            baseline={baseline}
+                            arrivalForecast={arrivalForecast}
+                            airportCode={selectedAirport}
+                            selectedTime={selectedTime}
+                            loading={baselineLoading || arrivalForecastLoading || loading}
+                          />
+                        </CollapsibleCard>
+                      );
+                    })()}
 
-                    {/* Arrival Timeline - Always visible */}
-                    {selectedAirport && (
-                      <div className="bg-slate-800 rounded-lg border border-slate-700 p-3">
-                        {arrivalTimelineContent}
-                        {matchedDaysLoading && (
-                          <div className="mt-2 text-center text-sm text-gray-400">
-                            Loading historical data...
-                          </div>
-                        )}
-                      </div>
-                    )}
+                    {/* Arrival Timeline - Collapsible */}
+                    {selectedAirport && (() => {
+                      const arrivalsSummary = (() => {
+                        if (!arrivals || arrivals.length === 0) {
+                          return 'No inbound arrivals in next 45 minutes';
+                        }
+                        
+                        const now = new Date();
+                        const categoryCounts: Record<string, number> = {};
+                        
+                        arrivals.forEach(arrival => {
+                          const category = arrival.aircraftCategory || 'other';
+                          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+                        });
+                        
+                        const categoryNames: Record<string, string> = {
+                          widebody: 'widebody',
+                          narrowbody: 'narrowbody',
+                          regional: 'regional',
+                          small: 'small',
+                          light: 'light'
+                        };
+                        
+                        const parts: string[] = [];
+                        Object.entries(categoryCounts).forEach(([cat, count]) => {
+                          if (count > 0) {
+                            parts.push(`${count} ${categoryNames[cat] || cat}`);
+                          }
+                        });
+                        
+                        const summaryText = parts.length > 0 ? parts.join(', ') : `${arrivals.length} aircraft`;
+                        return `${arrivals.length} inbound: ${summaryText}`;
+                      })();
+                      
+                      return (
+                        <CollapsibleCard
+                          title="Inbound Arrivals"
+                          icon={PlaneIcon}
+                          summary={arrivalsSummary}
+                          defaultExpanded={false}
+                        >
+                          {arrivalTimelineContent}
+                          {matchedDaysLoading && (
+                            <div className="mt-2 text-center text-sm text-gray-400">
+                              Loading historical data...
+                            </div>
+                          )}
+                        </CollapsibleCard>
+                      );
+                    })()}
                   </div>
                 );
               })()}

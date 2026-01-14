@@ -618,9 +618,8 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   };
 
   return (
-    <div className="p-3 bg-slate-800 rounded-lg border border-slate-700">
+    <div className="pt-2">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase">Traffic Forecast</h4>
         <HelpButton
           title="Traffic Forecast Graph"
           size="sm"

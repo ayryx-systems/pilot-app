@@ -203,6 +203,48 @@ export const SituationOverview = memo(function SituationOverview({
     return lastActualCount > threshold;
   }, [arrivalForecast, baseline]);
 
+  // Generate weather summary for collapsed state
+  const weatherSummary = useMemo(() => {
+    if (!weather) return null;
+    
+    const parts: string[] = [];
+    
+    // Flight category
+    parts.push(flightCategory);
+    
+    // Ceiling/cloudbase
+    if (weather.cloudbase !== null && weather.cloudbase !== undefined) {
+      const cloudbaseAGL = Math.round(weather.cloudbase);
+      parts.push(`Ceiling ${cloudbaseAGL} AGL`);
+    } else if (weather.clouds && weather.clouds.length > 0) {
+      const lowestCloud = weather.clouds[0];
+      if (lowestCloud.coverage !== 'CLR' && lowestCloud.coverage !== 'SKC') {
+        parts.push(`${lowestCloud.coverage} ${lowestCloud.altitude}`);
+      }
+    }
+    
+    // Visibility
+    if (weather.visibility) {
+      const vis = typeof weather.visibility === 'number' 
+        ? `${weather.visibility}SM` 
+        : weather.visibility;
+      parts.push(`Vis ${vis}`);
+    }
+    
+    // Wind
+    if (weather.wind) {
+      const windDir = weather.wind.direction.toString().padStart(3, '0');
+      const windSpeed = weather.wind.speed;
+      const gust = weather.wind.gust;
+      const windStr = gust 
+        ? `${windDir}@${windSpeed}G${gust}kt`
+        : `${windDir}@${windSpeed}kt`;
+      parts.push(windStr);
+    }
+    
+    return parts.join(', ');
+  }, [weather, flightCategory]);
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const openConditionModal = (key: string, condition: any) => {
     setSelectedCondition({ key, condition });
@@ -367,7 +409,7 @@ export const SituationOverview = memo(function SituationOverview({
               <div className="flex items-center justify-between w-full mb-1">
                 <div className="flex items-center">
                   <Cloud className="w-5 h-5 text-white mr-2" />
-                  <span className="text-sm font-semibold text-white">Conditions</span>
+                  <span className="text-sm font-semibold text-white">Weather Conditions</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {isWeatherExpanded ? (
@@ -377,9 +419,11 @@ export const SituationOverview = memo(function SituationOverview({
                   )}
                 </div>
               </div>
-              <div className="text-xs text-gray-300 leading-tight mb-2 text-left">
-                Tap to view detailed forecast
-              </div>
+              {!isWeatherExpanded && weatherSummary && (
+                <div className="text-xs text-gray-200 leading-tight font-medium text-left">
+                  {weatherSummary}
+                </div>
+              )}
             </button>
             {isWeatherExpanded && (
               <div className="px-2 pb-2 border-t border-slate-600/50">
