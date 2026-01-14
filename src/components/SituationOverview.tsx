@@ -159,9 +159,10 @@ export const SituationOverview = memo(function SituationOverview({
   const closeConditionModal = () => {
     setSelectedCondition(null);
   };
-  const getStatusIcon = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
+  const getStatusIcon = (status?: 'normal' | 'caution' | 'warning' | 'alert' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
     switch (status) {
       case 'warning':
+      case 'alert':
         return <AlertTriangle className="w-4 h-4 text-red-400" />;
       case 'caution':
         return <AlertTriangle className="w-4 h-4 text-yellow-400" />;
@@ -177,9 +178,10 @@ export const SituationOverview = memo(function SituationOverview({
     }
   };
 
-  const getStatusColor = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
+  const getStatusColor = (status?: 'normal' | 'caution' | 'warning' | 'alert' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
     switch (status) {
       case 'warning':
+      case 'alert':
         return 'bg-slate-700 border-red-500';
       case 'caution':
         return 'bg-slate-700 border-yellow-500';
@@ -193,9 +195,10 @@ export const SituationOverview = memo(function SituationOverview({
     }
   };
 
-  const getStatusTextColor = (status?: 'normal' | 'caution' | 'warning' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
+  const getStatusTextColor = (status?: 'normal' | 'caution' | 'warning' | 'alert' | 'active' | 'inactive' | 'unavailable' | 'check-overview') => {
     switch (status) {
       case 'warning':
+      case 'alert':
         return 'text-red-400';
       case 'caution':
         return 'text-yellow-400';
@@ -253,7 +256,7 @@ export const SituationOverview = memo(function SituationOverview({
     <div className="relative space-y-4">
       {/* Current/Forecast Situation Summary */}
       {summary && (
-        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(activeSegment.specialNotices?.status || getOverallAlertLevel())} text-gray-200`}>
+        <div className={`p-2 rounded-lg border-2 bg-slate-700/50 ${getStatusColor(activeSegment.specialNotices?.status || 'normal')} text-gray-200`}>
           <div className="flex items-center gap-2 mb-1">
             {activeSegment.isNow ? (
               <span className="text-xs font-semibold text-green-400 uppercase tracking-wide flex items-center gap-1">
@@ -320,15 +323,15 @@ export const SituationOverview = memo(function SituationOverview({
 
       {/* Special Notices - Only show for truly exceptional situations */}
       {summary && activeSegment.specialNotices && (activeSegment.specialNotices.summary || activeSegment.specialNotices.details) && (
-        <div className={`rounded-xl border-2 p-2 ${getStatusColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+        <div className={`rounded-xl border-2 p-2 ${getStatusColor(activeSegment.specialNotices.status)}`}>
           <div className="flex items-center justify-between w-full mb-1">
             <div className="flex items-center">
               <AlertTriangle className="w-5 h-5 text-white mr-2" />
-              <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}`}>
+              <span className={`text-sm font-semibold ${getStatusTextColor(activeSegment.specialNotices.status)}`}>
                 Special Notices
               </span>
             </div>
-            {getStatusIcon(activeSegment.specialNotices.status === 'alert' ? 'warning' : activeSegment.specialNotices.status)}
+            {getStatusIcon(activeSegment.specialNotices.status)}
           </div>
           <div className="text-xs text-gray-300 leading-tight">
             {activeSegment.specialNotices.details || activeSegment.specialNotices.summary}
