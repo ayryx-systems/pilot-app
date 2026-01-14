@@ -391,52 +391,60 @@ export const SituationOverview = memo(function SituationOverview({
       )}
 
       {/* Weather Card with Graphs - Always visible */}
-      {weather && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2 mb-2">
-            <div className="h-px flex-1 bg-slate-700"></div>
-            <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-              Weather
-            </span>
-            <div className="h-px flex-1 bg-slate-700"></div>
-          </div>
-          
-          <div className="rounded-xl border-2 border-slate-500 bg-slate-700/80">
-            <button
-              onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
-              className="w-full flex flex-col p-2 rounded-lg transition-colors"
-            >
-              <div className="flex items-center justify-between w-full mb-1">
-                <div className="flex items-center">
-                  <Cloud className="w-5 h-5 text-white mr-2" />
-                  <span className="text-sm font-semibold text-white">Weather Conditions</span>
+      {weather && (() => {
+        const now = new Date();
+        const isNowMode = selectedTime ? Math.abs(selectedTime.getTime() - now.getTime()) < 60000 : true;
+        const timeLabel = isNowMode 
+          ? 'Now'
+          : `at ${(selectedTime || now).getHours().toString().padStart(2, '0')}:${(selectedTime || now).getMinutes().toString().padStart(2, '0')}`;
+        
+        return (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="h-px flex-1 bg-slate-700"></div>
+              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                Weather
+              </span>
+              <div className="h-px flex-1 bg-slate-700"></div>
+            </div>
+            
+            <div className="rounded-xl border-2 border-slate-500 bg-slate-700/80">
+              <button
+                onClick={() => setIsWeatherExpanded(!isWeatherExpanded)}
+                className="w-full flex flex-col p-2 rounded-lg transition-colors"
+              >
+                <div className="flex items-center justify-between w-full mb-1">
+                  <div className="flex items-center">
+                    <Cloud className="w-5 h-5 text-white mr-2" />
+                    <span className="text-sm font-semibold text-white">Weather Conditions ({timeLabel})</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {isWeatherExpanded ? (
+                      <ChevronUp className="w-5 h-5 text-gray-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-gray-400" />
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  {isWeatherExpanded ? (
-                    <ChevronUp className="w-5 h-5 text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-gray-400" />
-                  )}
-                </div>
-              </div>
-              {!isWeatherExpanded && weatherSummary && (
-                <div className="text-xs text-gray-200 leading-tight font-medium text-left">
-                  {weatherSummary}
+                {!isWeatherExpanded && weatherSummary && (
+                  <div className="text-xs text-gray-200 leading-tight font-medium text-left">
+                    {weatherSummary}
+                  </div>
+                )}
+              </button>
+              {isWeatherExpanded && (
+                <div className="px-2 pb-2 border-t border-slate-600/50">
+                  <WeatherGraphs
+                    weather={weather}
+                    selectedTime={currentTime}
+                    isNow={isNow}
+                  />
                 </div>
               )}
-            </button>
-            {isWeatherExpanded && (
-              <div className="px-2 pb-2 border-t border-slate-600/50">
-                <WeatherGraphs
-                  weather={weather}
-                  selectedTime={currentTime}
-                  isNow={isNow}
-                />
-              </div>
-            )}
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
 
       {/* Status Indicators */}

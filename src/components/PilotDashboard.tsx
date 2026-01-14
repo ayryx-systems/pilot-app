@@ -722,21 +722,28 @@ export function PilotDashboard() {
 
                     {/* Traffic Forecast - Collapsible */}
                     {selectedAirport && baseline && (() => {
+                      const now = new Date();
+                      const isNowMode = Math.abs(selectedTime.getTime() - now.getTime()) < 60000;
+                      
+                      const timeLabel = isNowMode 
+                        ? 'Now'
+                        : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
+                      
                       const trafficSummary = (() => {
                         if (!arrivalForecast || arrivalForecast.arrivalCounts.length === 0) {
                           return 'Loading traffic forecast...';
                         }
                         
-                        const now = new Date();
-                        const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+                        const referenceTime = selectedTime;
+                        const oneHourFromReference = new Date(referenceTime.getTime() + 60 * 60 * 1000);
                         
                         let nextHourCount = 0;
                         arrivalForecast.timeSlots.forEach((slot, idx) => {
                           const [hours, minutes] = slot.split(':').map(Number);
-                          const slotDate = new Date(now);
+                          const slotDate = new Date(referenceTime);
                           slotDate.setHours(hours, minutes, 0, 0);
                           
-                          if (slotDate.getTime() >= now.getTime() && slotDate.getTime() < oneHourFromNow.getTime()) {
+                          if (slotDate.getTime() >= referenceTime.getTime() && slotDate.getTime() < oneHourFromReference.getTime()) {
                             const count = arrivalForecast.arrivalCounts[idx];
                             if (count !== null && count !== undefined) {
                               nextHourCount += count;
@@ -748,13 +755,14 @@ export function PilotDashboard() {
                         if (nextHourCount > 20) trafficLevel = 'Heavy';
                         else if (nextHourCount > 10) trafficLevel = 'Moderate';
                         
-                        return `${trafficLevel}: ${nextHourCount} arrivals expected next hour`;
+                        const timePhrase = isNowMode ? 'next hour' : 'following hour';
+                        return `${trafficLevel}: ${nextHourCount} arrivals expected ${timePhrase}`;
                       })();
                       
                       return (
                         <CollapsibleCard
                           key={`traffic-${selectedAirport}`}
-                          title="Traffic Pattern"
+                          title={`Traffic Pattern (${timeLabel})`}
                           icon={TrendingUp}
                           summary={trafficSummary}
                           defaultExpanded={false}
@@ -772,12 +780,19 @@ export function PilotDashboard() {
 
                     {/* Arrival Timeline - Collapsible */}
                     {selectedAirport && (() => {
+                      const now = new Date();
+                      const isNowMode = Math.abs(selectedTime.getTime() - now.getTime()) < 60000;
+                      
+                      const timeLabel = isNowMode 
+                        ? 'Now'
+                        : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
+                      
                       const arrivalsSummary = (() => {
                         if (!arrivals || arrivals.length === 0) {
-                          return 'No inbound arrivals in next 45 minutes';
+                          const timePhrase = isNowMode ? 'next 45 minutes' : 'this timeframe';
+                          return `No inbound arrivals in ${timePhrase}`;
                         }
                         
-                        const now = new Date();
                         const categoryCounts: Record<string, number> = {};
                         
                         arrivals.forEach(arrival => {
@@ -801,12 +816,13 @@ export function PilotDashboard() {
                         });
                         
                         const summaryText = parts.length > 0 ? parts.join(', ') : `${arrivals.length} aircraft`;
-                        return `${arrivals.length} inbound: ${summaryText}`;
+                        const timePhrase = isNowMode ? 'inbound' : 'expected';
+                        return `${arrivals.length} ${timePhrase}: ${summaryText}`;
                       })();
                       
                       return (
                         <CollapsibleCard
-                          title="Inbound Arrivals"
+                          title={`Inbound Arrivals (${timeLabel})`}
                           icon={PlaneIcon}
                           summary={arrivalsSummary}
                           defaultExpanded={false}
