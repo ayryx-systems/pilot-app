@@ -165,6 +165,7 @@ export interface TimeSegment {
   localTimeTo: string;    // Local time display (HH:MM AM/PM)
   situationOverview: string;
   status: 'normal' | 'caution' | 'alert';
+  flightCategory: FlightCategory;  // Pre-computed flight category (NOW uses METAR, future uses TAF)
 }
 
 export interface SituationSummary {

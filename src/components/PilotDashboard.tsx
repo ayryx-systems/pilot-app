@@ -8,8 +8,27 @@ import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalTimeline } from './ArrivalTimeline';
 import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
+
+function deriveWeatherCategoryFromTimeline(summary: SituationSummary | null, targetTime: Date): FlightCategory {
+  if (!summary || !summary.timeSegments || summary.timeSegments.length === 0) {
+    return 'VFR';
+  }
+
+  const targetTimeMs = targetTime.getTime();
+
+  for (const segment of summary.timeSegments) {
+    const segmentStart = new Date(segment.timeFrom).getTime();
+    const segmentEnd = new Date(segment.timeTo).getTime();
+
+    if (targetTimeMs >= segmentStart && targetTimeMs < segmentEnd) {
+      return segment.flightCategory || 'VFR';
+    }
+  }
+
+  return summary.timeSegments[0].flightCategory || 'VFR';
+}
 import { ETASelector } from './ETASelector';
-import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory } from '@/types';
+import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory, SituationSummary } from '@/types';
 import { MapControls } from './MapControls';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
@@ -135,7 +154,13 @@ export function PilotDashboard() {
     setCollapsedSections(prev => ({ ...prev, [section]: !prev[section] }));
   };
 
-  const tafCategory = deriveWeatherCategoryFromTAF(airportOverview?.weather, selectedTime);
+  // Derive weather category from unified timeline (NOW uses METAR, future uses TAF)
+  const timelineCategory = deriveWeatherCategoryFromTimeline(summary, selectedTime);
+  
+  // Fallback to old TAF-based method if timeline not available
+  const tafCategory = timelineCategory === 'VFR' && !summary?.timeSegments?.length
+    ? deriveWeatherCategoryFromTAF(airportOverview?.weather, selectedTime)
+    : timelineCategory;
   
   const activeWeatherCategory = isManualWeather ? weatherCategory : tafCategory;
   

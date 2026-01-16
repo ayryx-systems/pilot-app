@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState, useMemo, memo } from 'react';
-import { SituationSummary, ConnectionStatus, BaselineData, ArrivalForecast } from '@/types';
+import { SituationSummary, ConnectionStatus, BaselineData, ArrivalForecast, FlightCategory } from '@/types';
 import { AlertTriangle, CheckCircle, Info, Cloud, Plane, Navigation, ChevronUp, ChevronDown } from 'lucide-react';
 import { WeatherModal } from './WeatherModal';
 import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
 import { HelpButton } from './HelpButton';
-import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
 import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
 
 interface WeatherData {
@@ -73,6 +72,7 @@ function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): 
   situationOverview: string;
   status: 'normal' | 'caution' | 'alert';
   isNow: boolean;
+  flightCategory: FlightCategory;
 } {
   // Handle legacy format or missing data
   if (!summary || !summary.timeSegments || summary.timeSegments.length === 0) {
@@ -80,6 +80,7 @@ function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): 
       situationOverview: summary?.situation_overview || "Situation data unavailable",
       status: 'normal',
       isNow: true,
+      flightCategory: 'VFR',
     };
   }
 
@@ -105,6 +106,7 @@ function selectTimeSegment(summary: SituationSummary | null, targetTime: Date): 
     situationOverview: selectedSegment.situationOverview,
     status: selectedSegment.status,
     isNow,
+    flightCategory: selectedSegment.flightCategory || 'VFR',
   };
 }
 
@@ -139,16 +141,13 @@ export const SituationOverview = memo(function SituationOverview({
   }, [summary?.conditions]);
 
   // Select appropriate time segment based on slider position
+  // This now includes the flight category from the unified timeline (NOW uses METAR, future uses TAF)
   const activeSegment = useMemo(() => {
     return selectTimeSegment(summary, selectedTime || new Date());
   }, [summary, selectedTime]);
 
-  // Derive flight category from weather data
-  const flightCategory = useMemo(() => {
-    if (!weather) return 'VFR';
-    return deriveWeatherCategoryFromTAF(weather, selectedTime || new Date());
-  }, [weather, selectedTime]);
-
+  // Use flight category from the unified timeline
+  const flightCategory = activeSegment.flightCategory;
   const categoryColors = FLIGHT_CATEGORY_COLORS[flightCategory] || FLIGHT_CATEGORY_COLORS.unknown;
 
   const currentTime = selectedTime || new Date();
