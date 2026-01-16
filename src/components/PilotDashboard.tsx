@@ -883,7 +883,7 @@ export function PilotDashboard() {
                         else if (nextHourCount <= thresholds.light) trafficLevel = 'Light';
                         
                         const timePhrase = isNowMode ? 'next hour' : 'following hour';
-                        const dataSource = hasForecastData ? '' : ' (baseline avg)';
+                        const dataSource = hasForecastData ? ' (flight plans)' : ' (baseline avg)';
                         return `${trafficLevel}: ${Math.round(nextHourCount)} arrivals expected ${timePhrase}${dataSource}`;
                       })();
                       

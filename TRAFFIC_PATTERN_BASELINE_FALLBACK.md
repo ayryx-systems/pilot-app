@@ -46,7 +46,9 @@ Enhanced the `trafficSummary` calculation (lines 756-785) to:
      - Get season (summer/winter)
      - Access baseline day-of-week time slot data
      - Sum all 15-minute baseline averages in the next hour
-   - Add "(baseline avg)" suffix to summary when using baseline data
+   - Add data source suffix to summary:
+     - "(flight plans)" when using actual FAA forecast data
+     - "(baseline avg)" when using historical baseline data
 
 3. **Utility Functions Added**:
    - `getDateString(date)`: Format date as YYYY-MM-DD
@@ -117,17 +119,22 @@ The baseline data contains historical averages:
 - **Tomorrow**: "Light: 0 arrivals expected following hour" OR incorrect today's values ❌
 
 ### After
-- **Near-term (within forecast range)**: "Heavy: 45 arrivals expected next hour"
+- **Near-term (within forecast range)**: "Heavy: 45 arrivals expected next hour (flight plans)" ✓
 - **Beyond forecast range**: "Moderate: 23 arrivals expected following hour (baseline avg)" ✓
 - **Tomorrow**: "Moderate: 25 arrivals expected following hour (baseline avg)" ✓
 - **Graph**: Orange forecast line continues seamlessly using baseline data ✓
+
+### Data Source Indicators
+- **(flight plans)**: Real FAA arrival forecast data from filed flight plans
+- **(baseline avg)**: Historical day-of-week average when FAA data not available
 
 ## Testing Recommendations
 
 1. **Test Near-Term Forecast**:
    - Select current time ("Now" mode)
    - Verify FAA forecast data is displayed
-   - Summary should NOT have "(baseline avg)" suffix
+   - Summary should show "(flight plans)" suffix
+   - Traffic level should reflect actual filed flight plans
 
 2. **Test Beyond Forecast Range**:
    - Move time slider 12+ hours into the future
@@ -153,10 +160,13 @@ The baseline data contains historical averages:
 ## Notes
 
 - The baseline fallback provides reasonable estimates based on historical patterns
-- The "(baseline avg)" suffix clearly indicates when historical data is being used
+- Data source indicators clearly show what type of data is being displayed:
+  - "(flight plans)" = Real FAA forecast from filed flight plans
+  - "(baseline avg)" = Historical day-of-week average
 - The graph legend update helps users understand the data sources
 - Date filtering ensures tomorrow's predictions don't incorrectly use today's FAA data
 - Timezone handling accounts for DST transitions using baseline metadata
+- Both data sources are valuable: flight plans show actual near-term traffic, baseline provides long-term planning context
 
 ## Related Files
 
