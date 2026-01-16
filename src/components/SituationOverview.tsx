@@ -166,12 +166,21 @@ export const SituationOverview = memo(function SituationOverview({
     // Find the most recent completed 15-minute slot
     // We look backwards from the current time to find the last non-null slot
     const now = new Date();
+    const todayDateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    
     let lastActualCount: number | null = null;
     let lastActualSlot: string | null = null;
 
     for (let i = arrivalForecast.timeSlots.length - 1; i >= 0; i--) {
       const count = arrivalForecast.arrivalCounts[i];
       if (count !== null && count !== undefined) {
+        // Check if this slot is from today (if slotDates available)
+        const isToday = arrivalForecast.slotDates 
+          ? arrivalForecast.slotDates[i] === todayDateStr
+          : true; // Legacy fallback
+        
+        if (!isToday) continue;
+        
         // Check if this slot is in the past (completed)
         const slotTime = arrivalForecast.timeSlots[i];
         const [hours, minutes] = slotTime.split(':').map(Number);

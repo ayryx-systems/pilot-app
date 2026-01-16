@@ -356,9 +356,25 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         forecastMap.set(slot, filteredForecastCounts[idx]);
       });
       
-      alignedForecastCounts = alignment.alignedTimeSlots.map(slot => {
-        const count = forecastMap.get(slot);
-        return count !== undefined ? count : null;
+      // Backfill forecast data with baseline day-of-week averages where FAA forecast is not available
+      alignedForecastCounts = alignment.alignedTimeSlots.map((slot, idx) => {
+        const forecastCount = forecastMap.get(slot);
+        
+        // If FAA forecast has data for this slot, use it
+        if (forecastCount !== undefined) {
+          return forecastCount;
+        }
+        
+        // Otherwise, fall back to baseline day-of-week average
+        const dayIdx = alignment.dayIndices[idx];
+        if (dayIdx !== undefined && dayData) {
+          const slotData = dayData[dayTimeSlots[dayIdx]];
+          if (slotData && (slotData.averageCount || slotData.averageArrivals)) {
+            return slotData.averageCount || slotData.averageArrivals;
+          }
+        }
+        
+        return null;
       });
     }
 
@@ -419,7 +435,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       const forecastData = alignedForecastCounts.map(count => count !== null ? count : null);
       
       datasets.push({
-        label: 'FAA Arrival Forecast',
+        label: 'FAA Forecast (+ baseline where unavailable)',
         data: forecastData,
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
