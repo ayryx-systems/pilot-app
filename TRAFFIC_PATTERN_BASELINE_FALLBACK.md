@@ -2,7 +2,7 @@
 
 ## Summary
 
-Fixed the Traffic Pattern display in the pilot app to properly handle time ranges beyond FAA arrival forecast coverage by falling back to historical baseline day-of-week averages.
+Fixed the Traffic Pattern display in the pilot app to properly handle time ranges beyond FAA arrival forecast coverage by falling back to historical baseline day-of-week averages in the summary text. The graph keeps FAA and baseline data cleanly separated on different lines.
 
 ## Problems Fixed
 
@@ -15,7 +15,7 @@ Fixed the Traffic Pattern display in the pilot app to properly handle time range
 - Detect when no FAA forecast data is available for the next hour
 - Fall back to baseline day-of-week average for the same time slots
 - Sum up the baseline averages for all 15-minute slots in the next hour
-- Add "(baseline avg)" suffix to the summary text to indicate the data source
+- Add clear data source labels: "(flight plans)" for FAA data, "(baseline avg)" for historical data
 
 ### 2. Tomorrow Showing Today's Data
 **Issue**: When selecting a time >24 hours in the future (tomorrow), the traffic forecast would sometimes show non-zero values that appeared to be today's FAA predictions incorrectly applied to tomorrow.
@@ -59,17 +59,17 @@ Enhanced the `trafficSummary` calculation (lines 756-785) to:
 
 ### `pilot-app/src/components/TimeBasedGraphs.tsx`
 
-Enhanced the forecast data alignment (lines 354-363) to:
+No changes needed - kept simple:
 
-1. **Backfill Forecast Data**:
-   - When creating `alignedForecastCounts`, check if FAA forecast has data for each slot
-   - If FAA data exists, use it
-   - If FAA data is null/undefined, fall back to baseline day-of-week average for that time slot
-   - This ensures the orange forecast line continues beyond the FAA range using baseline data
+1. **FAA Forecast Display**:
+   - Orange line shows only actual FAA forecast data
+   - Line naturally stops when FAA data ends
+   - No backfilling with baseline data (baseline already shown as blue line)
+   - Maintains clean separation between data sources
 
-2. **Update Legend**:
-   - Changed label from "FAA Arrival Forecast" to "FAA Forecast (+ baseline where unavailable)"
-   - This clearly indicates that the forecast line includes both sources
+2. **Date Filtering**:
+   - Uses `slotDates` field to filter forecast slots by selected date
+   - Prevents tomorrow from showing today's forecast data
 
 ## Data Flow
 
@@ -122,7 +122,7 @@ The baseline data contains historical averages:
 - **Near-term (within forecast range)**: "Heavy: 45 arrivals expected next hour (flight plans)" ✓
 - **Beyond forecast range**: "Moderate: 23 arrivals expected following hour (baseline avg)" ✓
 - **Tomorrow**: "Moderate: 25 arrivals expected following hour (baseline avg)" ✓
-- **Graph**: Orange forecast line continues seamlessly using baseline data ✓
+- **Graph**: Orange forecast line shows only FAA data (stops when data ends), blue baseline shows historical patterns ✓
 
 ### Data Source Indicators
 - **(flight plans)**: Real FAA arrival forecast data from filed flight plans
@@ -145,7 +145,7 @@ The baseline data contains historical averages:
 3. **Test Tomorrow**:
    - Move time slider 24+ hours into the future
    - Verify correct day-of-week baseline is used
-   - Graph should show continuous orange line (not gaps)
+   - Graph should show blue baseline line (orange FAA line will not appear as no forecast data available)
 
 4. **Test Date Boundaries**:
    - Test times near midnight (23:00-01:00)
@@ -163,7 +163,10 @@ The baseline data contains historical averages:
 - Data source indicators clearly show what type of data is being displayed:
   - "(flight plans)" = Real FAA forecast from filed flight plans
   - "(baseline avg)" = Historical day-of-week average
-- The graph legend update helps users understand the data sources
+- **Simple graph design**: Orange line = FAA only, Blue line = baseline only
+  - No mixing of data sources on a single line
+  - Clear visual separation makes it easy to distinguish actual forecasts from historical patterns
+  - Orange line naturally stops when FAA data ends
 - Date filtering ensures tomorrow's predictions don't incorrectly use today's FAA data
 - Timezone handling accounts for DST transitions using baseline metadata
 - Both data sources are valuable: flight plans show actual near-term traffic, baseline provides long-term planning context
