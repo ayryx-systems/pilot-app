@@ -724,6 +724,10 @@ export function PilotDashboard() {
                         ? 'Now'
                         : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
                       
+                      // Get airport-specific traffic thresholds
+                      const currentAirport = airports.find(a => a.id === selectedAirport);
+                      const thresholds = currentAirport?.trafficThresholds || { heavy: 30, light: 15 };
+                      
                       const trafficSummary = (() => {
                         if (!arrivalForecast || arrivalForecast.arrivalCounts.length === 0) {
                           return 'Loading traffic forecast...';
@@ -746,9 +750,10 @@ export function PilotDashboard() {
                           }
                         });
                         
-                        let trafficLevel = 'Light';
-                        if (nextHourCount > 20) trafficLevel = 'Heavy';
-                        else if (nextHourCount > 10) trafficLevel = 'Moderate';
+                        // Determine traffic level using airport-specific thresholds
+                        let trafficLevel = 'Moderate';
+                        if (nextHourCount >= thresholds.heavy) trafficLevel = 'Heavy';
+                        else if (nextHourCount <= thresholds.light) trafficLevel = 'Light';
                         
                         const timePhrase = isNowMode ? 'next hour' : 'following hour';
                         return `${trafficLevel}: ${nextHourCount} arrivals expected ${timePhrase}`;
@@ -783,36 +788,47 @@ export function PilotDashboard() {
                         : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
                       
                       const arrivalsSummary = (() => {
-                        if (!arrivals || arrivals.length === 0) {
-                          const timePhrase = isNowMode ? 'next 45 minutes' : 'this timeframe';
-                          return `No inbound arrivals in ${timePhrase}`;
-                        }
-                        
-                        const categoryCounts: Record<string, number> = {};
-                        
-                        arrivals.forEach(arrival => {
-                          const category = arrival.aircraftCategory || 'other';
-                          categoryCounts[category] = (categoryCounts[category] || 0) + 1;
-                        });
-                        
-                        const categoryNames: Record<string, string> = {
-                          widebody: 'widebody',
-                          narrowbody: 'narrowbody',
-                          regional: 'regional',
-                          small: 'small',
-                          light: 'light'
-                        };
-                        
-                        const parts: string[] = [];
-                        Object.entries(categoryCounts).forEach(([cat, count]) => {
-                          if (count > 0) {
-                            parts.push(`${count} ${categoryNames[cat] || cat}`);
+                        if (isNowMode) {
+                          if (!arrivals || arrivals.length === 0) {
+                            return 'No recent arrivals in last 15 minutes';
                           }
-                        });
-                        
-                        const summaryText = parts.length > 0 ? parts.join(', ') : `${arrivals.length} aircraft`;
-                        const timePhrase = isNowMode ? 'inbound' : 'expected';
-                        return `${arrivals.length} ${timePhrase}: ${summaryText}`;
+                          
+                          const fifteenMinutesAgo = Date.now() - 15 * 60 * 1000;
+                          const recentArrivals = arrivals.filter(arrival => {
+                            const landingTime = new Date(arrival.timestampLanding).getTime();
+                            return landingTime >= fifteenMinutesAgo;
+                          });
+                          
+                          if (recentArrivals.length === 0) {
+                            return 'No recent arrivals in last 15 minutes';
+                          }
+                          
+                          const durations = recentArrivals
+                            .map(a => a.durationMinutes)
+                            .sort((a, b) => a - b);
+                          const median = durations[Math.floor(durations.length / 2)];
+                          
+                          return `Median arrival time: ${Math.round(median)}min from 50nm (${recentArrivals.length} recent)`;
+                        } else {
+                          if (!matchedDaysData?.aggregatedStats) {
+                            return 'Loading historical data...';
+                          }
+                          
+                          const stats = matchedDaysData.aggregatedStats;
+                          const baselineMinutes = matchedDaysData.baselineMinutes || 0;
+                          const typical = stats.p50 || 0;
+                          const extended = stats.p90 || 0;
+                          const extreme = stats.p95 || 0;
+                          
+                          const typicalAboveBaseline = typical - baselineMinutes;
+                          const isDelayed = typicalAboveBaseline > 5;
+                          
+                          const delayNote = isDelayed 
+                            ? ` (${Math.round(typicalAboveBaseline)}min longer than usual)`
+                            : '';
+                          
+                          return `Typical: ${Math.round(typical)}min, Extended: ${Math.round(extended)}min, Extreme: ${Math.round(extreme)}min${delayNote}`;
+                        }
                       })();
                       
                       return (

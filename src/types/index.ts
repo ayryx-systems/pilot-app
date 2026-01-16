@@ -10,6 +10,10 @@ export interface Airport {
     lat: number;
     lon: number;
   };
+  trafficThresholds?: {
+    heavy: number;
+    light: number;
+  };
   active: boolean;
   lastUpdate: string;
 }
