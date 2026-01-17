@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { pilotApi, ApiError } from '@/services/api';
 import {
   PilotAppState,
@@ -10,6 +10,16 @@ import {
 
 export function usePilotData() {
   const [mounted, setMounted] = useState(false);
+  
+  const loadAirportDataRef = useRef<{
+    lastCallTime: number;
+    lastAirportId: string | null;
+    inProgress: boolean;
+  }>({
+    lastCallTime: 0,
+    lastAirportId: null,
+    inProgress: false,
+  });
 
   const [state, setState] = useState<PilotAppState>(() => {
     // Initialize with saved airport from localStorage
@@ -115,6 +125,24 @@ export function usePilotData() {
   // Load data for specific airport
   const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean }) => {
     if (!airportId) return;
+
+    const now = Date.now();
+    const lastCall = loadAirportDataRef.current;
+    
+    // Deduplication: prevent duplicate calls within 500ms for the same airport
+    // This prevents React Strict Mode and multiple effects from causing duplicate API calls
+    if (
+      lastCall.inProgress &&
+      lastCall.lastAirportId === airportId &&
+      (now - lastCall.lastCallTime) < 500
+    ) {
+      console.log(`[usePilotData] Skipping duplicate loadAirportData call for ${airportId} (last call ${now - lastCall.lastCallTime}ms ago)`);
+      return;
+    }
+    
+    lastCall.lastCallTime = now;
+    lastCall.lastAirportId = airportId;
+    lastCall.inProgress = true;
 
     let currentBaseline: BaselineData | null = null;
     let currentForecast: ArrivalForecast | null = null;
@@ -355,6 +383,8 @@ export function usePilotData() {
         
         return { ...prev, ...updates };
       });
+      
+      loadAirportDataRef.current.inProgress = false;
     } catch (error) {
       console.error('Failed to load airport data:', error);
       setState(prev => ({
@@ -362,6 +392,7 @@ export function usePilotData() {
         loading: false,
         error: error instanceof ApiError ? error.message : 'Failed to load airport data',
       }));
+      loadAirportDataRef.current.inProgress = false;
     }
   }, []);
 
