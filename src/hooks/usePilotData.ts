@@ -408,31 +408,42 @@ export function usePilotData() {
     if (connected) {
       const currentState = stateRef.current;
       if (!currentState.airports.length) {
-        const selectedId = await loadAirports();
-        if (selectedId) {
-          await loadAirportData(selectedId);
-        }
+        // Initial load: just load airports, don't load airport data here
+        // The effect watching selectedAirport will handle loading data when airport is auto-selected
+        await loadAirports();
       } else if (currentState.selectedAirport) {
+        // Manual refresh: reload data for current airport
         const skipBaseline = currentState.baseline !== null;
         await loadAirportData(currentState.selectedAirport, { skipBaseline });
       }
     }
   }, [testConnection, loadAirports, loadAirportData]);
 
-  // Single effect to handle initial load and airport selection changes
-  // This consolidates what were previously two separate effects to prevent duplicate calls
+  // Initial connection test on mount
   useEffect(() => {
-    if (!state.connectionStatus.connected) return;
+    testConnection();
+  }, []); // Only run on mount
 
-    if (!state.airports.length) {
-      // Initial load: fetch airports list
-      refreshData();
-    } else if (state.selectedAirport) {
+  // Handle initial load when connection is established
+  useEffect(() => {
+    if (!state.connectionStatus.connected || state.airports.length > 0) return;
+    
+    // Connection established but no airports loaded yet - load them
+    refreshData();
+  }, [state.connectionStatus.connected, state.airports.length, refreshData]);
+
+  // Handle airport selection changes (after airports are loaded)
+  // This handles both initial auto-selection and user selection changes
+  useEffect(() => {
+    // Only proceed if we're connected and have airports loaded
+    if (!state.connectionStatus.connected || !state.airports.length) return;
+
+    if (state.selectedAirport) {
       // Airport selected: load data for that airport
       const skipBaseline = state.baseline !== null;
       loadAirportData(state.selectedAirport, { skipBaseline });
     }
-  }, [state.connectionStatus.connected, state.airports.length, state.selectedAirport, state.baseline, refreshData, loadAirportData]);
+  }, [state.connectionStatus.connected, state.airports.length, state.selectedAirport, state.baseline, loadAirportData]);
 
   // Periodic connection test
   useEffect(() => {
