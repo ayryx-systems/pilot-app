@@ -251,8 +251,16 @@ class WeatherService {
 
   /**
    * Get Winds Aloft data from backend
+   * Cached for 30 minutes since winds change slowly
    */
   async getWindsAloft(airportCode?: string) {
+    const cacheKey = `winds_aloft_${airportCode || 'all'}`;
+    const cached = this.getCachedData(cacheKey, 30); // Cache for 30 minutes (matches backend refresh)
+    
+    if (cached) {
+      return cached;
+    }
+    
     const apiBaseUrl = getApiBaseUrl();
     const url = airportCode 
       ? `${apiBaseUrl}/api/pilot/winds-aloft?airport=${airportCode}`
@@ -260,8 +268,15 @@ class WeatherService {
     
     try {
       const response = await fetch(url);
+      if (!response.ok) {
+        throw new WeatherApiError(`Winds aloft API error: ${response.status} ${response.statusText}`, response.status);
+      }
+      
       const data = await response.json();
-      return data.data || [];
+      const windsData = data.data || [];
+      
+      this.setCachedData(cacheKey, windsData, 30);
+      return windsData;
     } catch (error) {
       console.error('[WeatherService] Failed to fetch winds aloft:', error);
       return [];

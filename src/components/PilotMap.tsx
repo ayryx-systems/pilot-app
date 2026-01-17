@@ -168,6 +168,10 @@ export function PilotMap({
   // Track current airport code to prevent unnecessary map recreation
   const currentAirportCodeRef = useRef<string | null>(null);
   
+  // Cache winds aloft data to avoid refetching on zoom/pan
+  const windsAloftDataRef = useRef<Array<{ id: string; station: string; lat: number; lon: number; windDir: number; windSpeed: number; level: number; temperature: number | null; timestamp: string; timestampFormatted?: string; airportCode?: string }>>([]);
+  const windsAloftAirportCodeRef = useRef<string | undefined>(undefined);
+  
   // Weather radar animation
   const { radarFrames, currentRadarFrameIndex } = useWeatherRadarAnimation({
     mapInstance,
@@ -1430,258 +1434,156 @@ export function PilotMap({
     updateSigmetAirmet();
   }, [mapInstance, displayOptions.showSigmetAirmet]);
 
-  // Update Winds Aloft display
-  useEffect(() => {
+  // Helper function to render winds aloft markers from cached data
+  const renderWindsAloftMarkers = async (windsData: typeof windsAloftDataRef.current, airportPos?: { lat: number; lon: number }) => {
     if (!mapInstance || !layerGroupsRef.current.weather) return;
 
-    const updateWindsAloft = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
+    const leafletModule = await import('leaflet');
+    const L = leafletModule.default;
 
-      // Remove existing wind layers
-      const existingLayers = layerGroupsRef.current.weather.getLayers();
+    // Remove existing wind layers
+    const existingLayers = layerGroupsRef.current.weather.getLayers();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    existingLayers.forEach((layer: any) => {
+      if (layer._windStationId) {
+        layerGroupsRef.current.weather.removeLayer(layer);
+      }
+    });
+
+    if (!displayOptions.showWindsAloft || windsData.length === 0) {
+      return;
+    }
+
+    // Get current zoom level for visibility decisions
+    const currentZoom = mapInstance.getZoom();
+    
+    // Only show winds aloft at zoom level 8 or higher
+    if (currentZoom < 8) {
+      return;
+    }
+
+    // Group winds by station to avoid superimposition
+    const stationGroups = new Map();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    windsData.forEach((wind: any) => {
+      // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
+      if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) {
+        return;
+      }
+      
+      const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
+      if (!stationGroups.has(stationKey)) {
+        stationGroups.set(stationKey, []);
+      }
+      stationGroups.get(stationKey).push(wind);
+    });
+
+    // Only show one wind barb per station (prefer lower altitude)
+    stationGroups.forEach((stationWinds) => {
+      // Sort by altitude and take the lowest one
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      existingLayers.forEach((layer: any) => {
-        if (layer._windStationId) {
-          layerGroupsRef.current.weather.removeLayer(layer);
-        }
+      stationWinds.sort((a: any, b: any) => a.level - b.level);
+      const wind = stationWinds[0];
+
+      // Calculate offset away from airport to avoid masking airport info
+      let offsetLat = wind.lat;
+      let offsetLon = wind.lon;
+      
+      if (airportPos) {
+        // Calculate bearing from airport to wind station
+        const bearing = calculateBearing(airportPos.lat, airportPos.lon, wind.lat, wind.lon);
+        
+        // Offset the wind barb further away from the airport
+        const offsetDistance = 0.05; // ~3nm offset
+        const bearingRad = (bearing * Math.PI) / 180;
+        
+        offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
+        offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
+      } else {
+        // If no airport, add small random offset
+        offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
+        offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
+      }
+
+      // Create wind barb icon
+      const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
+      
+      const windMarker = L.marker([offsetLat, offsetLon], {
+        icon: windBarb,
+        interactive: true,
+        pane: 'overlayPane'
       });
 
-      if (displayOptions.showWindsAloft) {
-        // Get current zoom level for visibility decisions
-        const currentZoom = mapInstance.getZoom();
-        
-        // Only show winds aloft at zoom level 8 or higher
-        if (currentZoom < 8) {
-          return;
-        }
-        
-        try {
-          // Get wind data with airport code for timezone formatting
-          const windsData = await weatherService.getWindsAloft(airport?.code);
-          
-            // Group winds by station to avoid superimposition
-            const stationGroups = new Map();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            windsData.forEach((wind: any) => {
-            // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
-            if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) {
-              return;
-            }
-            
-            const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
-            if (!stationGroups.has(stationKey)) {
-              stationGroups.set(stationKey, []);
-            }
-            stationGroups.get(stationKey).push(wind);
-          });
-          
-          // Only show one wind barb per station (prefer lower altitude)
-          stationGroups.forEach((stationWinds) => {
-            // Sort by altitude and take the lowest one
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            stationWinds.sort((a: any, b: any) => a.level - b.level);
-            const wind = stationWinds[0];
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (windMarker as any)._windStationId = wind.id;
 
-            // Calculate offset away from airport to avoid masking airport info
-            let offsetLat = wind.lat;
-            let offsetLon = wind.lon;
-            
-            if (airport?.position) {
-              // Calculate direction from airport to wind station
-              const airportLat = airport.position.lat;
-              const airportLon = airport.position.lon;
-              
-              // Calculate bearing from airport to wind station
-              const bearing = calculateBearing(airportLat, airportLon, wind.lat, wind.lon);
-              
-              // Offset the wind barb further away from the airport
-              const offsetDistance = 0.05; // ~3nm offset
-              const bearingRad = (bearing * Math.PI) / 180;
-              
-              offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
-              offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
-            } else {
-              // If no airport, add small random offset
-              offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
-              offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
-            }
+      // Create popup content showing all altitude levels for this station
+      // Sort by altitude descending (highest first)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const allLevelsHTML = sortedLevels.map((w: any) => 
+        `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
+          <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
+          ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
+        </div>`
+      ).join('');
 
-            // Create wind barb icon
-            const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
-            
-            const windMarker = L.marker([offsetLat, offsetLon], {
-              icon: windBarb,
-              interactive: true,
-              pane: 'overlayPane'
-            });
+      const updatedLabel = wind.timestampFormatted && wind.airportCode
+        ? `Updated: ${wind.timestampFormatted} (${wind.airportCode})`
+        : `Updated: ${new Date(wind.timestamp).toLocaleTimeString()}`;
 
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (windMarker as any)._windStationId = wind.id;
+      const popupContent = `
+        <div style="min-width: 200px;">
+          <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
+          <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
+          ${allLevelsHTML}
+          <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${updatedLabel}</div>
+        </div>
+      `;
 
-            // Create popup content showing all altitude levels for this station
-            // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const allLevelsHTML = sortedLevels.map((w: any) => 
-              `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
-                <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
-                ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
-              </div>`
-            ).join('');
+      windMarker.bindPopup(popupContent);
+      layerGroupsRef.current.weather.addLayer(windMarker);
+    });
+  };
 
-            const updatedLabel = wind.timestampFormatted && wind.airportCode
-              ? `Updated: ${wind.timestampFormatted} (${wind.airportCode})`
-              : `Updated: ${new Date(wind.timestamp).toLocaleTimeString()}`;
-
-            const popupContent = `
-              <div style="min-width: 200px;">
-                <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
-                <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
-                ${allLevelsHTML}
-                <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${updatedLabel}</div>
-              </div>
-            `;
-
-            windMarker.bindPopup(popupContent);
-            layerGroupsRef.current.weather.addLayer(windMarker);
-          });
-
-        } catch (error) {
-          console.error('[PilotMap] Failed to load Winds Aloft:', error);
-        }
-      }
-    };
-
-    updateWindsAloft();
-  }, [mapInstance, displayOptions.showWindsAloft, airport?.code, airport?.position]);
-
-  // Update winds aloft visibility on zoom changes
+  // Fetch winds aloft data only when airport code changes or when toggled on
   useEffect(() => {
-    if (!mapInstance) return;
+    if (!mapInstance || !layerGroupsRef.current.weather) return;
+    if (!displayOptions.showWindsAloft) {
+      // Clear markers when disabled
+      renderWindsAloftMarkers([]).catch((error) => {
+        console.error('[PilotMap] Failed to clear Winds Aloft markers:', error);
+      });
+      return;
+    }
+
+    // Only fetch if airport code changed or we don't have cached data for this airport
+    const shouldFetch = windsAloftAirportCodeRef.current !== airport?.code || windsAloftDataRef.current.length === 0;
+
+    if (shouldFetch) {
+      weatherService.getWindsAloft(airport?.code).then(async (windsData) => {
+        windsAloftDataRef.current = windsData;
+        windsAloftAirportCodeRef.current = airport?.code;
+        await renderWindsAloftMarkers(windsData, airport?.position);
+      }).catch((error) => {
+        console.error('[PilotMap] Failed to load Winds Aloft:', error);
+      });
+    } else {
+      // Use cached data
+      renderWindsAloftMarkers(windsAloftDataRef.current, airport?.position);
+    }
+  }, [mapInstance, displayOptions.showWindsAloft, airport?.code]);
+
+  // Update winds aloft visibility on zoom changes (no refetch, just show/hide)
+  useEffect(() => {
+    if (!mapInstance || !displayOptions.showWindsAloft) return;
 
     const handleZoomEnd = () => {
-      // Trigger winds aloft update on zoom change
-      const updateWindsAloft = async () => {
-        const leafletModule = await import('leaflet');
-        const L = leafletModule.default;
-
-      // Remove existing wind layers
-      const existingLayers = layerGroupsRef.current.weather.getLayers();
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      existingLayers.forEach((layer: any) => {
-          if (layer._windStationId) {
-            layerGroupsRef.current.weather.removeLayer(layer);
-          }
-        });
-
-        if (displayOptions.showWindsAloft) {
-          // Get current zoom level for visibility decisions
-          const currentZoom = mapInstance.getZoom();
-          
-          // Only show winds aloft at zoom level 8 or higher
-          if (currentZoom < 8) {
-            return;
-          }
-          
-          try {
-            // Get wind data with airport code for timezone formatting
-            const windsData = await weatherService.getWindsAloft(airport?.code);
-            
-            // Group winds by station to avoid superimposition
-            const stationGroups = new Map();
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          windsData.forEach((wind: any) => {
-              // Check for valid data - windSpeed can be 0 (calm), so check for null/undefined explicitly
-              if (wind.lat == null || wind.lon == null || wind.windDir == null || wind.windSpeed == null) return;
-              
-              const stationKey = `${wind.station}_${wind.lat.toFixed(3)}_${wind.lon.toFixed(3)}`;
-              if (!stationGroups.has(stationKey)) {
-                stationGroups.set(stationKey, []);
-              }
-              stationGroups.get(stationKey).push(wind);
-            });
-
-            // Only show one wind barb per station (prefer lower altitude)
-            stationGroups.forEach((stationWinds) => {
-              // Sort by altitude and take the lowest one
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              stationWinds.sort((a: any, b: any) => a.level - b.level);
-              const wind = stationWinds[0];
-
-              // Calculate offset away from airport to avoid masking airport info
-              let offsetLat = wind.lat;
-              let offsetLon = wind.lon;
-              
-              if (airport?.position) {
-                // Calculate direction from airport to wind station
-                const airportLat = airport.position.lat;
-                const airportLon = airport.position.lon;
-                
-                // Calculate bearing from airport to wind station
-                const bearing = calculateBearing(airportLat, airportLon, wind.lat, wind.lon);
-                
-                // Offset the wind barb further away from the airport
-                const offsetDistance = 0.05; // ~3nm offset
-                const bearingRad = (bearing * Math.PI) / 180;
-                
-                offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
-                offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
-              } else {
-                // If no airport, add small random offset
-                offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
-                offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
-              }
-
-              // Create wind barb icon
-              const windBarb = createWindBarb(wind.windDir, wind.windSpeed, wind.level);
-              
-              const windMarker = L.marker([offsetLat, offsetLon], {
-                icon: windBarb,
-                interactive: true,
-                pane: 'overlayPane'
-              });
-
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (windMarker as any)._windStationId = wind.id;
-
-              // Create popup content showing all altitude levels for this station
-              // Sort by altitude descending (highest first) - backend already sorts, but ensure here too
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const sortedLevels = [...stationWinds].sort((a: any, b: any) => b.level - a.level);
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              const allLevelsHTML = sortedLevels.map((w: any) => 
-                `<div style="margin-bottom: 2px; color: #e5e7eb; font-size: 12px;">
-                  <span style="font-weight: 600;">${w.level.toLocaleString()}ft:</span> ${w.windDir}° at ${w.windSpeed}kt
-                  ${w.temperature !== null ? ` (${w.temperature}°C)` : ''}
-                </div>`
-              ).join('');
-
-              const updatedLabel = wind.timestampFormatted && wind.airportCode
-                ? `Updated: ${wind.timestampFormatted} (${wind.airportCode})`
-                : `Updated: ${new Date(wind.timestamp).toLocaleTimeString()}`;
-
-              const popupContent = `
-                <div style="min-width: 200px;">
-                  <div style="color: #ffffff; font-weight: 700; margin-bottom: 6px; font-size: 14px;">WINDS ALOFT</div>
-                  <div style="margin-bottom: 4px; color: #e5e7eb;"><span style="font-weight: 600;">Station:</span> ${wind.station}</div>
-                  ${allLevelsHTML}
-                  <div style="font-size: 10px; color: #9ca3af; margin-top: 4px;">${updatedLabel}</div>
-                </div>
-              `;
-
-              windMarker.bindPopup(popupContent);
-              layerGroupsRef.current.weather.addLayer(windMarker);
-            });
-
-          } catch (error) {
-            console.error('[PilotMap] Failed to load Winds Aloft on zoom change:', error);
-          }
-        }
-      };
-
-      updateWindsAloft();
+      // Just re-render with cached data based on zoom level
+      renderWindsAloftMarkers(windsAloftDataRef.current, airport?.position).catch((error) => {
+        console.error('[PilotMap] Failed to render Winds Aloft on zoom:', error);
+      });
     };
 
     // Listen for zoom changes
@@ -1691,7 +1593,7 @@ export function PilotMap({
     return () => {
       mapInstance.off('zoomend', handleZoomEnd);
     };
-  }, [mapInstance, displayOptions.showWindsAloft, airport]);
+  }, [mapInstance, displayOptions.showWindsAloft, airport?.position]);
 
   // Update Icing Forecast display
   useEffect(() => {
