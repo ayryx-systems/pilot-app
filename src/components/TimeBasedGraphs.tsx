@@ -449,21 +449,15 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       });
 
       // Add recent actuals overlay (actual ADSB-detected arrivals)
-      // Backend provides actualCounts[] array with real arrival counts from ADSB
+      // Backend only sends completed slots, so just display them
       // Purple dots show what actually happened vs orange line (FAA forecast prediction)
-      // actualCounts already filtered to only include completed slots (15+ min in past)
       if (arrivalForecast.actualCounts) {
-        const recentActualsData = alignment.alignedTimeSlots.map((slot, idx) => {
-          // Find the corresponding slot in the original forecast data
+        const recentActualsData = alignment.alignedTimeSlots.map((slot) => {
           const forecastSlotIdx = arrivalForecast.timeSlots.indexOf(slot);
           if (forecastSlotIdx === -1) return null;
           
-          // Use ACTUAL arrival count (from ADSB), not forecast
-          // Backend ensures actualCounts only contains values for fully completed slots
-          const actualCount = arrivalForecast.actualCounts[forecastSlotIdx];
-          if (actualCount === null || actualCount === undefined) return null;
-          
-          return actualCount;
+          const actualCount = arrivalForecast.actualCounts![forecastSlotIdx];
+          return actualCount ?? null;
         });
         
         // Only add if there's at least one recent actual

@@ -221,23 +221,18 @@ export function usePilotData() {
         };
         
         // Merge actualCounts from arrivals into arrivalForecast
-        // This updates Recent Actuals as aircraft land without extra API calls
+        // Backend only sends completed slots, so just map them directly
         if (arrivalsResponse.value.actualCounts && currentForecast) {
-          // Map actualCounts to align with forecast time slots
-          const actualCountsMap = new Map<string, { count: number; completed: boolean }>();
+          const actualCountsMap = new Map<string, number>();
           arrivalsResponse.value.actualCounts.timeSlots.forEach((slot, idx) => {
-            actualCountsMap.set(slot, {
-              count: arrivalsResponse.value.actualCounts!.counts[idx],
-              completed: arrivalsResponse.value.actualCounts!.isCompleted[idx]
-            });
+            actualCountsMap.set(slot, arrivalsResponse.value.actualCounts!.counts[idx]);
           });
           
           updates.arrivalForecast = {
             ...currentForecast,
-            actualCounts: currentForecast.timeSlots.map(slot => {
-              const data = actualCountsMap.get(slot);
-              return data && data.completed ? data.count : null;
-            })
+            actualCounts: currentForecast.timeSlots.map(slot => 
+              actualCountsMap.get(slot) ?? null
+            )
           };
         }
       } else {

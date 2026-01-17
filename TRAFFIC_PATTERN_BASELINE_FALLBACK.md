@@ -59,7 +59,7 @@ Enhanced the `trafficSummary` calculation (lines 756-785) to:
 
 ### `pilot-app/src/components/TimeBasedGraphs.tsx`
 
-No changes needed - kept simple:
+Enhanced to display Recent Actuals using backend-provided completion status:
 
 1. **FAA Forecast Display**:
    - Orange line shows only actual FAA forecast data
@@ -67,9 +67,55 @@ No changes needed - kept simple:
    - No backfilling with baseline data (baseline already shown as blue line)
    - Maintains clean separation between data sources
 
-2. **Date Filtering**:
+2. **Recent Actuals Overlay**:
+   - Displays purple dots for completed time slots
+   - Uses `arrivalForecast.isCompleted[]` array from backend
+   - No timezone arithmetic in frontend
+   - Backend determines completion status in airport local time
+   - 4px dots with white borders, rendered on top (order: 0)
+
+3. **Date Filtering**:
    - Uses `slotDates` field to filter forecast slots by selected date
    - Prevents tomorrow from showing today's forecast data
+
+### `core/src/services/faAadcService.js`
+
+Added completion status calculation to FAA forecast parsing:
+
+1. **isCompleted Array**:
+   - Calculates which slots are completed (in the past) vs future
+   - Compares slot time to current time in airport local time
+   - Adds 15-minute grace period so current slot completes after it ends
+   - Returns boolean array alongside forecast data
+   - All timezone logic handled in backend using existing utilities
+
+### `core/src/api/pilot-api.js` - Arrival Forecast Endpoint
+
+Added actual arrival aggregation to forecast response:
+
+1. **Actual Arrival Aggregation**:
+   - Fetches recent arrivals from `ArrivalTimeService` (last 2 hours of ADSB landings)
+   - Groups arrivals by 15-minute time slots in airport local time
+   - Creates `actualCounts[]` array aligned with forecast `timeSlots[]`
+   - Returns both `arrivalCounts` (FAA forecast) and `actualCounts` (ADSB reality)
+   - Graceful degradation if processor/service unavailable (all nulls)
+
+2. **Data Flow**:
+   - `ArrivalTimeService.getRecentArrivals()` → Real ADSB landing times
+   - Convert each landing to airport local time (DST-aware)
+   - Round down to 15-minute slot (e.g., 13:37 → 13:30)
+   - Count arrivals per slot
+   - Align with forecast time slots
+   - Return as `actualCounts[]` alongside forecast
+
+### `pilot-app/src/types/index.ts`
+
+Updated ArrivalForecast interface to include completion status:
+
+1. **isCompleted Field**:
+   - Optional boolean array indicating which slots are completed
+   - Provided by backend (no frontend calculation needed)
+   - Used to display Recent Actuals purple dots
 
 ## Data Flow
 
@@ -78,16 +124,25 @@ The FAA forecast service returns:
 ```typescript
 {
   timeSlots: string[];        // ["08:00", "08:15", "08:30", ...]
-  arrivalCounts: number[];    // [12, 15, 18, ...]
+  arrivalCounts: number[];    // [12, 15, 18, ...] ← FAA FORECAST (predicted)
+  actualCounts: number[];     // [13, 14, null, null, ...] ← ADSB ACTUAL (reality)
   slotDates: string[];        // ["2026-01-16", "2026-01-16", "2026-01-17", ...]
+  isCompleted: boolean[];     // [true, true, false, false, ...]
   ...
 }
 ```
 
 - `timeSlots`: Local time in HH:MM format (15-minute intervals)
-- `arrivalCounts`: Number of arrivals expected in each slot
+- `arrivalCounts`: **FAA forecast** - number of arrivals expected per filed flight plans
+- `actualCounts`: **ADSB reality** - actual arrivals detected by ADSB tracking (null for future slots)
 - `slotDates`: Date string for each slot (YYYY-MM-DD in airport local time)
+- `isCompleted`: Boolean for each slot indicating if it's in the past (completed)
 - Coverage: Typically last 4 hours + next ~6-18 hours
+
+**Graph Display:**
+- 🟠 Orange line = `arrivalCounts` (what FAA predicts)
+- 🟣 Purple dots = `actualCounts` (what ADSB detected)
+- Comparison shows forecast accuracy
 
 ### Baseline Structure
 The baseline data contains historical averages:
@@ -163,10 +218,30 @@ The baseline data contains historical averages:
 - Data source indicators clearly show what type of data is being displayed:
   - "(flight plans)" = Real FAA forecast from filed flight plans
   - "(baseline avg)" = Historical day-of-week average
-- **Simple graph design**: Orange line = FAA only, Blue line = baseline only
+- **Simple graph design with clear color coding**:
+  - 🔵 Blue line = Day-of-week baseline
+  - 🟢 Green dashed line = Seasonal average
+  - 🟠 Orange dashed line = FAA Arrival Forecast
+  - 🟣 Purple dots = Recent Actuals (completed slots only)
   - No mixing of data sources on a single line
-  - Clear visual separation makes it easy to distinguish actual forecasts from historical patterns
+  - Clear visual separation and layering (purple dots on top)
   - Orange line naturally stops when FAA data ends
+- **Recent Actuals feature** (ADSB vs FAA comparison):
+  - Shows **actual ADSB-detected arrival counts** as purple dots (5px)
+  - Compares reality (ADSB) vs prediction (FAA flight plans)
+  - **Bundled with arrivals endpoint** - no extra API calls needed
+  - Backend aggregates actual landings by 15-minute time slots
+  - **15-minute completion rule**: Dots only appear for slots that are 15+ minutes in the past
+  - This ensures complete data (not artificially low counts for incomplete slots)
+  - Backend determines which slots are completed (in airport local time)
+  - Backend provides `actualCounts` in arrivals response, merged into forecast
+  - Frontend displays purple dots for `actualCounts`, orange line for forecast
+  - **Auto-updates every 30 seconds** via arrivals polling (already happening)
+  - No timezone arithmetic in frontend - all time/aggregation done by backend
+  - Purple dots with white borders for visibility, displayed on top of graph
+  - Legend shows "Recent Actuals (ADSB)" with proper purple indicator (appears when dots exist)
+  - Validates forecast accuracy in real-time
+  - **Key insight**: Dots above line = more traffic than forecast, below = less
 - Date filtering ensures tomorrow's predictions don't incorrectly use today's FAA data
 - Timezone handling accounts for DST transitions using baseline metadata
 - Both data sources are valuable: flight plans show actual near-term traffic, baseline provides long-term planning context
