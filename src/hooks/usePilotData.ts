@@ -219,6 +219,27 @@ export function usePilotData() {
           active: arrivalsResponse.value.active ?? true,
           message: arrivalsResponse.value.message
         };
+        
+        // Merge actualCounts from arrivals into arrivalForecast
+        // This updates Recent Actuals as aircraft land without extra API calls
+        if (arrivalsResponse.value.actualCounts && currentForecast) {
+          // Map actualCounts to align with forecast time slots
+          const actualCountsMap = new Map<string, { count: number; completed: boolean }>();
+          arrivalsResponse.value.actualCounts.timeSlots.forEach((slot, idx) => {
+            actualCountsMap.set(slot, {
+              count: arrivalsResponse.value.actualCounts!.counts[idx],
+              completed: arrivalsResponse.value.actualCounts!.isCompleted[idx]
+            });
+          });
+          
+          updates.arrivalForecast = {
+            ...currentForecast,
+            actualCounts: currentForecast.timeSlots.map(slot => {
+              const data = actualCountsMap.get(slot);
+              return data && data.completed ? data.count : null;
+            })
+          };
+        }
       } else {
         console.error('Failed to load arrivals:', arrivalsResponse.reason);
         updates.arrivals = [];
@@ -414,6 +435,8 @@ export function usePilotData() {
     const interval = setInterval(testConnection, 10000); // Test every 10 seconds
     return () => clearInterval(interval);
   }, [testConnection]);
+
+  // Removed separate forecast polling - actualCounts now come with arrivals endpoint
 
   return {
     selectedAirport: state.selectedAirport,

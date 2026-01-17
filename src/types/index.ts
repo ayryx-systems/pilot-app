@@ -365,6 +365,11 @@ export interface ArrivalsResponse {
   airportId: string;
   arrivals: Arrival[];
   count: number;
+  actualCounts?: {
+    timeSlots: string[];
+    counts: number[];
+    isCompleted: boolean[]; // Marks which slots are fully complete (15+ min in past)
+  };
   timestamp: string;
   cacheMaxAge: number;
   source: string;

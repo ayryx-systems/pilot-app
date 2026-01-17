@@ -451,6 +451,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       // Add recent actuals overlay (actual ADSB-detected arrivals)
       // Backend provides actualCounts[] array with real arrival counts from ADSB
       // Purple dots show what actually happened vs orange line (FAA forecast prediction)
+      // actualCounts already filtered to only include completed slots (15+ min in past)
       if (arrivalForecast.actualCounts) {
         const recentActualsData = alignment.alignedTimeSlots.map((slot, idx) => {
           // Find the corresponding slot in the original forecast data
@@ -458,33 +459,30 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
           if (forecastSlotIdx === -1) return null;
           
           // Use ACTUAL arrival count (from ADSB), not forecast
+          // Backend ensures actualCounts only contains values for fully completed slots
           const actualCount = arrivalForecast.actualCounts[forecastSlotIdx];
           if (actualCount === null || actualCount === undefined) return null;
           
-          // Only show if slot is marked as completed (in the past)
-          if (arrivalForecast.isCompleted && arrivalForecast.isCompleted[forecastSlotIdx]) {
-            return actualCount;
-          }
-          
-          return null;
+          return actualCount;
         });
         
         // Only add if there's at least one recent actual
         const hasRecentActuals = recentActualsData.some(v => v !== null);
         if (hasRecentActuals) {
           datasets.push({
-            label: 'Recent Actuals',
+            label: 'Recent Actuals (ADSB)',
             data: recentActualsData,
-            borderColor: 'transparent',
-            backgroundColor: 'transparent',
-            borderWidth: 0,
+            borderColor: '#a855f7', // Purple (for legend)
+            backgroundColor: '#a855f7', // Purple (for legend)
+            borderWidth: 2,
             fill: false,
             showLine: false, // Only show points, no line
-            pointRadius: 4,
+            pointRadius: 5, // Slightly larger for visibility
             pointBackgroundColor: '#a855f7', // Purple
             pointBorderColor: '#ffffff', // White border for contrast
             pointBorderWidth: 2,
             pointStyle: 'circle',
+            pointHoverRadius: 7, // Larger on hover
             order: 0, // Render on top (lower order = higher z-index)
             spanGaps: false
           });
