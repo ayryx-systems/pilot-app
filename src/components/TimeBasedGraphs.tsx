@@ -372,6 +372,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         borderWidth: 2.5,
         fill: true,
         tension: 0.4,
+        order: 2, // Below forecast and recent actuals
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointRadius: (ctx: any) => {
           if (alignedDayCounts[ctx.dataIndex] === null) return 0;
@@ -403,6 +404,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         borderDash: [5, 5],
         fill: false,
         tension: 0.4,
+        order: 3, // Background layer
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointRadius: (ctx: any) => alignedSeasonalCounts[ctx.dataIndex] !== null ? 1 : 0,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -427,6 +429,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         borderDash: [3, 3],
         fill: false,
         tension: 0.4,
+        order: 1, // Above baseline, below recent actuals
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointRadius: (ctx: any) => {
           const value = forecastData[ctx.dataIndex];
@@ -445,47 +448,47 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         spanGaps: true
       });
 
-      // Add recent actuals overlay (last 1 hour of completed slots)
-      const now = new Date();
-      const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
-      
-      const recentActualsData = alignment.alignedTimeSlots.map((slot, idx) => {
-        // Find the corresponding forecast slot
-        const forecastValue = alignedForecastCounts[idx];
-        if (forecastValue === null || forecastValue === undefined) return null;
-        
-        // Parse the slot time
-        const [hours, minutes] = slot.split(':').map(Number);
-        const slotTime = new Date(now);
-        slotTime.setHours(hours, minutes, 0, 0);
-        
-        // Only show if:
-        // 1. Slot is in the past (completed)
-        // 2. Slot is within the last hour
-        if (slotTime <= now && slotTime >= oneHourAgo) {
-          return forecastValue;
-        }
-        
-        return null;
-      });
-      
-      // Only add if there's at least one recent actual
-      const hasRecentActuals = recentActualsData.some(v => v !== null);
-      if (hasRecentActuals) {
-        datasets.push({
-          label: 'Recent Actuals (Last Hour)',
-          data: recentActualsData,
-          borderColor: 'transparent',
-          backgroundColor: 'transparent',
-          borderWidth: 0,
-          fill: false,
-          showLine: false, // Only show points, no line
-          pointRadius: 5,
-          pointBackgroundColor: '#3b82f6',
-          pointBorderColor: '#60a5fa',
-          pointBorderWidth: 2,
-          spanGaps: false
+      // Add recent actuals overlay (actual ADSB-detected arrivals)
+      // Backend provides actualCounts[] array with real arrival counts from ADSB
+      // Purple dots show what actually happened vs orange line (FAA forecast prediction)
+      if (arrivalForecast.actualCounts) {
+        const recentActualsData = alignment.alignedTimeSlots.map((slot, idx) => {
+          // Find the corresponding slot in the original forecast data
+          const forecastSlotIdx = arrivalForecast.timeSlots.indexOf(slot);
+          if (forecastSlotIdx === -1) return null;
+          
+          // Use ACTUAL arrival count (from ADSB), not forecast
+          const actualCount = arrivalForecast.actualCounts[forecastSlotIdx];
+          if (actualCount === null || actualCount === undefined) return null;
+          
+          // Only show if slot is marked as completed (in the past)
+          if (arrivalForecast.isCompleted && arrivalForecast.isCompleted[forecastSlotIdx]) {
+            return actualCount;
+          }
+          
+          return null;
         });
+        
+        // Only add if there's at least one recent actual
+        const hasRecentActuals = recentActualsData.some(v => v !== null);
+        if (hasRecentActuals) {
+          datasets.push({
+            label: 'Recent Actuals',
+            data: recentActualsData,
+            borderColor: 'transparent',
+            backgroundColor: 'transparent',
+            borderWidth: 0,
+            fill: false,
+            showLine: false, // Only show points, no line
+            pointRadius: 4,
+            pointBackgroundColor: '#a855f7', // Purple
+            pointBorderColor: '#ffffff', // White border for contrast
+            pointBorderWidth: 2,
+            pointStyle: 'circle',
+            order: 0, // Render on top (lower order = higher z-index)
+            spanGaps: false
+          });
+        }
       }
     }
 

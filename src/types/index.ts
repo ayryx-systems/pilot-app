@@ -453,8 +453,10 @@ export interface ArrivalForecast {
   airportCode: string;
   timestamp: string;
   timeSlots: string[]; // Array of time slots in HH:MM format (local time)
-  arrivalCounts: (number | null)[]; // Array of arrival counts per 15-min slot
+  arrivalCounts: (number | null)[]; // Array of FORECAST arrival counts per 15-min slot (from FAA)
+  actualCounts?: (number | null)[]; // Array of ACTUAL arrival counts per 15-min slot (from ADSB)
   slotDates?: string[]; // Array of date strings (YYYY-MM-DD) corresponding to each time slot
+  isCompleted?: boolean[]; // Array of booleans indicating if each slot is completed (in the past)
   totalArrivals: number;
   source: string;
   error?: string;
