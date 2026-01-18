@@ -403,6 +403,9 @@ export function usePilotData() {
     stateRef.current = state;
   }, [state]);
 
+  // Track currently loading airport to prevent duplicate calls
+  const loadingAirportRef = useRef<string | null>(null);
+
   const refreshData = useCallback(async () => {
     const connected = await testConnection();
     if (connected) {
@@ -439,11 +442,30 @@ export function usePilotData() {
     if (!state.connectionStatus.connected || !state.airports.length) return;
 
     if (state.selectedAirport) {
-      // Airport selected: load data for that airport
-      const skipBaseline = state.baseline !== null;
-      loadAirportData(state.selectedAirport, { skipBaseline });
+      // Prevent duplicate calls for the same airport
+      if (loadingAirportRef.current === state.selectedAirport) {
+        return;
+      }
+
+      // Track that we're loading this airport
+      loadingAirportRef.current = state.selectedAirport;
+      
+      // Get baseline state from current state (not from dependency)
+      const currentBaseline = stateRef.current.baseline;
+      const skipBaseline = currentBaseline !== null;
+      
+      // Load data for the selected airport
+      loadAirportData(state.selectedAirport, { skipBaseline }).finally(() => {
+        // Clear loading ref when done (only if still the same airport)
+        if (loadingAirportRef.current === state.selectedAirport) {
+          loadingAirportRef.current = null;
+        }
+      });
+    } else {
+      // No airport selected, clear loading ref
+      loadingAirportRef.current = null;
     }
-  }, [state.connectionStatus.connected, state.airports.length, state.selectedAirport, state.baseline, loadAirportData]);
+  }, [state.connectionStatus.connected, state.airports.length, state.selectedAirport, loadAirportData]);
 
   // Periodic connection test
   useEffect(() => {
