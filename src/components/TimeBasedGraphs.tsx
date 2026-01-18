@@ -171,6 +171,42 @@ function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData
   return timeSlot;
 }
 
+function getHoursFromNow(timeSlot: string, nowLocal: Date, airportCode: string, baseline?: BaselineData | null, slotDate?: string, todayDateStr?: string): number {
+  const [slotHours, slotMinutes] = timeSlot.split(':').map(Number);
+  const nowHours = nowLocal.getUTCHours();
+  const nowMinutes = nowLocal.getUTCMinutes();
+  
+  const slotTotalMinutes = slotHours * 60 + slotMinutes;
+  const nowTotalMinutes = nowHours * 60 + nowMinutes;
+  
+  let hoursFromNow = (slotTotalMinutes - nowTotalMinutes) / 60;
+  
+  // Handle day wrap-around: if we have date info, use it; otherwise assume same day
+  if (slotDate && todayDateStr) {
+    if (slotDate !== todayDateStr) {
+      // Different day - add/subtract 24 hours
+      const slotDateObj = new Date(slotDate + 'T00:00:00Z');
+      const todayDateObj = new Date(todayDateStr + 'T00:00:00Z');
+      const daysDiff = Math.round((slotDateObj.getTime() - todayDateObj.getTime()) / (1000 * 60 * 60 * 24));
+      hoursFromNow += daysDiff * 24;
+    }
+  } else {
+    // Legacy: handle wrap-around for same-day slots
+    if (hoursFromNow > 12) hoursFromNow -= 24;
+    if (hoursFromNow < -12) hoursFromNow += 24;
+  }
+  
+  return hoursFromNow;
+}
+
+function formatRelativeTime(hoursFromNow: number): string {
+  if (Math.abs(hoursFromNow) < 0.1) return 'NOW';
+  if (hoursFromNow < 0) {
+    return `${Math.abs(Math.round(hoursFromNow * 4) / 4)}h ago`;
+  }
+  return `+${Math.round(hoursFromNow * 4) / 4}h`;
+}
+
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   baseline,
   arrivalForecast,
@@ -223,9 +259,20 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     prevBaselineRef.current = baseline;
     prevSelectedTimeRef.current = new Date(selectedTimeKey);
 
-    // Get the airport local date string (not UTC date)
-    const dateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
-    const dayOfWeek = getDayOfWeekName(dateStr);
+    // Calculate NOW in airport local time
+    const nowUTC = getCurrentUTCTime();
+    const nowLocal = utcToAirportLocal(nowUTC, airportCode, baseline);
+    const todayDateStr = getAirportLocalDateString(nowUTC, airportCode, baseline);
+    
+    // Calculate time window: -2 hours history, extend forward based on ETA
+    const isNow = Math.abs(selectedTime.getTime() - nowUTC.getTime()) <= 60000;
+    const hoursAhead = (selectedTime.getTime() - nowUTC.getTime()) / (1000 * 60 * 60);
+    const windowStartHours = -2; // 2 hours history
+    const windowEndHours = isNow ? 2 : Math.max(hoursAhead + 2, 2); // Extend 2 hours past ETA, minimum 2 hours
+    
+    // Get the airport local date string for selected time
+    const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
+    const dayOfWeek = getDayOfWeekName(selectedDateStr);
     const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
 
@@ -234,7 +281,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const season = getAirportSeason(localDateForSeason, baseline);
     const seasonDisplay = season.charAt(0).toUpperCase() + season.slice(1);
 
-    const holidayKey = getHolidayKey(dateStr);
+    const holidayKey = getHolidayKey(selectedDateStr);
     const seasonalData = baseline[season];
     
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -283,22 +330,96 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
     const alignment = alignTimeSlots(dayTimeSlots, seasonalAvg.timeSlots);
 
-    const alignedDayCounts = alignment.alignedTimeSlots.map((ts, idx) => {
-      const dayIdx = alignment.dayIndices[idx];
-      return dayIdx !== undefined ? dayCounts[dayIdx] : null;
+    // Build relative time slots and filter to window
+    // We need to consider both today and tomorrow's slots when ETA is in the future
+    const relativeTimeSlots: Array<{ hoursFromNow: number; timeSlot: string; label: string; dateStr: string }> = [];
+    
+    // Add today's slots
+    alignment.alignedTimeSlots.forEach((ts) => {
+      const hoursFromNow = getHoursFromNow(ts, nowLocal, airportCode, baseline, todayDateStr, todayDateStr);
+      if (hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours) {
+        relativeTimeSlots.push({
+          hoursFromNow,
+          timeSlot: ts,
+          label: formatRelativeTime(hoursFromNow),
+          dateStr: todayDateStr,
+        });
+      }
+    });
+    
+    // If ETA is tomorrow, also add tomorrow's slots
+    if (selectedDateStr !== todayDateStr) {
+      alignment.alignedTimeSlots.forEach((ts) => {
+        const hoursFromNow = getHoursFromNow(ts, nowLocal, airportCode, baseline, selectedDateStr, todayDateStr);
+        if (hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours) {
+          // Only add if not already present (avoid duplicates)
+          const exists = relativeTimeSlots.some(rt => rt.timeSlot === ts && rt.dateStr === selectedDateStr);
+          if (!exists) {
+            relativeTimeSlots.push({
+              hoursFromNow,
+              timeSlot: ts,
+              label: formatRelativeTime(hoursFromNow),
+              dateStr: selectedDateStr,
+            });
+          }
+        }
+      });
+    }
+    
+    // Sort by hoursFromNow
+    relativeTimeSlots.sort((a, b) => a.hoursFromNow - b.hoursFromNow);
+
+    // Map data to relative time slots
+    // For slots on different days, we need to look up the correct day-of-week baseline
+    const alignedDayCounts = relativeTimeSlots.map((rt) => {
+      // Check if this slot is for today or selected date
+      const slotDateStr = rt.dateStr || todayDateStr;
+      const slotDayOfWeek = getDayOfWeekName(slotDateStr);
+      
+      // Get baseline data for this day
+      let slotDayData = dayData;
+      if (slotDateStr !== selectedDateStr) {
+        // Different day - need to get its baseline
+        const slotHolidayKey = getHolidayKey(slotDateStr);
+        if (slotHolidayKey) {
+          const currentSeasonData = baseline[season];
+          const otherSeason = season === 'summer' ? 'winter' : 'summer';
+          const otherSeasonData = baseline[otherSeason];
+          
+          if (currentSeasonData?.holidayTimeSlots?.[slotHolidayKey]) {
+            slotDayData = currentSeasonData.holidayTimeSlots[slotHolidayKey];
+          } else if (otherSeasonData?.holidayTimeSlots?.[slotHolidayKey]) {
+            slotDayData = otherSeasonData.holidayTimeSlots[slotHolidayKey];
+          } else {
+            slotDayData = seasonalData?.dayOfWeekTimeSlots?.[slotDayOfWeek];
+          }
+        } else {
+          slotDayData = seasonalData?.dayOfWeekTimeSlots?.[slotDayOfWeek];
+        }
+      }
+      
+      if (!slotDayData) return null;
+      const slotValue = slotDayData[rt.timeSlot];
+      return slotValue ? (slotValue.averageCount || slotValue.averageArrivals || 0) : null;
     });
 
-    const alignedSeasonalCounts = alignment.alignedTimeSlots.map((ts, idx) => {
+    const alignedSeasonalCounts = relativeTimeSlots.map((rt) => {
+      const idx = alignment.alignedTimeSlots.indexOf(rt.timeSlot);
+      if (idx < 0) return null;
       const seasonalIdx = alignment.seasonalIndices[idx];
       return seasonalIdx !== undefined ? seasonalAvg.counts[seasonalIdx] : null;
     });
 
-    const matchedTimeSlot = dayTimeSlots.find(ts => ts === timeSlot) || dayTimeSlots[0];
-    const currentTimeSlotIndex = alignment.alignedTimeSlots.indexOf(matchedTimeSlot);
+    // Find indices for NOW and ETA in relative time slots
+    const nowTimeSlot = getTimeSlotKey(nowUTC, airportCode, baseline);
+    const nowRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === nowTimeSlot);
+    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === timeSlot);
 
-    // Align forecast data with baseline time slots if available
-    // Filter forecast slots to only include those for the selected date
+    // Align forecast data with relative time slots
+    // Only include forecast slots for today (fixes bug where forecast appears on tomorrow)
     let alignedForecastCounts: (number | null)[] = [];
+    let alignedRecentActuals: (number | null)[] = [];
+    
     if (arrivalForecast && arrivalForecast.timeSlots && arrivalForecast.arrivalCounts) {
       // Validate data structure
       if (arrivalForecast.timeSlots.length !== arrivalForecast.arrivalCounts.length) {
@@ -308,87 +429,71 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         });
       }
       
-      // Get selected date to filter forecast slots
-      const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
-      const todayDateStr = getAirportLocalDateString(new Date(), airportCode, baseline);
-      
-      // Filter forecast slots based on selected date using slotDates if available
-      // If slotDates is not available, fall back to hour-based filtering (legacy behavior)
-      const filteredForecastSlots: string[] = [];
-      const filteredForecastCounts: number[] = [];
-      
       const hasSlotDates = arrivalForecast.slotDates && arrivalForecast.slotDates.length === arrivalForecast.timeSlots.length;
+      const forecastMap = new Map<string, number>();
+      const actualsMap = new Map<string, number>();
       
       arrivalForecast.timeSlots.forEach((slot, idx) => {
         const count = arrivalForecast.arrivalCounts[idx];
         if (count === undefined || count === null) return;
         
-        let shouldInclude = false;
+        let shouldIncludeForecast = false;
+        let shouldIncludeActuals = false;
         
         if (hasSlotDates) {
-          // Use date information from backend to filter slots
           const slotDate = arrivalForecast.slotDates![idx];
-          shouldInclude = slotDate === selectedDateStr;
+          // Include forecast for today and selected date (for future ETAs)
+          shouldIncludeForecast = slotDate === todayDateStr || slotDate === selectedDateStr;
+          // Actuals only for today (fixes bug)
+          shouldIncludeActuals = slotDate === todayDateStr;
         } else {
-          // Fallback to hour-based filtering (legacy behavior)
-          const [hours] = slot.split(':').map(Number);
-          const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
-          const currentMinutes = nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes();
-          const fourHoursAgoMinutes = currentMinutes - 4 * 60;
-          const [slotHours, slotMinutes] = slot.split(':').map(Number);
-          const slotTotalMinutes = slotHours * 60 + slotMinutes;
-          
-          if (selectedDateStr === todayDateStr) {
-            // For today: include slots >= (current time - 4 hours)
-            shouldInclude = slotTotalMinutes >= fourHoursAgoMinutes;
-          } else {
-            // For future dates: only include early morning slots (00:00-09:45)
-            shouldInclude = hours >= 0 && hours <= 9;
-          }
+          // Legacy: check if slot is within window
+          const hoursFromNow = getHoursFromNow(slot, nowLocal, airportCode, baseline);
+          shouldIncludeForecast = hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours;
+          // For actuals, only include if it's in the past (today)
+          shouldIncludeActuals = hoursFromNow < 0 && hoursFromNow >= windowStartHours;
         }
         
-        if (shouldInclude) {
-          filteredForecastSlots.push(slot);
-          filteredForecastCounts.push(count);
+        if (shouldIncludeForecast) {
+          forecastMap.set(slot, count);
+        }
+        
+        // Recent actuals only for today (fixes bug where they appear on tomorrow)
+        if (shouldIncludeActuals && arrivalForecast.actualCounts && arrivalForecast.actualCounts[idx] !== null && arrivalForecast.actualCounts[idx] !== undefined) {
+          actualsMap.set(slot, arrivalForecast.actualCounts[idx]!);
         }
       });
       
-      const forecastMap = new Map<string, number>();
-      filteredForecastSlots.forEach((slot, idx) => {
-        forecastMap.set(slot, filteredForecastCounts[idx]);
+      alignedForecastCounts = relativeTimeSlots.map(rt => {
+        const count = forecastMap.get(rt.timeSlot);
+        return count !== undefined ? count : null;
       });
       
-      alignedForecastCounts = alignment.alignedTimeSlots.map(slot => {
-        const count = forecastMap.get(slot);
+      alignedRecentActuals = relativeTimeSlots.map(rt => {
+        const count = actualsMap.get(rt.timeSlot);
         return count !== undefined ? count : null;
       });
     }
 
-    // Calculate NOW time slot index
-    const nowUTC = getCurrentUTCTime();
-    const nowTimeSlot = getTimeSlotKey(nowUTC, airportCode, baseline);
-    const nowTimeSlotIndex = alignment.alignedTimeSlots.indexOf(nowTimeSlot);
-    
     // Calculate expected arrivals for NOW and ETA (FAA forecast or baseline)
-    const getExpectedArrivals = (timeSlotIdx: number): number | null => {
-      if (timeSlotIdx < 0 || timeSlotIdx >= alignment.alignedTimeSlots.length) return null;
+    const getExpectedArrivals = (relativeIdx: number): number | null => {
+      if (relativeIdx < 0 || relativeIdx >= relativeTimeSlots.length) return null;
       
       // Try FAA forecast first
-      if (alignedForecastCounts.length > 0 && alignedForecastCounts[timeSlotIdx] !== null) {
-        return alignedForecastCounts[timeSlotIdx];
+      if (alignedForecastCounts.length > 0 && alignedForecastCounts[relativeIdx] !== null) {
+        return alignedForecastCounts[relativeIdx];
       }
       
       // Fall back to baseline
-      const dayIdx = alignment.dayIndices[timeSlotIdx];
-      if (dayIdx !== undefined && dayIdx !== null && dayCounts[dayIdx] !== null) {
-        return dayCounts[dayIdx];
+      if (alignedDayCounts[relativeIdx] !== null) {
+        return alignedDayCounts[relativeIdx];
       }
       
       return null;
     };
     
-    const nowExpectedArrivals = nowTimeSlotIndex >= 0 ? getExpectedArrivals(nowTimeSlotIndex) : null;
-    const etaExpectedArrivals = currentTimeSlotIndex >= 0 ? getExpectedArrivals(currentTimeSlotIndex) : null;
+    const nowExpectedArrivals = nowRelativeIndex >= 0 ? getExpectedArrivals(nowRelativeIndex) : null;
+    const etaExpectedArrivals = etaRelativeIndex >= 0 ? getExpectedArrivals(etaRelativeIndex) : null;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const datasets: any[] = [
@@ -477,70 +582,48 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       });
 
       // Add recent actuals overlay (actual ADSB-detected arrivals)
-      // Backend only sends completed slots, so just display them
-      // Purple dots show what actually happened vs orange line (FAA forecast prediction)
-      if (arrivalForecast.actualCounts) {
-        const recentActualsData = alignment.alignedTimeSlots.map((slot) => {
-          const forecastSlotIdx = arrivalForecast.timeSlots.indexOf(slot);
-          if (forecastSlotIdx === -1) return null;
-          
-          const actualCount = arrivalForecast.actualCounts![forecastSlotIdx];
-          return actualCount ?? null;
+      // Only show for today's slots (already filtered above)
+      const hasRecentActuals = alignedRecentActuals.some(v => v !== null);
+      if (hasRecentActuals) {
+        datasets.push({
+          label: 'Recent Actuals (ADSB)',
+          data: alignedRecentActuals,
+          borderColor: '#a855f7', // Purple (for legend)
+          backgroundColor: '#a855f7', // Purple (for legend)
+          borderWidth: 2,
+          fill: false,
+          showLine: false, // Only show points, no line
+          pointRadius: 5, // Slightly larger for visibility
+          pointBackgroundColor: '#a855f7', // Purple
+          pointBorderColor: '#ffffff', // White border for contrast
+          pointBorderWidth: 2,
+          pointStyle: 'circle',
+          pointHoverRadius: 7, // Larger on hover
+          order: 0, // Render on top (lower order = higher z-index)
+          spanGaps: false
         });
-        
-        // Only add if there's at least one recent actual
-        const hasRecentActuals = recentActualsData.some(v => v !== null);
-        if (hasRecentActuals) {
-          datasets.push({
-            label: 'Recent Actuals (ADSB)',
-            data: recentActualsData,
-            borderColor: '#a855f7', // Purple (for legend)
-            backgroundColor: '#a855f7', // Purple (for legend)
-            borderWidth: 2,
-            fill: false,
-            showLine: false, // Only show points, no line
-            pointRadius: 5, // Slightly larger for visibility
-            pointBackgroundColor: '#a855f7', // Purple
-            pointBorderColor: '#ffffff', // White border for contrast
-            pointBorderWidth: 2,
-            pointStyle: 'circle',
-            pointHoverRadius: 7, // Larger on hover
-            order: 0, // Render on top (lower order = higher z-index)
-            spanGaps: false
-          });
-        }
       }
     }
 
     const newChartData = {
-      labels: alignment.alignedTimeSlots,
+      labels: relativeTimeSlots.map(rt => rt.label),
       datasets,
-      daySampleSizes,
-      seasonalSampleSizes: seasonalAvg.sampleSizes,
-      dayIndices: alignment.dayIndices,
-      seasonalIndices: alignment.seasonalIndices,
       title: `Traffic Forecast - ${dayLabel}`,
-      currentTimeSlotIndex,
-      nowTimeSlotIndex,
+      nowRelativeIndex,
+      etaRelativeIndex,
       nowExpectedArrivals,
       etaExpectedArrivals,
-      alignedTimeSlots: alignment.alignedTimeSlots,
+      relativeTimeSlots,
       arrivalForecastRef: arrivalForecast, // Store reference to detect changes
     };
 
     // Only update chartData if it's actually different to prevent unnecessary Chart.js updates
-    // Also check if arrivalForecast dataset changed
-    const prevForecastDataset = prevChartDataRef.current?.datasets?.[2];
-    const newForecastDataset = newChartData.datasets[2];
-    const forecastDatasetChanged = !prevForecastDataset || !newForecastDataset ||
-      JSON.stringify(prevForecastDataset.data) !== JSON.stringify(newForecastDataset.data);
-    
     const shouldUpdate = !prevChartDataRef.current || 
         JSON.stringify(prevChartDataRef.current.labels) !== JSON.stringify(newChartData.labels) ||
         JSON.stringify(prevChartDataRef.current.datasets?.[0]?.data) !== JSON.stringify(newChartData.datasets[0]?.data) ||
         JSON.stringify(prevChartDataRef.current.datasets?.[1]?.data) !== JSON.stringify(newChartData.datasets[1]?.data) ||
-        forecastDatasetChanged ||
-        prevChartDataRef.current.currentTimeSlotIndex !== newChartData.currentTimeSlotIndex;
+        prevChartDataRef.current.nowRelativeIndex !== newChartData.nowRelativeIndex ||
+        prevChartDataRef.current.etaRelativeIndex !== newChartData.etaRelativeIndex;
     
     if (shouldUpdate) {
       setChartData(newChartData);
@@ -570,14 +653,18 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   }
 
   // Build annotations for NOW and ETA lines
+  // NOW line only shows for today (fixes bug where it appears on tomorrow)
   const annotations: Record<string, unknown> = {};
+  const todayDateStr = getAirportLocalDateString(getCurrentUTCTime(), airportCode, baseline);
+  const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
+  const isViewingToday = todayDateStr === selectedDateStr;
   
-  if (chartData.nowTimeSlotIndex >= 0 && chartData.nowExpectedArrivals !== null) {
+  if (isViewingToday && chartData.nowRelativeIndex >= 0 && chartData.nowExpectedArrivals !== null) {
     const nowValue = chartData.nowExpectedArrivals;
     annotations['nowLine'] = {
       type: 'line',
-      xMin: chartData.nowTimeSlotIndex,
-      xMax: chartData.nowTimeSlotIndex,
+      xMin: chartData.nowRelativeIndex,
+      xMax: chartData.nowRelativeIndex,
       borderColor: 'rgba(239, 68, 68, 0.8)',
       borderWidth: 2,
       borderDash: [6, 3],
@@ -594,12 +681,12 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   }
   
   const isNow = Math.abs(selectedTime.getTime() - getCurrentUTCTime().getTime()) <= 60000;
-  if (!isNow && chartData.currentTimeSlotIndex >= 0 && chartData.etaExpectedArrivals !== null) {
+  if (!isNow && chartData.etaRelativeIndex >= 0 && chartData.etaExpectedArrivals !== null) {
     const etaValue = chartData.etaExpectedArrivals;
     annotations['etaLine'] = {
       type: 'line',
-      xMin: chartData.currentTimeSlotIndex,
-      xMax: chartData.currentTimeSlotIndex,
+      xMin: chartData.etaRelativeIndex,
+      xMax: chartData.etaRelativeIndex,
       borderColor: 'rgba(59, 130, 246, 0.8)',
       borderWidth: 2,
       label: {
@@ -670,7 +757,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       x: {
         title: {
           display: true,
-          text: 'Time (Local)',
+          text: 'Hours from NOW',
           color: '#94a3b8',
           font: {
             size: 10
@@ -681,9 +768,8 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
           font: {
             size: 9
           },
-          maxRotation: 45,
-          minRotation: 45,
-          maxTicksLimit: 12,
+          maxRotation: 0,
+          minRotation: 0,
         },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)'
