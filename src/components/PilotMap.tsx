@@ -891,11 +891,11 @@ export function PilotMap({
 
           if (track.coordinates.length < 2) return; // Need at least 2 points for a line
 
-          // Calculate track age based on the most recent coordinate timestamp
+          // Calculate track age based on track-level timestamp (createdAt or startTime)
           const now = new Date();
-          const mostRecentCoord = track.coordinates[track.coordinates.length - 1];
-          const trackAge = mostRecentCoord?.timestamp
-            ? (now.getTime() - new Date(mostRecentCoord.timestamp).getTime()) / (1000 * 60) // Age in minutes
+          const trackTimestamp = track.createdAt || track.startTime;
+          const trackAge = trackTimestamp
+            ? (now.getTime() - new Date(trackTimestamp).getTime()) / (1000 * 60) // Age in minutes
             : 0;
 
           // Hide tracks over 30 minutes old

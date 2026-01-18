@@ -450,9 +450,10 @@ class WeatherService {
       if (response.status === 304) {
         const cacheKey = 'radar_animation_frames';
         const cached = this.getCachedData(cacheKey, 5);
-        if (cached) {
+        if (cached && Array.isArray(cached)) {
           return cached;
         }
+        // If cached data is invalid, fall through to fetch fresh data
       }
 
       if (!response.ok) {
@@ -464,7 +465,15 @@ class WeatherService {
         this.radarETag = etag;
       }
 
-      const frames = await response.json();
+      const data = await response.json();
+      
+      // Ensure we always return an array, even if API returns unexpected format
+      const frames = Array.isArray(data) ? data : (data?.frames || []);
+      
+      if (!Array.isArray(frames)) {
+        console.error('[WeatherService] Invalid frames format:', data);
+        return [];
+      }
       
       const cacheKey = 'radar_animation_frames';
       this.setCachedData(cacheKey, frames, 5);

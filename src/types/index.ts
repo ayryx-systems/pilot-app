@@ -136,7 +136,6 @@ export interface GroundTrack {
     lat: number;
     lon: number;
     altitude?: number;
-    timestamp: string;
   }>;
   runway?: string;
   status: 'ACTIVE' | 'COMPLETED' | 'EMERGENCY';

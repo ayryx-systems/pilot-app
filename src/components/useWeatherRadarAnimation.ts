@@ -40,6 +40,8 @@ export function useWeatherRadarAnimation({
   const radarFramesRef = useRef<WeatherRadarFrame[]>([]);
   const fadeAnimationFrameRef = useRef<number | null>(null);
   const frameIndexRef = useRef<number>(0);
+  const previousAirportCodeRef = useRef<string | null | undefined>(undefined);
+  const [layerGroupReady, setLayerGroupReady] = useState(false);
 
   const startAnimation = useCallback(() => {
     if (radarOverlaysRef.current.length <= 1) return;
@@ -150,7 +152,86 @@ export function useWeatherRadarAnimation({
   }, [displayOptions.showWeatherRadar, airportCode, baseline]);
 
   useEffect(() => {
-    if (!mapInstance || !layerGroupsRef.current?.weather) return;
+    const airportChanged = previousAirportCodeRef.current !== undefined && 
+                          previousAirportCodeRef.current !== airportCode;
+    
+    if (airportChanged) {
+      if (radarOverlaysRef.current.length > 0 && layerGroupsRef.current?.weather) {
+        radarOverlaysRef.current.forEach(overlay => {
+          try {
+            if (layerGroupsRef.current?.weather) {
+              layerGroupsRef.current.weather.removeLayer(overlay);
+            }
+            if (mapInstance && mapInstance.hasLayer(overlay)) {
+              mapInstance.removeLayer(overlay);
+            }
+          } catch {
+          }
+        });
+        radarOverlaysRef.current = [];
+      }
+      
+      radarBlobUrlsRef.current.forEach(url => {
+        try {
+          URL.revokeObjectURL(url);
+        } catch {
+        }
+      });
+      radarBlobUrlsRef.current = [];
+
+      if (radarTimeIndicatorRef.current && mapRef.current) {
+        radarTimeIndicatorRef.current.remove();
+        radarTimeIndicatorRef.current = null;
+      }
+
+      if (radarAnimationIntervalRef.current) {
+        clearTimeout(radarAnimationIntervalRef.current as any);
+        clearInterval(radarAnimationIntervalRef.current as any);
+        radarAnimationIntervalRef.current = null;
+      }
+      if (fadeAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(fadeAnimationFrameRef.current);
+        fadeAnimationFrameRef.current = null;
+      }
+
+      setRadarFrames([]);
+      radarFramesRef.current = [];
+      frameIndexRef.current = 0;
+      setCurrentRadarFrameIndex(0);
+    }
+    
+    previousAirportCodeRef.current = airportCode;
+
+    if (!mapInstance || !layerGroupsRef.current?.weather) {
+      if (layerGroupReady) {
+        setLayerGroupReady(false);
+      }
+      if (mapInstance && displayOptions.showWeatherRadar) {
+        let retryCount = 0;
+        const maxRetries = 20;
+        const retryInterval = 100;
+        
+        const retryCheck = setInterval(() => {
+          retryCount++;
+          if (layerGroupsRef.current?.weather) {
+            clearInterval(retryCheck);
+            setLayerGroupReady(true);
+          } else if (retryCount >= maxRetries) {
+            clearInterval(retryCheck);
+            console.warn('[WeatherRadarAnimation] Layer group not ready after retries');
+          }
+        }, retryInterval);
+        
+        return () => {
+          clearInterval(retryCheck);
+        };
+      }
+      return;
+    }
+
+    if (!layerGroupReady) {
+      setLayerGroupReady(true);
+    }
 
     const updateWeatherRadar = async () => {
       if (!displayOptions.showWeatherRadar) {
@@ -208,6 +289,11 @@ export function useWeatherRadarAnimation({
       if (radarLayer) {
         try {
           const frames = await weatherService.getWeatherRadarAnimation();
+
+          if (!Array.isArray(frames)) {
+            console.error('[WeatherRadarAnimation] Invalid frames format:', frames);
+            return;
+          }
 
           if (frames.length === 0) {
             console.warn('[WeatherRadarAnimation] No radar animation frames available');
@@ -385,9 +471,7 @@ export function useWeatherRadarAnimation({
 
     return () => {
       if (radarAnimationIntervalRef.current) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clearTimeout(radarAnimationIntervalRef.current as any);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         clearInterval(radarAnimationIntervalRef.current as any);
         radarAnimationIntervalRef.current = null;
       }
@@ -395,25 +479,8 @@ export function useWeatherRadarAnimation({
         cancelAnimationFrame(fadeAnimationFrameRef.current);
         fadeAnimationFrameRef.current = null;
       }
-      // Clean up time indicator when map instance changes
-      if (radarTimeIndicatorRef.current) {
-        try {
-          radarTimeIndicatorRef.current.remove();
-        } catch {
-          // Element already removed, ignore
-        }
-        radarTimeIndicatorRef.current = null;
-      }
-      radarBlobUrlsRef.current.forEach(url => {
-        try {
-          URL.revokeObjectURL(url);
-        } catch {
-          // Ignore
-        }
-      });
-      radarBlobUrlsRef.current = [];
     };
-  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline, layerGroupsRef, mapRef, setActiveWeatherLayers, startAnimation]);
+  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline, layerGroupsRef, mapRef, setActiveWeatherLayers, startAnimation, layerGroupReady]);
 
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;
@@ -428,7 +495,7 @@ export function useWeatherRadarAnimation({
 
         const frames = await weatherService.getWeatherRadarAnimation();
 
-        if (frames.length > 0) {
+        if (Array.isArray(frames) && frames.length > 0) {
           const existingTimestamps = radarFramesRef.current.map(f => f.timestamp).sort();
           const newTimestamps = frames.map(f => f.timestamp).sort();
           
