@@ -665,7 +665,8 @@ export function PilotDashboard() {
             {/* Scrollable Content Area */}
             <div 
               ref={scrollContainerRef} 
-              className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3"
+              className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 pb-20 md:pb-24"
+              style={{ scrollPaddingBottom: '80px' }}
               onScroll={(e) => {
                 const target = e.currentTarget;
                 if (!isRestoringRef.current) {
