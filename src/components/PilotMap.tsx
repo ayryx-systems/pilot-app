@@ -932,15 +932,18 @@ export function PilotMap({
             color = rgbaToHex(rgbaColor);
           }
 
-          // Calculate opacity based on track age (fade out over 30 minutes)
+          // Calculate opacity based on track age (fade from 100% to 5% over 30 minutes)
           // Selected tracks always have full opacity
-          let opacity = isSelected ? 1.0 : 0.8; // Default opacity
-          if (!isSelected && trackAge > 20) {
-            // Start fading at 20 minutes, completely transparent at 30 minutes
-            const fadeStart = 20; // minutes
-            const fadeEnd = 30; // minutes
-            const fadeProgress = Math.min((trackAge - fadeStart) / (fadeEnd - fadeStart), 1);
-            opacity = 0.8 * (1 - fadeProgress); // Fade from 0.8 to 0
+          let opacity: number;
+          if (isSelected) {
+            opacity = 1.0; // Selected tracks always at full opacity
+          } else {
+            // Linear gradient: 100% opacity at 0 minutes, 5% opacity at 30 minutes
+            const maxAge = 30; // minutes
+            const minOpacity = 0.05; // 5% minimum opacity
+            const maxOpacity = 1.0; // 100% maximum opacity
+            const ageRatio = Math.min(trackAge / maxAge, 1.0); // Clamp to 0-1
+            opacity = maxOpacity - (maxOpacity - minOpacity) * ageRatio;
           }
 
           // Create invisible thick line for easier clicking
