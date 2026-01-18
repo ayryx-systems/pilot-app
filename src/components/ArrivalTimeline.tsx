@@ -328,7 +328,7 @@ export function ArrivalTimeline({
               display: true,
               content: `${stats.p10.toFixed(0)}m`,
               position: 'end',
-              backgroundColor: 'rgba(34, 197, 94, 1)',
+              backgroundColor: 'rgba(22, 163, 74, 1)',
               color: 'white',
               font: { size: 11, weight: 'bold' },
               padding: 3,

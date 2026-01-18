@@ -690,10 +690,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         display: true,
         content: `NOW: ${Math.round(nowValue)}`,
         position: 'end',
-        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        backgroundColor: 'rgba(239, 68, 68, 1)',
         color: 'white',
-        font: { size: 9, weight: 'bold' },
-        padding: 2,
+        font: { size: 12, weight: 'bold' },
+        padding: 4,
       },
     };
   }
@@ -711,10 +711,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         display: true,
         content: `ETA: ${Math.round(etaValue)}`,
         position: 'end',
-        backgroundColor: 'rgba(59, 130, 246, 0.9)',
+        backgroundColor: 'rgba(59, 130, 246, 1)',
         color: 'white',
-        font: { size: 9, weight: 'bold' },
-        padding: 2,
+        font: { size: 12, weight: 'bold' },
+        padding: 4,
       },
     };
   }
