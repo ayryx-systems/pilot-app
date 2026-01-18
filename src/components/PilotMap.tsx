@@ -5,6 +5,7 @@ import * as L from 'leaflet';
 import { Airport, AirportOverview, PiRep, GroundTrack, Arrival, MapDisplayOptions, WeatherLayer, AirportOSMFeatures, BaselineData } from '@/types';
 import { AIRPORTS } from '@/constants/airports';
 import { weatherService } from '@/services/weatherService';
+import { computeFlightCategory } from '@/utils/weatherCategory';
 import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
@@ -2080,14 +2081,70 @@ export function PilotMap({
         try {
           const metars = await weatherService.getMetars();
           
-          metars.forEach((metar: { lat?: number; lon?: number; flightCategory?: string }) => {
+          // Filter to show only most recent METAR per station
+          const metarsByStation = new Map<string, typeof metars[0]>();
+          metars.forEach((metar) => {
+            const stationId = metar.icaoId || metar.stationId;
+            if (!stationId) return;
+            
+            const existing = metarsByStation.get(stationId);
+            if (!existing || !metar.observationTime) {
+              metarsByStation.set(stationId, metar);
+            } else if (metar.observationTime && existing.observationTime) {
+              const existingTime = new Date(existing.observationTime).getTime();
+              const newTime = new Date(metar.observationTime).getTime();
+              if (newTime > existingTime) {
+                metarsByStation.set(stationId, metar);
+              }
+            }
+          });
+          
+          const uniqueMetars = Array.from(metarsByStation.values());
+          
+          uniqueMetars.forEach((metar: { lat?: number; lon?: number; flightCategory?: string; icaoId?: string; stationId?: string }) => {
             if (!metar.lat || !metar.lon || isNaN(metar.lat) || isNaN(metar.lon)) return;
+            
+            const stationId = metar.icaoId || metar.stationId;
+            const isSelectedAirport = selectedAirport && stationId && (
+              stationId.toUpperCase() === selectedAirport.toUpperCase() ||
+              stationId.toUpperCase().replace('K', '') === selectedAirport.toUpperCase().replace('K', '')
+            );
+            
+            // Use airport overview weather for selected airport if available
+            let displayMetar = metar;
+            if (isSelectedAirport && airportData?.weather) {
+              const weather = airportData.weather;
+              const visSM = typeof weather.visibility === 'number' ? weather.visibility : 
+                           typeof weather.visibility === 'string' ? parseFloat(weather.visibility) : null;
+              const visKM = visSM !== null ? visSM * 1.60934 : null;
+              const flightCategory = computeFlightCategory(visKM, weather.ceiling || weather.cloudbase);
+              
+              // Convert airportData.weather to METAR format for popup
+              displayMetar = {
+                ...metar,
+                rawOb: weather.metar || '',
+                observationTime: weather.timestamp,
+                flightCategory: flightCategory,
+                visibility: visSM,
+                windDir: weather.wind?.direction ?? null,
+                windSpeed: weather.wind?.speed ?? null,
+                windGust: weather.wind?.gust ?? null,
+                temperature: weather.temperature ? parseFloat(weather.temperature) : null,
+                dewpoint: null, // Not in airport overview
+                altimeter: null, // Not in airport overview
+                clouds: weather.clouds?.map(c => ({
+                  cover: c.coverage,
+                  base: c.altitude
+                })) || [],
+                wxString: null // Not directly available
+              };
+            }
 
             // Determine color based on flight category
             let color = '#6b7280'; // Gray for unknown
             const borderColor = '#ffffff';
             
-            switch (metar.flightCategory) {
+            switch (displayMetar.flightCategory) {
               case 'LIFR':
                 color = '#7c2d12'; // Dark red/brown
                 break;
@@ -2150,13 +2207,13 @@ export function PilotMap({
                 color: white;
                 line-height: 1;
                 text-align: center;
-              ">${(metar.icaoId || metar.stationId || '?').substring(0, 4)}</div>`,
+              ">${(displayMetar.icaoId || displayMetar.stationId || '?').substring(0, 4)}</div>`,
               className: 'custom-metar-marker',
               iconSize: [28, 28],
               iconAnchor: [14, 14]
             });
 
-            const marker = L.marker([metar.lat, metar.lon], {
+            const marker = L.marker([displayMetar.lat || metar.lat, displayMetar.lon || metar.lon], {
               icon: metarIcon,
               pane: 'markerPane'
             });
@@ -2164,29 +2221,29 @@ export function PilotMap({
             marker.setZIndexOffset(1900); // Below PIREPs but above other weather
 
             // Build popup content
-            const obsTime = metar.observationTime;
+            const obsTime = displayMetar.observationTime;
             const zuluTime = obsTime ? formatZulu(obsTime) : 'Unknown';
             const relativeTime = obsTime ? formatRelativeTime(obsTime) : 'Unknown';
 
-            const windStr = metar.windDir !== null && metar.windSpeed !== null
-              ? `${metar.windDir}° at ${metar.windSpeed}${metar.windGust ? `G${metar.windGust}` : ''}kt`
+            const windStr = displayMetar.windDir !== null && displayMetar.windSpeed !== null
+              ? `${displayMetar.windDir}° at ${displayMetar.windSpeed}${displayMetar.windGust ? `G${displayMetar.windGust}` : ''}kt`
               : 'Calm';
 
-            const tempStr = metar.temperature !== null
-              ? `${metar.temperature}°C${metar.dewpoint !== null ? `/${metar.dewpoint}°C` : ''}`
+            const tempStr = displayMetar.temperature !== null
+              ? `${displayMetar.temperature}°C${displayMetar.dewpoint !== null ? `/${displayMetar.dewpoint}°C` : ''}`
               : 'N/A';
 
-            const visStr = metar.visibility !== null
-              ? `${metar.visibility} SM`
+            const visStr = displayMetar.visibility !== null
+              ? `${displayMetar.visibility} SM`
               : 'N/A';
 
-            const altStr = metar.altimeter !== null
-              ? `${metar.altimeter.toFixed(2)} inHg`
+            const altStr = displayMetar.altimeter !== null
+              ? `${displayMetar.altimeter.toFixed(2)} inHg`
               : 'N/A';
 
-            const cloudsStr = metar.clouds && Array.isArray(metar.clouds) && metar.clouds.length > 0
+            const cloudsStr = displayMetar.clouds && Array.isArray(displayMetar.clouds) && displayMetar.clouds.length > 0
               // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              ? metar.clouds.map((c: any) => {
+              ? displayMetar.clouds.map((c: any) => {
                   if (c.cover === 'CLR' || c.cover === 'SKC') return 'Clear';
                   if (c.cover === 'FEW') return `Few ${c.base ? c.base + 'ft' : ''}`;
                   if (c.cover === 'SCT') return `Scattered ${c.base ? c.base + 'ft' : ''}`;
@@ -2199,11 +2256,11 @@ export function PilotMap({
             const popupContent = `
               <div style="min-width: 250px;">
                 <div style="margin-bottom: 8px;">
-                  <h4 style="margin: 0; color: ${color};"><strong>METAR - ${metar.icaoId || metar.stationId}</strong></h4>
-                  <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Flight Category: <strong style="color: ${color};">${metar.flightCategory || 'UNKNOWN'}</strong></div>
+                  <h4 style="margin: 0; color: ${color};"><strong>METAR - ${displayMetar.icaoId || displayMetar.stationId}</strong></h4>
+                  <div style="font-size: 11px; color: #9ca3af; margin-top: 2px;">Flight Category: <strong style="color: ${color};">${displayMetar.flightCategory || 'UNKNOWN'}</strong></div>
                 </div>
                 <p style="margin: 4px 0; font-size: 12px; color: #e5e7eb;">
-                  ${zuluTime} (${relativeTime})
+                  <strong>${relativeTime}</strong> • ${zuluTime}
                 </p>
                 <div style="margin: 8px 0; font-size: 12px; color: #f3f4f6;">
                   <div><strong>Wind:</strong> ${windStr}</div>
@@ -2211,9 +2268,9 @@ export function PilotMap({
                   <div><strong>Visibility:</strong> ${visStr}</div>
                   <div><strong>Altimeter:</strong> ${altStr}</div>
                   <div><strong>Clouds:</strong> ${cloudsStr}</div>
-                  ${metar.wxString ? `<div><strong>Weather:</strong> ${metar.wxString}</div>` : ''}
+                  ${displayMetar.wxString ? `<div><strong>Weather:</strong> ${displayMetar.wxString}</div>` : ''}
                 </div>
-                ${metar.rawOb ? `<p style="margin: 8px 0; font-size: 10px; font-style: italic; color: #d1d5db; font-family: monospace; word-break: break-all;">${metar.rawOb}</p>` : ''}
+                ${displayMetar.rawOb ? `<p style="margin: 8px 0; font-size: 10px; font-style: italic; color: #d1d5db; font-family: monospace; word-break: break-all;">${displayMetar.rawOb}</p>` : ''}
               </div>
             `;
 
@@ -2225,7 +2282,7 @@ export function PilotMap({
             });
             
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (marker as any)._metarId = metar.id;
+            (marker as any)._metarId = displayMetar.id || metar.id;
             layerGroupsRef.current.weather.addLayer(marker);
           });
 
@@ -2247,7 +2304,7 @@ export function PilotMap({
     return () => {
       mapInstance.off('zoomend', handleZoomEnd);
     };
-  }, [mapInstance, displayOptions.showMetars]);
+  }, [mapInstance, displayOptions.showMetars, selectedAirport, airportData]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const renderRunways = (mapInstance: L.Map, osmData: any, currentZoom: number, Leaflet: typeof L) => {

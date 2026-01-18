@@ -473,6 +473,18 @@ export function usePilotData() {
     return () => clearInterval(interval);
   }, [testConnection]);
 
+  // Periodic weather refresh (every 3 minutes to keep METAR/TAF current)
+  useEffect(() => {
+    if (!state.connectionStatus.connected || !state.selectedAirport) return;
+    
+    const interval = setInterval(() => {
+      // Refresh weather data for selected airport
+      loadAirportData(state.selectedAirport, { skipBaseline: true });
+    }, 3 * 60 * 1000); // Every 3 minutes
+    
+    return () => clearInterval(interval);
+  }, [state.connectionStatus.connected, state.selectedAirport, loadAirportData]);
+
   // Removed separate forecast polling - actualCounts now come with arrivals endpoint
 
   return {

@@ -401,11 +401,32 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     return weather;
   };
 
+  // Calculate relative time for METAR
+  const formatRelativeTime = (dateString: string | null | undefined): string => {
+    if (!dateString) return 'Unknown';
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return 'Unknown';
+    
+    const now = new Date();
+    const diffMs = now.getTime() - date.getTime();
+    const diffMinutes = Math.floor(diffMs / 60000);
+    
+    if (diffMinutes < 0) return 'Future';
+    if (diffMinutes < 60) return `${diffMinutes} min ago`;
+    
+    const hours = Math.floor(diffMinutes / 60);
+    const minutes = diffMinutes % 60;
+    if (minutes === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
+  };
+
+  const metarAge = weather?.timestamp ? formatRelativeTime(weather.timestamp) : 'Unknown';
+
   return (
     <div className="space-y-4">
       {metarRaw && (
         <div className="text-xs font-mono text-gray-400 bg-gray-900 p-2 rounded">
-          <div className="text-gray-500 mb-1">METAR (CURRENT)</div>
+          <div className="text-gray-500 mb-1">METAR ({metarAge})</div>
           {metarRaw}
         </div>
       )}
