@@ -170,6 +170,14 @@ export function PilotDashboard() {
     }
   }, [tafCategory, isManualWeather]);
 
+  useEffect(() => {
+    const isNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
+    if (isNow && isManualWeather) {
+      setIsManualWeather(false);
+      setWeatherCategory(tafCategory);
+    }
+  }, [selectedTime, isManualWeather, tafCategory]);
+
   const fetchArrivalSituation = useCallback(async (
     airportId: string, 
     eta: Date, 
