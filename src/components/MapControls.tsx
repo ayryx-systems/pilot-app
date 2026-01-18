@@ -64,7 +64,6 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
     { key: 'showWeatherPireps' as const, label: 'PIREPs (Weather)', icon: '📢' },
     { key: 'showMetars' as const, label: 'METAR Stations', icon: '🌡️' },
     { key: 'showGroundTracks' as const, label: 'Approach Tracks', icon: '🛤️' },
-    { key: 'showOSMFeatures' as const, label: 'Airport Features (Runways, Taxiways, etc.)', icon: '🏢' },
     { key: 'showWeatherRadar' as const, label: 'Weather Radar', icon: '🌦️' },
     { key: 'showSigmetAirmet' as const, label: 'SIGMETs/AIRMETs', icon: '📋' },
     { key: 'showWindsAloft' as const, label: 'Winds Aloft', icon: '💨' },
@@ -122,7 +121,6 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
                     <p><strong>PIREPs (Weather):</strong> Official weather pilot reports</p>
                     <p><strong>Approach Tracks:</strong> Arrival paths from 50nm for the last 30 minutes</p>
                     <p><strong>Weather Radar:</strong> Live precipitation and storm data</p>
-                    <p><strong>Airport Features:</strong> Runways, taxiways, and airport structures</p>
                   </div>
                   <p className="text-blue-300">
                     💡 Your layer preferences are saved automatically.
