@@ -199,12 +199,10 @@ function getHoursFromNow(timeSlot: string, nowLocal: Date, airportCode: string, 
   return hoursFromNow;
 }
 
-function formatRelativeTime(hoursFromNow: number): string {
-  if (Math.abs(hoursFromNow) < 0.1) return 'NOW';
-  if (hoursFromNow < 0) {
-    return `${Math.abs(Math.round(hoursFromNow * 4) / 4)}h ago`;
-  }
-  return `+${Math.round(hoursFromNow * 4) / 4}h`;
+function formatLocalTime(timeSlot: string, dateStr: string): string {
+  // timeSlot is in HH:MM format, dateStr is YYYY-MM-DD
+  // Return just the time portion for display
+  return timeSlot;
 }
 
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
@@ -341,7 +339,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         relativeTimeSlots.push({
           hoursFromNow,
           timeSlot: ts,
-          label: formatRelativeTime(hoursFromNow),
+          label: formatLocalTime(ts, todayDateStr),
           dateStr: todayDateStr,
         });
       }
@@ -358,7 +356,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
             relativeTimeSlots.push({
               hoursFromNow,
               timeSlot: ts,
-              label: formatRelativeTime(hoursFromNow),
+              label: formatLocalTime(ts, selectedDateStr),
               dateStr: selectedDateStr,
             });
           }
@@ -777,7 +775,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       x: {
         title: {
           display: true,
-          text: 'Hours from NOW',
+          text: 'Time (Local)',
           color: '#94a3b8',
           font: {
             size: 10
@@ -788,8 +786,8 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
           font: {
             size: 9
           },
-          maxRotation: 0,
-          minRotation: 0,
+          maxRotation: 45,
+          minRotation: 45,
         },
         grid: {
           color: 'rgba(148, 163, 184, 0.1)'

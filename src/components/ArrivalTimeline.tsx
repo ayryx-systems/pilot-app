@@ -285,16 +285,16 @@ export function ArrivalTimeline({
         type: 'line',
         xMin: hoursAhead,
         xMax: hoursAhead,
-        borderColor: 'rgba(59, 130, 246, 0.6)',
+        borderColor: 'rgba(59, 130, 246, 0.8)',
         borderWidth: 2,
         label: {
           display: true,
           content: 'ETA',
           position: 'end',
-          backgroundColor: 'rgba(59, 130, 246, 0.9)',
+          backgroundColor: 'rgba(59, 130, 246, 1)',
           color: 'white',
-          font: { size: 10, weight: 'bold' },
-          padding: 3,
+          font: { size: 12, weight: 'bold' },
+          padding: 4,
         },
       };
 
@@ -322,16 +322,16 @@ export function ArrivalTimeline({
             xMax: etaX + markerWidth + 0.05,
             yMin: stats.p10,
             yMax: stats.p10,
-            borderColor: 'rgba(34, 197, 94, 0.9)',
+            borderColor: 'rgba(34, 197, 94, 1)',
             borderWidth: 3,
             label: {
               display: true,
               content: `${stats.p10.toFixed(0)}m`,
               position: 'end',
-              backgroundColor: 'rgba(34, 197, 94, 0.9)',
+              backgroundColor: 'rgba(34, 197, 94, 1)',
               color: 'white',
-              font: { size: 9, weight: 'bold' },
-              padding: 2,
+              font: { size: 11, weight: 'bold' },
+              padding: 3,
             },
           };
 
@@ -341,16 +341,16 @@ export function ArrivalTimeline({
             xMax: etaX + markerWidth + 0.05,
             yMin: stats.p90,
             yMax: stats.p90,
-            borderColor: 'rgba(249, 115, 22, 0.9)',
+            borderColor: 'rgba(249, 115, 22, 1)',
             borderWidth: 3,
             label: {
               display: true,
               content: `${stats.p90.toFixed(0)}m`,
               position: 'end',
-              backgroundColor: 'rgba(249, 115, 22, 0.9)',
+              backgroundColor: 'rgba(249, 115, 22, 1)',
               color: 'white',
-              font: { size: 9, weight: 'bold' },
-              padding: 2,
+              font: { size: 11, weight: 'bold' },
+              padding: 3,
             },
           };
         }
@@ -362,16 +362,16 @@ export function ArrivalTimeline({
             xMax: etaX + markerWidth + 0.08,
             yMin: stats.p50,
             yMax: stats.p50,
-            borderColor: 'rgba(255, 255, 255, 0.95)',
+            borderColor: 'rgba(255, 255, 255, 1)',
             borderWidth: 4,
             label: {
               display: true,
               content: `Typical: ${stats.p50.toFixed(0)}m`,
               position: 'start',
-              backgroundColor: 'rgba(55, 65, 81, 0.95)',
+              backgroundColor: 'rgba(31, 41, 55, 1)',
               color: 'white',
-              font: { size: 10, weight: 'bold' },
-              padding: 3,
+              font: { size: 12, weight: 'bold' },
+              padding: 4,
             },
           };
         }
@@ -399,7 +399,7 @@ export function ArrivalTimeline({
           max: chartData?.timeRange.max ?? 1,
           title: {
             display: true,
-            text: 'Hours from Now',
+            text: 'Time (Local)',
             font: { size: 10 },
             color: '#94a3b8',
           },
@@ -411,10 +411,25 @@ export function ArrivalTimeline({
             font: { size: 9 },
             stepSize: 2,
             callback: (value) => {
-              const v = Math.round(Number(value) * 10) / 10;
+              const v = Number(value);
               if (Math.abs(v) < 0.01) return 'Now';
-              if (v < 0) return `${Math.abs(v)}h ago`;
-              return `+${v}h`;
+              
+              // Convert hours from now to local time
+              const now = new Date();
+              const nowLocal = utcToAirportLocal(now, airportCode, baseline);
+              const nowHours = nowLocal.getUTCHours();
+              const nowMinutes = nowLocal.getUTCMinutes();
+              
+              // Calculate target time
+              const targetHours = nowHours + v;
+              const targetMinutes = nowMinutes;
+              
+              // Handle day wrap-around
+              let displayHours = Math.floor(targetHours);
+              if (displayHours < 0) displayHours += 24;
+              if (displayHours >= 24) displayHours -= 24;
+              
+              return `${String(displayHours).padStart(2, '0')}:${String(Math.floor(targetMinutes)).padStart(2, '0')}`;
             },
           },
         },
@@ -461,9 +476,9 @@ export function ArrivalTimeline({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Duration Timeline</h4>
+        <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Durations</h4>
         <HelpButton
-          title="Arrival Duration Timeline"
+          title="Arrival Durations"
           size="sm"
           content={
             <div className="space-y-2">
@@ -474,7 +489,7 @@ export function ArrivalTimeline({
                 <strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown
               </p>
               <p>
-                <strong>Horizontal Axis:</strong> Time of landing (hours from now)
+                <strong>Horizontal Axis:</strong> Time of landing (local time)
               </p>
               <p>
                 <strong>Colored Dots:</strong> Each aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical arrivals
@@ -541,12 +556,12 @@ export function ArrivalTimeline({
       </div>
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
-        <div className="mt-1.5 flex items-center justify-center gap-4 text-[11px]">
-          <span className="text-gray-500">Best <span className="font-semibold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-500">Typical <span className="font-semibold text-gray-200">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-500">Extended <span className="font-semibold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-600">(10% flights)</span></span>
-          <span className="text-gray-500">Extreme <span className="font-semibold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-600">(5% flights)</span></span>
-          <span className="text-gray-500">Baseline <span className="font-semibold text-gray-400">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
+        <div className="mt-1.5 flex items-center justify-center gap-4 text-[13px]">
+          <span className="text-gray-400">Best <span className="font-bold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-400">Typical <span className="font-bold text-white">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-400">Extended <span className="font-bold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-500">(10% flights)</span></span>
+          <span className="text-gray-400">Extreme <span className="font-bold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-500">(5% flights)</span></span>
+          <span className="text-gray-400">Baseline <span className="font-bold text-gray-300">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
         </div>
       )}
       
