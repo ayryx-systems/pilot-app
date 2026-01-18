@@ -12,9 +12,10 @@ import {
   Legend,
   Filler,
 } from 'chart.js';
+import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { BaselineData, ArrivalForecast } from '@/types';
-import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason, getCurrentUTCTime } from '@/utils/airportTime';
 import { HelpButton } from './HelpButton';
 
 ChartJS.register(
@@ -25,7 +26,8 @@ ChartJS.register(
   Title,
   Tooltip,
   Legend,
-  Filler
+  Filler,
+  annotationPlugin
 );
 
 interface TimeBasedGraphsProps {
@@ -362,6 +364,32 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       });
     }
 
+    // Calculate NOW time slot index
+    const nowUTC = getCurrentUTCTime();
+    const nowTimeSlot = getTimeSlotKey(nowUTC, airportCode, baseline);
+    const nowTimeSlotIndex = alignment.alignedTimeSlots.indexOf(nowTimeSlot);
+    
+    // Calculate expected arrivals for NOW and ETA (FAA forecast or baseline)
+    const getExpectedArrivals = (timeSlotIdx: number): number | null => {
+      if (timeSlotIdx < 0 || timeSlotIdx >= alignment.alignedTimeSlots.length) return null;
+      
+      // Try FAA forecast first
+      if (alignedForecastCounts.length > 0 && alignedForecastCounts[timeSlotIdx] !== null) {
+        return alignedForecastCounts[timeSlotIdx];
+      }
+      
+      // Fall back to baseline
+      const dayIdx = alignment.dayIndices[timeSlotIdx];
+      if (dayIdx !== undefined && dayIdx !== null && dayCounts[dayIdx] !== null) {
+        return dayCounts[dayIdx];
+      }
+      
+      return null;
+    };
+    
+    const nowExpectedArrivals = nowTimeSlotIndex >= 0 ? getExpectedArrivals(nowTimeSlotIndex) : null;
+    const etaExpectedArrivals = currentTimeSlotIndex >= 0 ? getExpectedArrivals(currentTimeSlotIndex) : null;
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const datasets: any[] = [
       {
@@ -376,22 +404,22 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointRadius: (ctx: any) => {
           if (alignedDayCounts[ctx.dataIndex] === null) return 0;
-          return ctx.dataIndex === currentTimeSlotIndex ? 8 : 2;
+          return 2;
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointBackgroundColor: (ctx: any) => {
           if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-          return ctx.dataIndex === currentTimeSlotIndex ? '#ffffff' : '#3b82f6';
+          return '#3b82f6';
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointBorderColor: (ctx: any) => {
           if (alignedDayCounts[ctx.dataIndex] === null) return 'transparent';
-          return ctx.dataIndex === currentTimeSlotIndex ? '#60a5fa' : '#3b82f6';
+          return '#3b82f6';
         },
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointBorderWidth: (ctx: any) => {
           if (alignedDayCounts[ctx.dataIndex] === null) return 0;
-          return ctx.dataIndex === currentTimeSlotIndex ? 3 : 1;
+          return 1;
         },
         spanGaps: true
       },
@@ -493,6 +521,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       seasonalIndices: alignment.seasonalIndices,
       title: `Traffic Forecast - ${dayLabel}`,
       currentTimeSlotIndex,
+      nowTimeSlotIndex,
+      nowExpectedArrivals,
+      etaExpectedArrivals,
       alignedTimeSlots: alignment.alignedTimeSlots,
       arrivalForecastRef: arrivalForecast, // Store reference to detect changes
     };
@@ -538,6 +569,51 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     );
   }
 
+  // Build annotations for NOW and ETA lines
+  const annotations: Record<string, unknown> = {};
+  
+  if (chartData.nowTimeSlotIndex >= 0 && chartData.nowExpectedArrivals !== null) {
+    const nowValue = chartData.nowExpectedArrivals;
+    annotations['nowLine'] = {
+      type: 'line',
+      xMin: chartData.nowTimeSlotIndex,
+      xMax: chartData.nowTimeSlotIndex,
+      borderColor: 'rgba(239, 68, 68, 0.8)',
+      borderWidth: 2,
+      borderDash: [6, 3],
+      label: {
+        display: true,
+        content: `NOW: ${Math.round(nowValue)}`,
+        position: 'end',
+        backgroundColor: 'rgba(239, 68, 68, 0.9)',
+        color: 'white',
+        font: { size: 9, weight: 'bold' },
+        padding: 2,
+      },
+    };
+  }
+  
+  const isNow = Math.abs(selectedTime.getTime() - getCurrentUTCTime().getTime()) <= 60000;
+  if (!isNow && chartData.currentTimeSlotIndex >= 0 && chartData.etaExpectedArrivals !== null) {
+    const etaValue = chartData.etaExpectedArrivals;
+    annotations['etaLine'] = {
+      type: 'line',
+      xMin: chartData.currentTimeSlotIndex,
+      xMax: chartData.currentTimeSlotIndex,
+      borderColor: 'rgba(59, 130, 246, 0.8)',
+      borderWidth: 2,
+      label: {
+        display: true,
+        content: `ETA: ${Math.round(etaValue)}`,
+        position: 'end',
+        backgroundColor: 'rgba(59, 130, 246, 0.9)',
+        color: 'white',
+        font: { size: 9, weight: 'bold' },
+        padding: 2,
+      },
+    };
+  }
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -564,7 +640,11 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       },
       tooltip: {
         enabled: false
-      }
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      annotation: {
+        annotations: annotations as any,
+      },
     },
     scales: {
       y: {
@@ -633,7 +713,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
                 <strong className="text-orange-400">Orange Line:</strong> FAA arrival forecast (when available)
               </p>
               <p>
-                <strong>White Dot:</strong> Your selected arrival time
+                <strong className="text-red-400">Red Bar:</strong> Expected arrivals NOW (FAA forecast or baseline)
+              </p>
+              <p>
+                <strong className="text-blue-400">Blue Bar:</strong> Expected arrivals at your selected ETA (FAA forecast or baseline)
               </p>
               <p className="text-xs text-gray-400">
                 Larger sample sizes mean more reliable data.
