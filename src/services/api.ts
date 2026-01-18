@@ -12,6 +12,8 @@ import {
   BaselineResponse,
   ArrivalForecastResponse,
   ArrivalSituationResponse,
+  FeedbackSubmission,
+  FeedbackResponse,
 } from '@/types';
 import { demoService } from './demoService';
 import { getApiBaseUrl } from '@/lib/apiConfig';
@@ -611,6 +613,34 @@ class PilotApiService {
       error: `Failed after ${maxRetries} attempts: ${lastError}`,
       retries: maxRetries
     };
+  }
+
+  /**
+   * Submit feedback from the pilot app
+   */
+  async submitFeedback(feedback: FeedbackSubmission): Promise<FeedbackResponse> {
+    try {
+      const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/feedback`, {
+        method: 'POST',
+        body: JSON.stringify(feedback),
+        cache: 'no-cache',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache'
+        }
+      }, 10000);
+
+      return await this.handleResponse<FeedbackResponse>(response);
+    } catch (error) {
+      console.error('Failed to submit feedback:', error instanceof Error ? error.message : 'Unknown error');
+
+      if (error instanceof ApiError) {
+        throw error;
+      }
+
+      throw new ApiError('Failed to submit feedback - please try again', 0);
+    }
   }
 }
 

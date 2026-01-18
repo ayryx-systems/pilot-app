@@ -655,3 +655,25 @@ export interface MatchedDaysResponse {
   error?: string;
   source: string;
 }
+
+export type FeedbackType = 'positive' | 'issue' | 'suggestion' | 'question';
+
+export interface FeedbackSubmission {
+  type: FeedbackType;
+  message: string;
+  appVersion?: string;
+  airportContext?: string;
+  metadata?: {
+    screenWidth?: number;
+    screenHeight?: number;
+  };
+}
+
+export interface FeedbackResponse {
+  success: boolean;
+  feedbackId?: string;
+  message?: string;
+  error?: string;
+  _requestId?: string;
+  _timestamp?: string;
+}

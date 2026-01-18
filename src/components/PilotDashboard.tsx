@@ -43,6 +43,7 @@ import { HelpButton } from './HelpButton';
 import { CollapsibleSection } from './CollapsibleSection';
 import { CollapsibleCard } from './CollapsibleCard';
 import { TrendingUp, Plane as PlaneIcon } from 'lucide-react';
+import { FeedbackButton } from './FeedbackButton';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -1133,6 +1134,10 @@ export function PilotDashboard() {
         </button>
       )}
 
+      <FeedbackButton 
+        appVersion="0.1.0"
+        airportContext={selectedAirport || undefined}
+      />
 
     </div>
   );
