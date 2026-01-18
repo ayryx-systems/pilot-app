@@ -372,13 +372,16 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     // Map data to relative time slots
     // For slots on different days, we need to look up the correct day-of-week baseline
     const alignedDayCounts = relativeTimeSlots.map((rt) => {
-      // Check if this slot is for today or selected date
       const slotDateStr = rt.dateStr || todayDateStr;
       const slotDayOfWeek = getDayOfWeekName(slotDateStr);
       
-      // Get baseline data for this day
-      let slotDayData = dayData;
-      if (slotDateStr !== selectedDateStr) {
+      // Get baseline data for this specific date
+      let slotDayData: Record<string, any> | undefined;
+      
+      // If this slot is for the selected date, use dayData (already loaded)
+      if (slotDateStr === selectedDateStr) {
+        slotDayData = dayData;
+      } else {
         // Different day - need to get its baseline
         const slotHolidayKey = getHolidayKey(slotDateStr);
         if (slotHolidayKey) {
@@ -411,9 +414,12 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     });
 
     // Find indices for NOW and ETA in relative time slots
+    // NOW is always for today's date
     const nowTimeSlot = getTimeSlotKey(nowUTC, airportCode, baseline);
-    const nowRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === nowTimeSlot);
-    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === timeSlot);
+    const nowRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === nowTimeSlot && rt.dateStr === todayDateStr);
+    
+    // ETA is for the selected date
+    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === timeSlot && rt.dateStr === selectedDateStr);
 
     // Align forecast data with relative time slots
     // Only include forecast slots for today (fixes bug where forecast appears on tomorrow)
@@ -430,48 +436,65 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       }
       
       const hasSlotDates = arrivalForecast.slotDates && arrivalForecast.slotDates.length === arrivalForecast.timeSlots.length;
-      const forecastMap = new Map<string, number>();
-      const actualsMap = new Map<string, number>();
+      // Use date-aware keys to prevent cross-day contamination
+      const forecastMap = new Map<string, number>(); // key: "dateStr|timeSlot"
+      const actualsMap = new Map<string, number>(); // key: "dateStr|timeSlot"
       
       arrivalForecast.timeSlots.forEach((slot, idx) => {
         const count = arrivalForecast.arrivalCounts[idx];
         if (count === undefined || count === null) return;
         
+        let slotDateStr: string | null = null;
         let shouldIncludeForecast = false;
         let shouldIncludeActuals = false;
         
         if (hasSlotDates) {
-          const slotDate = arrivalForecast.slotDates![idx];
+          slotDateStr = arrivalForecast.slotDates![idx];
           // Include forecast for today and selected date (for future ETAs)
-          shouldIncludeForecast = slotDate === todayDateStr || slotDate === selectedDateStr;
+          shouldIncludeForecast = slotDateStr === todayDateStr || slotDateStr === selectedDateStr;
           // Actuals only for today (fixes bug)
-          shouldIncludeActuals = slotDate === todayDateStr;
+          shouldIncludeActuals = slotDateStr === todayDateStr;
         } else {
           // Legacy: check if slot is within window
           const hoursFromNow = getHoursFromNow(slot, nowLocal, airportCode, baseline);
           shouldIncludeForecast = hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours;
           // For actuals, only include if it's in the past (today)
           shouldIncludeActuals = hoursFromNow < 0 && hoursFromNow >= windowStartHours;
+          // In legacy mode, assume slots are for today
+          slotDateStr = todayDateStr;
         }
         
-        if (shouldIncludeForecast) {
-          forecastMap.set(slot, count);
+        if (shouldIncludeForecast && slotDateStr) {
+          // Use date-aware key to prevent cross-day contamination
+          forecastMap.set(`${slotDateStr}|${slot}`, count);
         }
         
         // Recent actuals only for today (fixes bug where they appear on tomorrow)
-        if (shouldIncludeActuals && arrivalForecast.actualCounts && arrivalForecast.actualCounts[idx] !== null && arrivalForecast.actualCounts[idx] !== undefined) {
-          actualsMap.set(slot, arrivalForecast.actualCounts[idx]!);
+        if (shouldIncludeActuals && slotDateStr && arrivalForecast.actualCounts && arrivalForecast.actualCounts[idx] !== null && arrivalForecast.actualCounts[idx] !== undefined) {
+          actualsMap.set(`${slotDateStr}|${slot}`, arrivalForecast.actualCounts[idx]!);
         }
       });
       
+      // Map forecast and actuals to relative time slots
+      // Match by both timeSlot AND date to avoid cross-day contamination
       alignedForecastCounts = relativeTimeSlots.map(rt => {
-        const count = forecastMap.get(rt.timeSlot);
-        return count !== undefined ? count : null;
+        // For forecast, check if this slot matches today or selected date
+        if (rt.dateStr === todayDateStr || rt.dateStr === selectedDateStr) {
+          const key = `${rt.dateStr}|${rt.timeSlot}`;
+          const count = forecastMap.get(key);
+          return count !== undefined ? count : null;
+        }
+        return null;
       });
       
       alignedRecentActuals = relativeTimeSlots.map(rt => {
-        const count = actualsMap.get(rt.timeSlot);
-        return count !== undefined ? count : null;
+        // Actuals only for today's slots (fixes bug where they appear on tomorrow)
+        if (rt.dateStr === todayDateStr) {
+          const key = `${rt.dateStr}|${rt.timeSlot}`;
+          const count = actualsMap.get(key);
+          return count !== undefined ? count : null;
+        }
+        return null;
       });
     }
 
@@ -653,13 +676,10 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   }
 
   // Build annotations for NOW and ETA lines
-  // NOW line only shows for today (fixes bug where it appears on tomorrow)
+  // NOW line shows whenever NOW is in the visible window (not just when viewing today)
   const annotations: Record<string, unknown> = {};
-  const todayDateStr = getAirportLocalDateString(getCurrentUTCTime(), airportCode, baseline);
-  const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
-  const isViewingToday = todayDateStr === selectedDateStr;
   
-  if (isViewingToday && chartData.nowRelativeIndex >= 0 && chartData.nowExpectedArrivals !== null) {
+  if (chartData.nowRelativeIndex >= 0 && chartData.nowExpectedArrivals !== null) {
     const nowValue = chartData.nowExpectedArrivals;
     annotations['nowLine'] = {
       type: 'line',
