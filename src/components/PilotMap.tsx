@@ -2217,7 +2217,7 @@ export function PilotMap({
             // Create METAR station icon (square with station ID)
             const metarIcon = L.divIcon({
               html: `<div style="
-                width: 24px;
+                width: 36px;
                 height: 24px;
                 background: ${color};
                 border: 2px solid ${borderColor};
@@ -2226,15 +2226,16 @@ export function PilotMap({
                 display: flex;
                 align-items: center;
                 justify-content: center;
-                font-size: 9px;
+                font-size: 10px;
                 font-weight: bold;
                 color: white;
                 line-height: 1;
                 text-align: center;
+                padding: 0 2px;
               ">${(displayMetar.icaoId || displayMetar.stationId || '?').substring(0, 4)}</div>`,
               className: 'custom-metar-marker',
-              iconSize: [28, 28],
-              iconAnchor: [14, 14]
+              iconSize: [40, 28],
+              iconAnchor: [20, 14]
             });
 
             const marker = L.marker([displayMetar.lat || metar.lat, displayMetar.lon || metar.lon], {
