@@ -606,7 +606,10 @@ export interface MatchedDay {
 export interface ExampleDay {
   date: string;
   category: FlightCategory;
-  p50: number;
+  p10: number | null;
+  p50: number | null;
+  p90: number | null;
+  p95: number | null;
   arrivalCount: number;
   weather?: Record<number, FlightCategory>;
 }

@@ -206,8 +206,9 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
         </div>
         <div className="flex items-center gap-3">
           <div className="text-right">
-            <div className="text-xs text-gray-400">{example.arrivalCount} arrivals</div>
-            <div className="text-sm font-medium text-gray-200">P50: {example.p50}m</div>
+            {example.p50 != null && (
+              <div className="text-sm font-medium text-gray-200">Typical: {example.p50.toFixed(0)}m</div>
+            )}
           </div>
           {expanded ? (
             <ChevronUp className="w-4 h-4 text-gray-400" />
@@ -244,6 +245,25 @@ export function ExampleDayCard({ example, airportCode, selectedHour, baselineMin
                 <span>Time of day (local)</span>
                 <span>Duration from 50nm (min)</span>
               </div>
+              {(example.p10 != null || example.p50 != null || example.p90 != null || example.p95 != null) && (
+                <div className="mt-2 space-y-1">
+                  <div className="text-center text-xs text-gray-500">at ETA</div>
+                  <div className="flex items-center justify-center gap-3 text-[12px] flex-wrap">
+                    {example.p10 != null && (
+                      <span className="text-gray-400">Best <span className="font-bold text-green-400">{example.p10.toFixed(0)}m</span></span>
+                    )}
+                    {example.p50 != null && (
+                      <span className="text-gray-400">Typical <span className="font-bold text-white">{example.p50.toFixed(0)}m</span></span>
+                    )}
+                    {example.p90 != null && (
+                      <span className="text-gray-400">Extended <span className="font-bold text-orange-400">{example.p90.toFixed(0)}m</span> <span className="text-gray-500">(10% flights)</span></span>
+                    )}
+                    {example.p95 != null && (
+                      <span className="text-gray-400">Extreme <span className="font-bold text-red-400">{example.p95.toFixed(0)}m</span> <span className="text-gray-500">(5% flights)</span></span>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
