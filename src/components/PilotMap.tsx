@@ -1436,6 +1436,14 @@ export function PilotMap({
     };
 
     updateSigmetAirmet();
+
+    const interval = setInterval(() => {
+      if (displayOptions.showSigmetAirmet) {
+        updateSigmetAirmet();
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [mapInstance, displayOptions.showSigmetAirmet]);
 
   // Helper function to render winds aloft markers from cached data
@@ -1704,6 +1712,14 @@ export function PilotMap({
     };
 
     updateIcing();
+
+    const interval = setInterval(() => {
+      if (displayOptions.showIcing) {
+        updateIcing();
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [mapInstance, displayOptions.showIcing]);
 
   // Update Turbulence Forecast display
@@ -1811,6 +1827,14 @@ export function PilotMap({
     };
 
     updateTurbulence();
+
+    const interval = setInterval(() => {
+      if (displayOptions.showTurbulence) {
+        updateTurbulence();
+      }
+    }, 5 * 60 * 1000);
+
+    return () => clearInterval(interval);
   }, [mapInstance, displayOptions.showTurbulence]);
 
   // Update Weather PIREPs display
