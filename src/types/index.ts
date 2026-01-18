@@ -657,10 +657,12 @@ export interface MatchedDaysResponse {
 }
 
 export type FeedbackType = 'positive' | 'issue' | 'suggestion' | 'question';
+export type UserRole = 'pilot' | 'planner' | 'dispatch' | 'other';
 
 export interface FeedbackSubmission {
   type: FeedbackType;
   message: string;
+  role?: UserRole;
   appVersion?: string;
   airportContext?: string;
   metadata?: {

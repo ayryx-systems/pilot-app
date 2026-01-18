@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { FeedbackType, FeedbackSubmission } from '@/types';
-import { ThumbsUp, AlertCircle, Lightbulb, HelpCircle, Loader2 } from 'lucide-react';
+import { FeedbackType, FeedbackSubmission, UserRole } from '@/types';
+import { ThumbsUp, AlertCircle, Lightbulb, HelpCircle, Loader2, Info, X } from 'lucide-react';
 
 interface FeedbackFormProps {
   onSubmit: (feedback: FeedbackSubmission) => Promise<void>;
@@ -40,9 +40,11 @@ const FEEDBACK_TYPES: Array<{ type: FeedbackType; label: string; icon: React.Rea
 
 export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }: FeedbackFormProps) {
   const [selectedType, setSelectedType] = useState<FeedbackType | null>(null);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [message, setMessage] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showMetadataInfo, setShowMetadataInfo] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -68,6 +70,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
     try {
       await onSubmit({
         type: selectedType,
+        role: selectedRole,
         message: message.trim(),
         appVersion,
         airportContext,
@@ -81,6 +84,17 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
       setIsSubmitting(false);
     }
   };
+
+  const metadataItems = [
+    'Feedback type (positive, issue, suggestion, or question)',
+    'Your role (pilot, planner, dispatch, or other)',
+    'Your feedback message',
+    'App version (if available)',
+    'Current airport context (if viewing an airport)',
+    'Browser type and version',
+    'Screen dimensions (width and height)',
+    'Timestamp of submission',
+  ];
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -121,6 +135,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                 type="button"
                 onClick={() => {
                   setSelectedType(null);
+                  setSelectedRole(null);
                   setMessage('');
                   setError(null);
                 }}
@@ -136,6 +151,27 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
           </div>
 
           <div className="space-y-3">
+            <div>
+              <label htmlFor="feedback-role" className="block text-sm font-medium text-gray-300 mb-2">
+                Your role <span className="text-gray-500">(optional but helpful)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {(['pilot', 'planner', 'dispatch', 'other'] as UserRole[]).map((role) => (
+                  <button
+                    key={role}
+                    type="button"
+                    onClick={() => setSelectedRole(role)}
+                    className={`px-3 py-2 rounded-lg border-2 text-sm transition-colors ${
+                      selectedRole === role
+                        ? 'border-blue-500 bg-blue-500/20 text-blue-300'
+                        : 'border-slate-700 bg-slate-800/50 hover:border-slate-600 text-gray-300'
+                    }`}
+                  >
+                    {role.charAt(0).toUpperCase() + role.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label htmlFor="feedback-message" className="block text-sm font-medium text-gray-300 mb-2">
                 Your feedback
@@ -168,11 +204,43 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
               </div>
             </div>
 
-            {(appVersion || airportContext) && (
-              <div className="text-xs text-gray-500 space-y-1">
-                <p className="font-medium">Context (included automatically):</p>
-                {appVersion && <p>App Version: {appVersion}</p>}
-                {airportContext && <p>Airport: {airportContext}</p>}
+            <div className="flex items-start justify-between pt-2">
+              <button
+                type="button"
+                onClick={() => setShowMetadataInfo(!showMetadataInfo)}
+                className="flex items-center space-x-2 text-xs text-gray-400 hover:text-gray-300 transition-colors"
+              >
+                <Info className="w-4 h-4" />
+                <span>What information will be sent?</span>
+              </button>
+            </div>
+
+            {showMetadataInfo && (
+              <div className="p-4 bg-slate-900/50 border border-slate-700 rounded-lg">
+                <div className="flex items-start justify-between mb-3">
+                  <h4 className="text-sm font-medium text-gray-300">Information Being Sent</h4>
+                  <button
+                    type="button"
+                    onClick={() => setShowMetadataInfo(false)}
+                    className="text-gray-400 hover:text-gray-300 transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-400 mb-3">
+                  This feedback is anonymous. The following information will be included to help us understand and improve the app:
+                </p>
+                <ul className="space-y-1.5">
+                  {metadataItems.map((item, index) => (
+                    <li key={index} className="text-xs text-gray-300 flex items-start">
+                      <span className="text-blue-400 mr-2">•</span>
+                      <span>{item}</span>
+                    </li>
+                  ))}
+                </ul>
+                <p className="text-xs text-gray-500 mt-3 italic">
+                  Note: No personal information (name, email, IP address) is collected or stored.
+                </p>
               </div>
             )}
 
