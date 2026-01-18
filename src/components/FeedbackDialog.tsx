@@ -16,6 +16,17 @@ interface FeedbackDialogProps {
   airportContext?: string;
 }
 
+const FEEDBACK_STORAGE_KEY = 'pilotApp_feedback_draft';
+
+function clearDraftFeedback() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(FEEDBACK_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function FeedbackDialog({ open, onOpenChange, appVersion, airportContext }: FeedbackDialogProps) {
   const [mounted, setMounted] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
@@ -42,6 +53,7 @@ export function FeedbackDialog({ open, onOpenChange, appVersion, airportContext 
       const response = await pilotApi.submitFeedback(feedback);
       
       if (response.success) {
+        clearDraftFeedback();
         setToastMessage(response.message || 'Thank you for your feedback!');
         setToastType('success');
         setToastOpen(true);

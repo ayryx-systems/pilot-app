@@ -38,13 +38,58 @@ const FEEDBACK_TYPES: Array<{ type: FeedbackType; label: string; icon: React.Rea
   },
 ];
 
+const FEEDBACK_STORAGE_KEY = 'pilotApp_feedback_draft';
+
+function loadDraftFeedback() {
+  if (typeof window === 'undefined') return null;
+  try {
+    const stored = localStorage.getItem(FEEDBACK_STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.message || parsed.type || parsed.role) {
+        return parsed;
+      }
+    }
+  } catch {
+    // Ignore parse errors
+  }
+  return null;
+}
+
+function saveDraftFeedback(data: { type?: FeedbackType | null; role?: UserRole | null; message?: string }) {
+  if (typeof window === 'undefined') return;
+  try {
+    if (data.message || data.type || data.role) {
+      localStorage.setItem(FEEDBACK_STORAGE_KEY, JSON.stringify(data));
+    } else {
+      localStorage.removeItem(FEEDBACK_STORAGE_KEY);
+    }
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+function clearDraftFeedback() {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.removeItem(FEEDBACK_STORAGE_KEY);
+  } catch {
+    // Ignore storage errors
+  }
+}
+
 export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }: FeedbackFormProps) {
-  const [selectedType, setSelectedType] = useState<FeedbackType | null>(null);
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
-  const [message, setMessage] = useState('');
+  const draft = loadDraftFeedback();
+  const [selectedType, setSelectedType] = useState<FeedbackType | null>(draft?.type || null);
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>(draft?.role || null);
+  const [message, setMessage] = useState(draft?.message || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showMetadataInfo, setShowMetadataInfo] = useState(false);
+
+  React.useEffect(() => {
+    saveDraftFeedback({ type: selectedType, role: selectedRole, message });
+  }, [selectedType, selectedRole, message]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,6 +124,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
           screenHeight: typeof window !== 'undefined' ? window.innerHeight : undefined,
         },
       });
+      clearDraftFeedback();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to submit feedback. Please try again.');
       setIsSubmitting(false);
@@ -96,6 +142,8 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
     'Timestamp of submission',
   ];
 
+  const hasDraft = message.trim().length > 0 || selectedRole !== null;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {!selectedType ? (
@@ -103,6 +151,13 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
           <p className="text-sm text-gray-300 mb-4">
             How can we help? Your feedback is anonymous and helps us improve the app.
           </p>
+          {hasDraft && (
+            <div className="p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg mb-3">
+              <p className="text-xs text-blue-300">
+                You have unsaved feedback. It will be preserved if you navigate away.
+              </p>
+            </div>
+          )}
           <div className="grid grid-cols-1 gap-3">
             {FEEDBACK_TYPES.map((item) => (
               <button
@@ -135,8 +190,6 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                 type="button"
                 onClick={() => {
                   setSelectedType(null);
-                  setSelectedRole(null);
-                  setMessage('');
                   setError(null);
                 }}
                 className="text-sm text-gray-400 hover:text-gray-300 transition-colors"
@@ -160,7 +213,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                   <button
                     key={role}
                     type="button"
-                    onClick={() => setSelectedRole(role)}
+                    onClick={() => setSelectedRole(selectedRole === role ? null : role)}
                     className={`px-3 py-2 rounded-lg border-2 text-sm transition-colors ${
                       selectedRole === role
                         ? 'border-blue-500 bg-blue-500/20 text-blue-300'
@@ -253,7 +306,13 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
             <div className="flex items-center space-x-3 pt-2">
               <button
                 type="button"
-                onClick={onCancel}
+                onClick={() => {
+                  clearDraftFeedback();
+                  setSelectedType(null);
+                  setSelectedRole(null);
+                  setMessage('');
+                  onCancel();
+                }}
                 disabled={isSubmitting}
                 className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-gray-200 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
