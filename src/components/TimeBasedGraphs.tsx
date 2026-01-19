@@ -607,7 +607,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       const hasRecentActuals = alignedRecentActuals.some(v => v !== null);
       if (hasRecentActuals) {
         datasets.push({
-          label: 'Recent Actuals (ADSB)',
+          label: 'Actual Arrivals',
           data: alignedRecentActuals,
           borderColor: '#a855f7', // Purple (for legend)
           backgroundColor: '#a855f7', // Purple (for legend)
@@ -805,7 +805,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
           content={
             <div className="space-y-2">
               <p>
-                Shows expected arrival traffic at your selected time based on historical patterns and FAA forecasts.
+                Shows expected arrival traffic at your selected time based on historical patterns and FAA forecasts. All values shown are per 15-minute time slot.
               </p>
               <p>
                 <strong className="text-blue-400">Blue Line:</strong> Average for this day of the week (e.g., Thursday average)
@@ -817,13 +817,13 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
                 <strong className="text-orange-400">Orange Line:</strong> Flight Plans - FAA forecast based on filed flight plans with arrival times during each 15-minute time slot
               </p>
               <p>
-                <strong className="text-red-400">Red Bar:</strong> Expected arrivals NOW (FAA forecast or baseline)
+                <strong className="text-purple-400">Purple Dots:</strong> Actual Arrivals - Real ADSB-detected landings from the last 12 hours, shown as completed 15-minute time slots.
               </p>
               <p>
-                <strong className="text-blue-400">Blue Bar:</strong> Expected arrivals at your selected ETA (FAA forecast or baseline)
+                <strong className="text-red-400">Red Vertical Line:</strong> Expected arrivals NOW (FAA forecast or baseline)
               </p>
-              <p className="text-xs text-gray-400">
-                Larger sample sizes mean more reliable data.
+              <p>
+                <strong className="text-blue-400">Blue Vertical Line:</strong> Expected arrivals at your selected ETA (FAA forecast or baseline)
               </p>
             </div>
           }
