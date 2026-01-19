@@ -1,11 +1,22 @@
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useMemo } from 'react';
 import { Clock, RotateCcw, Radio, Compass } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
 import { BaselineData, FlightCategory } from '@/types';
-import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
+import { FLIGHT_CATEGORY_COLORS, computeFlightCategory } from '@/utils/weatherCategory';
 import { HelpButton } from './HelpButton';
+
+interface WeatherData {
+  graph?: {
+    timeSlots: string[];
+    visibility: (number | null)[];
+    ceiling: (number | null)[];
+  } | null;
+  visibility?: number | string;
+  ceiling?: number | null;
+  cloudbase?: number | null;
+}
 
 interface ETASelectorProps {
   airportCode: string;
@@ -15,6 +26,7 @@ interface ETASelectorProps {
   baseline?: BaselineData | null;
   tafCategory: FlightCategory;
   metarCategory?: FlightCategory;
+  weather?: WeatherData | null;
 }
 
 
@@ -26,6 +38,7 @@ export function ETASelector({
   baseline,
   tafCategory,
   metarCategory = 'VFR',
+  weather,
 }: ETASelectorProps) {
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
@@ -120,6 +133,37 @@ export function ETASelector({
 
   const sliderMarks = getSliderMarks();
 
+  const weatherGradient = useMemo(() => {
+    const gradientStops: string[] = [];
+    const numStops = 50;
+    
+    for (let i = 0; i <= numStops; i++) {
+      const position = (i / numStops) * 100;
+      const hoursAhead = (position / 100) * maxHoursAhead;
+      
+      let category: FlightCategory;
+      
+      if (position === 0) {
+        category = metarCategory;
+      } else if (weather?.graph) {
+        const slotIndex = Math.min(
+          Math.max(0, Math.round(hoursAhead * 4)),
+          (weather.graph.visibility?.length || 0) - 1
+        );
+        const visibility = weather.graph.visibility?.[slotIndex] ?? null;
+        const ceiling = weather.graph.ceiling?.[slotIndex] ?? null;
+        category = computeFlightCategory(visibility, ceiling);
+      } else {
+        category = tafCategory;
+      }
+      
+      const colors = FLIGHT_CATEGORY_COLORS[category] || FLIGHT_CATEGORY_COLORS.unknown;
+      gradientStops.push(`${colors.color} ${position}%`);
+    }
+    
+    return `linear-gradient(to right, ${gradientStops.join(', ')})`;
+  }, [weather?.graph, metarCategory, tafCategory, maxHoursAhead]);
+
   const isNowRef = useRef(isNow);
   const onTimeChangeRef = useRef(onTimeChange);
   isNowRef.current = isNow;
@@ -211,11 +255,7 @@ export function ETASelector({
           onChange={handleSliderChange}
           className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer eta-slider"
           style={{
-            background: `linear-gradient(to right, 
-              ${isNow ? '#60a5fa' : categoryColors.color} 0%, 
-              ${isNow ? '#60a5fa' : categoryColors.color} ${sliderValue}%, 
-              #475569 ${sliderValue}%, 
-              #475569 100%)`
+            background: weatherGradient
           }}
         />
         <div className="absolute top-0 left-0 right-0 h-1.5 pointer-events-none">

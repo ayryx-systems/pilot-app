@@ -705,6 +705,7 @@ export function PilotDashboard() {
                     baseline={baseline}
                     tafCategory={tafCategory}
                     metarCategory={metarCategory}
+                    weather={airportOverview?.weather}
                   />
                 </div>
               )}
