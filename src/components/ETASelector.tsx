@@ -14,13 +14,8 @@ interface ETASelectorProps {
   maxHoursAhead?: number;
   baseline?: BaselineData | null;
   tafCategory: FlightCategory;
-  isManualWeather: boolean;
-  onManualWeatherChange: (isManual: boolean) => void;
-  manualCategory: FlightCategory;
-  onCategoryChange: (category: FlightCategory) => void;
 }
 
-const CATEGORIES: FlightCategory[] = ['VFR', 'MVFR', 'IFR', 'LIFR'];
 
 export function ETASelector({
   airportCode,
@@ -29,10 +24,6 @@ export function ETASelector({
   maxHoursAhead = 24,
   baseline,
   tafCategory,
-  isManualWeather,
-  onManualWeatherChange,
-  manualCategory,
-  onCategoryChange,
 }: ETASelectorProps) {
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
@@ -42,8 +33,7 @@ export function ETASelector({
   const hoursAhead = (selectedTime.getTime() - utcNow.getTime()) / (1000 * 60 * 60);
   const sliderValue = isNow ? 0 : Math.min(100, (hoursAhead / maxHoursAhead) * 100);
 
-  const activeCategory = isManualWeather ? manualCategory : tafCategory;
-  const categoryColors = FLIGHT_CATEGORY_COLORS[activeCategory] || FLIGHT_CATEGORY_COLORS.unknown;
+  const categoryColors = FLIGHT_CATEGORY_COLORS[tafCategory] || FLIGHT_CATEGORY_COLORS.unknown;
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -280,56 +270,16 @@ export function ETASelector({
       {!isNow && (
         <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/50">
           <div className="flex items-center gap-2">
-            <label className="flex items-center gap-1.5 cursor-pointer">
-              <input
-                type="radio"
-                checked={!isManualWeather}
-                onChange={() => onManualWeatherChange(false)}
-                className="w-3 h-3 text-blue-500"
-              />
-              <span className="text-[10px] text-gray-300">TAF</span>
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-                style={{
-                  backgroundColor: FLIGHT_CATEGORY_COLORS[tafCategory].bg,
-                  color: FLIGHT_CATEGORY_COLORS[tafCategory].color,
-                }}
-              >
-                {tafCategory}
-              </span>
-            </label>
-          </div>
-          
-          <div className="flex items-center gap-1">
-            <label className="flex items-center gap-1 cursor-pointer">
-              <input
-                type="radio"
-                checked={isManualWeather}
-                onChange={() => onManualWeatherChange(true)}
-                className="w-3 h-3 text-blue-500"
-              />
-              <span className="text-[10px] text-gray-400">What-if:</span>
-            </label>
-            {CATEGORIES.map((cat) => {
-              const colors = FLIGHT_CATEGORY_COLORS[cat];
-              const isSelected = isManualWeather && manualCategory === cat;
-              return (
-                <button
-                  key={cat}
-                  onClick={() => { onManualWeatherChange(true); onCategoryChange(cat); }}
-                  className={`px-1.5 py-0.5 text-[10px] font-semibold rounded transition-all ${
-                    isSelected ? '' : 'opacity-50'
-                  }`}
-                  style={{
-                    backgroundColor: isSelected ? colors.bg : 'transparent',
-                    color: isSelected ? colors.color : 'rgb(107, 114, 128)',
-                    border: isSelected ? `1px solid ${colors.border}` : '1px solid transparent',
-                  }}
-                >
-                  {cat}
-                </button>
-              );
-            })}
+            <span className="text-[10px] text-gray-400">TAF:</span>
+            <span
+              className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+              style={{
+                backgroundColor: FLIGHT_CATEGORY_COLORS[tafCategory].bg,
+                color: FLIGHT_CATEGORY_COLORS[tafCategory].color,
+              }}
+            >
+              {tafCategory}
+            </span>
           </div>
         </div>
       )}

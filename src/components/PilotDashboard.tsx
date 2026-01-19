@@ -44,6 +44,7 @@ import { CollapsibleSection } from './CollapsibleSection';
 import { CollapsibleCard } from './CollapsibleCard';
 import { TrendingUp, Plane as PlaneIcon } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
+import { WeatherScenarioToggle } from './WeatherScenarioToggle';
 
 export function PilotDashboard() {
   const [mounted, setMounted] = useState(false);
@@ -689,10 +690,6 @@ export function PilotDashboard() {
                     maxHoursAhead={24}
                     baseline={baseline}
                     tafCategory={tafCategory}
-                    isManualWeather={isManualWeather}
-                    onManualWeatherChange={setIsManualWeather}
-                    manualCategory={weatherCategory}
-                    onCategoryChange={setWeatherCategory}
                   />
                 </div>
               )}
@@ -1033,6 +1030,15 @@ export function PilotDashboard() {
                           summary={arrivalsSummary}
                           defaultExpanded={false}
                         >
+                          <div className="mb-4 pb-3 border-b border-slate-600/50">
+                            <WeatherScenarioToggle
+                              isManual={isManualWeather}
+                              onManualChange={setIsManualWeather}
+                              manualCategory={weatherCategory}
+                              onCategoryChange={setWeatherCategory}
+                              tafCategory={tafCategory}
+                            />
+                          </div>
                           {arrivalTimelineContent}
                           {matchedDaysLoading && (
                             <div className="mt-2 text-center text-sm text-gray-400">
