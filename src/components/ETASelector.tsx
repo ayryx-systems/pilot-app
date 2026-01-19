@@ -14,6 +14,7 @@ interface ETASelectorProps {
   maxHoursAhead?: number;
   baseline?: BaselineData | null;
   tafCategory: FlightCategory;
+  metarCategory?: FlightCategory;
 }
 
 
@@ -24,6 +25,7 @@ export function ETASelector({
   maxHoursAhead = 24,
   baseline,
   tafCategory,
+  metarCategory = 'VFR',
 }: ETASelectorProps) {
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
@@ -33,7 +35,8 @@ export function ETASelector({
   const hoursAhead = (selectedTime.getTime() - utcNow.getTime()) / (1000 * 60 * 60);
   const sliderValue = isNow ? 0 : Math.min(100, (hoursAhead / maxHoursAhead) * 100);
 
-  const categoryColors = FLIGHT_CATEGORY_COLORS[tafCategory] || FLIGHT_CATEGORY_COLORS.unknown;
+  const activeCategory = isNow ? metarCategory : tafCategory;
+  const categoryColors = FLIGHT_CATEGORY_COLORS[activeCategory] || FLIGHT_CATEGORY_COLORS.unknown;
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -267,22 +270,19 @@ export function ETASelector({
         }} />
       </div>
 
-      {!isNow && (
-        <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/50">
-          <div className="flex items-center gap-2">
-            <span className="text-[10px] text-gray-400">TAF:</span>
-            <span
-              className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: FLIGHT_CATEGORY_COLORS[tafCategory].bg,
-                color: FLIGHT_CATEGORY_COLORS[tafCategory].color,
-              }}
-            >
-              {tafCategory}
-            </span>
-          </div>
+      <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/50">
+        <div className="flex items-center gap-2">
+          <span
+            className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
+            style={{
+              backgroundColor: categoryColors.bg,
+              color: categoryColors.color,
+            }}
+          >
+            {activeCategory} ({isNow ? 'METAR' : 'TAF'})
+          </span>
         </div>
-      )}
+      </div>
     </div>
   );
 }

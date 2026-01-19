@@ -8,6 +8,7 @@ import { FAAStatus } from './FAAStatus';
 import { PirepsList } from './PirepsList';
 import { ArrivalTimeline } from './ArrivalTimeline';
 import { deriveWeatherCategoryFromTAF } from './WeatherOutlook';
+import { computeFlightCategory } from '@/utils/weatherCategory';
 
 function deriveWeatherCategoryFromTimeline(summary: SituationSummary | null, targetTime: Date): FlightCategory {
   if (!summary || !summary.timeSegments || summary.timeSegments.length === 0) {
@@ -163,6 +164,19 @@ export function PilotDashboard() {
   const tafCategory = timelineCategory === 'VFR' && !summary?.timeSegments?.length
     ? deriveWeatherCategoryFromTAF(airportOverview?.weather, selectedTime)
     : timelineCategory;
+  
+  // Compute METAR category from current weather conditions
+  const metarCategory = (() => {
+    if (!airportOverview?.weather) return 'VFR';
+    const visSM = typeof airportOverview.weather.visibility === 'number' 
+      ? airportOverview.weather.visibility 
+      : typeof airportOverview.weather.visibility === 'string'
+        ? parseFloat(airportOverview.weather.visibility)
+        : null;
+    const visKM = visSM !== null ? visSM * 1.60934 : null;
+    const ceiling = airportOverview.weather.ceiling || airportOverview.weather.cloudbase || null;
+    return computeFlightCategory(visKM, ceiling);
+  })();
   
   const activeWeatherCategory = isManualWeather ? weatherCategory : tafCategory;
   
@@ -690,6 +704,7 @@ export function PilotDashboard() {
                     maxHoursAhead={24}
                     baseline={baseline}
                     tafCategory={tafCategory}
+                    metarCategory={metarCategory}
                   />
                 </div>
               )}
