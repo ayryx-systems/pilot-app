@@ -656,7 +656,7 @@ export interface MatchedDaysResponse {
   source: string;
 }
 
-export type FeedbackType = 'positive' | 'issue' | 'suggestion' | 'question';
+export type FeedbackType = 'positive' | 'issue' | 'suggestion';
 export type UserRole = 'pilot' | 'planner' | 'dispatch' | 'other';
 
 export interface FeedbackSubmission {

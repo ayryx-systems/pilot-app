@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { FeedbackType, FeedbackSubmission, UserRole } from '@/types';
-import { ThumbsUp, AlertCircle, Lightbulb, HelpCircle, Loader2, Info, X } from 'lucide-react';
+import { ThumbsUp, AlertCircle, Lightbulb, Loader2, Info, X, Mail } from 'lucide-react';
 
 interface FeedbackFormProps {
   onSubmit: (feedback: FeedbackSubmission) => Promise<void>;
@@ -29,12 +29,6 @@ const FEEDBACK_TYPES: Array<{ type: FeedbackType; label: string; icon: React.Rea
     label: 'Suggest an improvement',
     icon: <Lightbulb className="w-5 h-5" />,
     description: 'Have an idea to make it better?',
-  },
-  {
-    type: 'question',
-    label: 'Ask a question',
-    icon: <HelpCircle className="w-5 h-5" />,
-    description: 'Need help or clarification',
   },
 ];
 
@@ -132,7 +126,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
   };
 
   const metadataItems = [
-    'Feedback type (positive, issue, suggestion, or question)',
+    'Feedback type (positive, issue, or suggestion)',
     'Your role (pilot, planner, dispatch, or other)',
     'Your feedback message',
     'App version (if available)',
@@ -151,6 +145,20 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
           <p className="text-sm text-gray-300 mb-4">
             How can we help? Your feedback is anonymous and helps us improve the app.
           </p>
+          <div className="p-3 bg-slate-800/50 border border-slate-700 rounded-lg mb-4">
+            <div className="flex items-start space-x-2">
+              <Mail className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="text-xs text-gray-300 font-medium mb-1">Have a question?</p>
+                <p className="text-xs text-gray-400">
+                  If you'd like to ask a question or talk directly with the AYRYX team, please email us at{' '}
+                  <a href="mailto:feedback@ayryx.com" className="text-blue-400 hover:text-blue-300 underline">
+                    feedback@ayryx.com
+                  </a>
+                </p>
+              </div>
+            </div>
+          </div>
           {hasDraft && (
             <div className="p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg mb-3">
               <p className="text-xs text-blue-300">
@@ -239,8 +247,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                 placeholder={
                   selectedType === 'positive' ? 'What do you like about the app?' :
                   selectedType === 'issue' ? 'Describe the issue you encountered...' :
-                  selectedType === 'suggestion' ? 'Share your idea for improvement...' :
-                  'What would you like to know?'
+                  'Share your idea for improvement...'
                 }
                 rows={6}
                 maxLength={2000}
