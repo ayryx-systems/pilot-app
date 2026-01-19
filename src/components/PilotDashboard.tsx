@@ -520,9 +520,9 @@ export function PilotDashboard() {
         <div className="flex items-center space-x-2 min-w-0 flex-1" style={{ overflow: 'visible' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo4.png"
+            src="/ayryx_with_star_white.png"
             alt="AYRYX"
-            className="h-6 w-6 flex-shrink-0"
+            className="h-6 w-auto flex-shrink-0"
           />
           <div className="flex items-center gap-2 min-w-0" style={{ overflow: 'visible' }}>
             <AirportSelector
