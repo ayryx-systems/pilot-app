@@ -42,7 +42,7 @@ import { pilotApi } from '@/services/api';
 import { HelpButton } from './HelpButton';
 import { CollapsibleSection } from './CollapsibleSection';
 import { CollapsibleCard } from './CollapsibleCard';
-import { TrendingUp, Plane as PlaneIcon } from 'lucide-react';
+import { TrendingUp, Plane as PlaneIcon, Sliders } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
 import { WeatherScenarioToggle } from './WeatherScenarioToggle';
 
@@ -1030,15 +1030,26 @@ export function PilotDashboard() {
                           summary={arrivalsSummary}
                           defaultExpanded={false}
                         >
-                          <div className="mb-4 pb-3 border-b border-slate-600/50">
-                            <WeatherScenarioToggle
-                              isManual={isManualWeather}
-                              onManualChange={setIsManualWeather}
-                              manualCategory={weatherCategory}
-                              onCategoryChange={setWeatherCategory}
-                              tafCategory={tafCategory}
-                            />
-                          </div>
+                          {isNowMode ? (
+                            <div className="mb-4 pb-3 border-b border-slate-600/50">
+                              <div className="flex items-center gap-2 px-3 py-2 bg-blue-500/10 border border-blue-500/30 rounded-lg">
+                                <Sliders className="w-4 h-4 text-blue-400" />
+                                <p className="text-sm text-gray-300">
+                                  <span className="text-blue-400 font-medium">Explore ETAs:</span> Use the main time slider above to see arrival durations for different times and weather scenarios.
+                                </p>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="mb-4 pb-3 border-b border-slate-600/50">
+                              <WeatherScenarioToggle
+                                isManual={isManualWeather}
+                                onManualChange={setIsManualWeather}
+                                manualCategory={weatherCategory}
+                                onCategoryChange={setWeatherCategory}
+                                tafCategory={tafCategory}
+                              />
+                            </div>
+                          )}
                           {arrivalTimelineContent}
                           {matchedDaysLoading && (
                             <div className="mt-2 text-center text-sm text-gray-400">
