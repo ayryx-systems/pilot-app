@@ -55,9 +55,23 @@ export function AirportSelector({
         onClick={() => setOpen(!open)}
         disabled={loading}
         className="flex items-center gap-1.5 bg-slate-700 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-lg 
-                   border border-slate-600 hover:border-blue-400 focus:border-blue-400 focus:outline-none
+                   border focus:outline-none
                    disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm font-medium
                    transition-colors min-w-[60px]"
+        style={{ 
+          borderColor: open ? '#fee000ff' : '#475569',
+          borderWidth: '1px'
+        }}
+        onMouseEnter={(e) => {
+          if (!loading) {
+            e.currentTarget.style.borderColor = '#fee000ff';
+          }
+        }}
+        onMouseLeave={(e) => {
+          if (!open && !loading) {
+            e.currentTarget.style.borderColor = '#475569';
+          }
+        }}
         title={selectedAirportData ? `${selectedAirportData.code} - ${selectedAirportData.name}` : ''}
       >
         <span>{displayCode}</span>
@@ -67,8 +81,8 @@ export function AirportSelector({
       {open && (
         <>
           <div className="fixed inset-0" style={{ zIndex: 4000 }} onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-slate-800 border border-slate-600 rounded-lg shadow-xl 
-                        max-h-[300px] overflow-y-auto min-w-[200px]" style={{ zIndex: 4001 }}>
+          <div className="absolute top-full left-0 mt-1 bg-slate-800 border rounded-lg shadow-xl 
+                        max-h-[300px] overflow-y-auto min-w-[200px]" style={{ zIndex: 4001, borderColor: '#fee000ff', borderWidth: '1px' }}>
             {airports.map((airport) => (
               <button
                 key={airport.id}
