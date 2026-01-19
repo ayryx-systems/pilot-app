@@ -16,19 +16,19 @@ const FEEDBACK_TYPES: Array<{ type: FeedbackType; label: string; icon: React.Rea
     type: 'positive',
     label: 'What\'s working well',
     icon: <ThumbsUp className="w-5 h-5" />,
-    description: 'Share what you like about the app',
+    description: 'Share what you find valuable',
   },
   {
     type: 'issue',
     label: 'Report an issue',
     icon: <AlertCircle className="w-5 h-5" />,
-    description: 'Something isn\'t working correctly',
+    description: 'Report a problem or error',
   },
   {
     type: 'suggestion',
     label: 'Suggest an improvement',
     icon: <Lightbulb className="w-5 h-5" />,
-    description: 'Have an idea to make it better?',
+    description: 'Propose an enhancement or feature',
   },
 ];
 
@@ -143,22 +143,8 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
       {!selectedType ? (
         <div className="space-y-3">
           <p className="text-sm text-gray-300 mb-4">
-            How can we help? Your feedback is anonymous and helps us improve the app.
+            Your feedback helps us improve AYRYX. All submissions are anonymous.
           </p>
-          <div className="p-3 bg-slate-800/50 border border-slate-700 rounded-lg mb-4">
-            <div className="flex items-start space-x-2">
-              <Mail className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
-              <div>
-                <p className="text-xs text-gray-300 font-medium mb-1">Have a question?</p>
-                <p className="text-xs text-gray-400">
-                  If you'd like to ask a question or talk directly with the AYRYX team, please email us at{' '}
-                  <a href="mailto:feedback@ayryx.com" className="text-blue-400 hover:text-blue-300 underline">
-                    feedback@ayryx.com
-                  </a>
-                </p>
-              </div>
-            </div>
-          </div>
           {hasDraft && (
             <div className="p-3 bg-blue-900/30 border border-blue-700/50 rounded-lg mb-3">
               <p className="text-xs text-blue-300">
@@ -166,7 +152,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
               </p>
             </div>
           )}
-          <div className="grid grid-cols-1 gap-3">
+          <div className="grid grid-cols-1 gap-3 mb-4">
             {FEEDBACK_TYPES.map((item) => (
               <button
                 key={item.type}
@@ -188,6 +174,17 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                 </div>
               </button>
             ))}
+          </div>
+          <div className="pt-3 border-t border-slate-700/50">
+            <div className="flex items-start space-x-2">
+              <Mail className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
+              <p className="text-xs text-gray-400">
+                Have a question or want to talk directly with the AYRYX team? Email us at{' '}
+                <a href="mailto:feedback@ayryx.com" className="text-blue-400 hover:text-blue-300 underline">
+                  feedback@ayryx.com
+                </a>
+              </p>
+            </div>
           </div>
         </div>
       ) : (
@@ -245,9 +242,9 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
                   setError(null);
                 }}
                 placeholder={
-                  selectedType === 'positive' ? 'What do you like about the app?' :
+                  selectedType === 'positive' ? 'Describe what you find valuable or useful...' :
                   selectedType === 'issue' ? 'Describe the issue you encountered...' :
-                  'Share your idea for improvement...'
+                  'Describe your proposed enhancement or feature...'
                 }
                 rows={6}
                 maxLength={2000}
