@@ -900,7 +900,7 @@ export function PilotDashboard() {
                       return (
                         <CollapsibleCard
                           key={`traffic-${selectedAirport}`}
-                          title={`Traffic Pattern (${timeLabel})`}
+                          title={`Arrival Traffic (${timeLabel})`}
                           icon={TrendingUp}
                           summary={trafficSummary}
                           defaultExpanded={false}
