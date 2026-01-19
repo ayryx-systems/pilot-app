@@ -219,22 +219,6 @@ export function usePilotData() {
           active: arrivalsResponse.value.active ?? true,
           message: arrivalsResponse.value.message
         };
-        
-        // Merge actualCounts from arrivals into arrivalForecast
-        // Backend only sends completed slots, so just map them directly
-        if (arrivalsResponse.value.actualCounts && currentForecast) {
-          const actualCountsMap = new Map<string, number>();
-          arrivalsResponse.value.actualCounts.timeSlots.forEach((slot, idx) => {
-            actualCountsMap.set(slot, arrivalsResponse.value.actualCounts!.counts[idx]);
-          });
-          
-          updates.arrivalForecast = {
-            ...currentForecast,
-            actualCounts: currentForecast.timeSlots.map(slot => 
-              actualCountsMap.get(slot) ?? null
-            )
-          };
-        }
       } else {
         console.error('Failed to load arrivals:', arrivalsResponse.reason);
         updates.arrivals = [];
@@ -300,6 +284,23 @@ export function usePilotData() {
       }
       // If we skipped forecast, don't touch forecast or forecastLoading in updates
       // This prevents unnecessary state changes and re-renders
+
+      // Merge actualCounts from arrivals into arrivalForecast after both are processed
+      // This handles the race condition where arrivals loads before forecast
+      const finalForecast = updates.arrivalForecast ?? currentForecast;
+      if (arrivalsResponse.status === 'fulfilled' && arrivalsResponse.value.actualCounts && finalForecast) {
+        const actualCountsMap = new Map<string, number>();
+        arrivalsResponse.value.actualCounts.timeSlots.forEach((slot, idx) => {
+          actualCountsMap.set(slot, arrivalsResponse.value.actualCounts!.counts[idx]);
+        });
+        
+        updates.arrivalForecast = {
+          ...finalForecast,
+          actualCounts: finalForecast.timeSlots.map(slot => 
+            actualCountsMap.get(slot) ?? null
+          )
+        };
+      }
 
       // Set error message based on failed requests
       const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
