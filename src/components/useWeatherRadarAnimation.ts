@@ -19,6 +19,7 @@ interface UseWeatherRadarAnimationProps {
   setActiveWeatherLayers: React.Dispatch<React.SetStateAction<Map<string, L.TileLayer>>>;
   airportCode?: string | null;
   baseline?: BaselineData | null;
+  mapReady?: boolean;
 }
 
 export function useWeatherRadarAnimation({
@@ -29,7 +30,8 @@ export function useWeatherRadarAnimation({
   mapRef,
   setActiveWeatherLayers,
   airportCode,
-  baseline
+  baseline,
+  mapReady = false
 }: UseWeatherRadarAnimationProps) {
   const [radarFrames, setRadarFrames] = useState<WeatherRadarFrame[]>([]);
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
@@ -41,6 +43,7 @@ export function useWeatherRadarAnimation({
   const currentTimestampRef = useRef<number | null>(null);
   const previousAirportCodeRef = useRef<string | null | undefined>(undefined);
   const [layerGroupReady, setLayerGroupReady] = useState(false);
+  const isLoadingRef = useRef<boolean>(false);
 
   const startAnimation = useCallback(() => {
     const sortedTimestamps = Array.from(radarOverlaysMapRef.current.keys()).sort((a, b) => a - b);
@@ -157,19 +160,11 @@ export function useWeatherRadarAnimation({
                           previousAirportCodeRef.current !== airportCode;
     
     if (airportChanged) {
-      if (radarOverlaysMapRef.current.size > 0 && layerGroupsRef.current?.weather) {
-        radarOverlaysMapRef.current.forEach(overlay => {
-          try {
-            if (layerGroupsRef.current?.weather) {
-              layerGroupsRef.current.weather.removeLayer(overlay);
-            }
-            if (mapInstance && mapInstance.hasLayer(overlay)) {
-              mapInstance.removeLayer(overlay);
-            }
-          } catch {
-          }
-        });
-        radarOverlaysMapRef.current.clear();
+      console.log('[WeatherRadarAnimation] Airport changed from', previousAirportCodeRef.current, 'to', airportCode);
+      isLoadingRef.current = false;
+      radarOverlaysMapRef.current.clear();
+      if (layerGroupsRef.current?.weather) {
+        layerGroupsRef.current.weather.clearLayers();
       }
 
       if (radarTimeIndicatorRef.current && mapRef.current) {
@@ -191,40 +186,12 @@ export function useWeatherRadarAnimation({
       radarFramesRef.current = [];
       currentTimestampRef.current = null;
       setCurrentRadarFrameIndex(0);
+      setLayerGroupReady(false);
     }
     
     previousAirportCodeRef.current = airportCode;
-
-    if (!mapInstance || !layerGroupsRef.current?.weather) {
-      if (layerGroupReady) {
-        setLayerGroupReady(false);
-      }
-      if (mapInstance && displayOptions.showWeatherRadar) {
-        let retryCount = 0;
-        const maxRetries = 20;
-        const retryInterval = 100;
-        
-        const retryCheck = setInterval(() => {
-          retryCount++;
-          if (layerGroupsRef.current?.weather) {
-            clearInterval(retryCheck);
-            setLayerGroupReady(true);
-          } else if (retryCount >= maxRetries) {
-            clearInterval(retryCheck);
-            console.warn('[WeatherRadarAnimation] Layer group not ready after retries');
-          }
-        }, retryInterval);
-        
-        return () => {
-          clearInterval(retryCheck);
-        };
-      }
-      return;
-    }
-
-    if (!layerGroupReady) {
-      setLayerGroupReady(true);
-    }
+    
+    console.log('[WeatherRadarAnimation] Effect running - mapInstance:', !!mapInstance, 'mapReady:', mapReady, 'layerGroup:', !!layerGroupsRef.current?.weather, 'showWeatherRadar:', displayOptions.showWeatherRadar);
 
     const updateWeatherRadar = async () => {
       if (!displayOptions.showWeatherRadar) {
@@ -267,155 +234,233 @@ export function useWeatherRadarAnimation({
         return;
       }
 
+      if (!mapInstance) {
+        console.log('[WeatherRadarAnimation] updateWeatherRadar - mapInstance is null');
+        return;
+      }
+      
+      if (!layerGroupsRef.current?.weather) {
+        console.log('[WeatherRadarAnimation] updateWeatherRadar - layer group not ready');
+        return;
+      }
+
       const radarLayer = weatherLayers.find(layer => layer.id === 'radar') ||
                         weatherLayers.find(layer => layer.id === 'radar_composite');
 
-      if (radarLayer) {
-        try {
-          const frames = await weatherService.getWeatherRadarAnimation();
+      if (!radarLayer) {
+        console.warn('[WeatherRadarAnimation] No radar layer found in weatherLayers:', weatherLayers.map(l => l.id));
+        return;
+      }
 
-          if (!Array.isArray(frames)) {
-            console.error('[WeatherRadarAnimation] Invalid frames format:', frames);
-            return;
-          }
+      if (isLoadingRef.current) {
+        console.log('[WeatherRadarAnimation] Already loading radar frames, skipping...');
+        return;
+      }
 
-          if (frames.length === 0) {
-            console.warn('[WeatherRadarAnimation] No radar animation frames available');
-            return;
-          }
+      console.log('[WeatherRadarAnimation] Found radar layer, fetching animation frames...');
+      isLoadingRef.current = true;
+      
+      try {
+        const frames = await weatherService.getWeatherRadarAnimation();
+        isLoadingRef.current = false;
 
-          const existingTimestamps = Array.from(radarOverlaysMapRef.current.keys()).sort();
-          const newTimestamps = frames.map(f => f.timestamp).sort();
+        if (!Array.isArray(frames)) {
+          console.error('[WeatherRadarAnimation] Invalid frames format:', frames);
+          return;
+        }
 
-          const framesUnchanged = existingTimestamps.length === newTimestamps.length &&
-            existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+        if (frames.length === 0) {
+          console.warn('[WeatherRadarAnimation] No radar animation frames available');
+          return;
+        }
 
-          if (framesUnchanged && radarOverlaysMapRef.current.size > 0) {
+        console.log(`[WeatherRadarAnimation] Received ${frames.length} frames, checking if update needed...`);
+
+        const existingTimestamps = Array.from(radarOverlaysMapRef.current.keys()).sort();
+        const newTimestamps = frames.map(f => f.timestamp).sort();
+
+        const framesUnchanged = existingTimestamps.length === newTimestamps.length &&
+          existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+
+        if (framesUnchanged && radarOverlaysMapRef.current.size > 0) {
+          const overlaysStillExist = Array.from(radarOverlaysMapRef.current.values()).every(overlay => {
+            return mapInstance && mapInstance.hasLayer(overlay) && layerGroupsRef.current?.weather?.hasLayer(overlay);
+          });
+          
+          if (overlaysStillExist) {
+            console.log('[WeatherRadarAnimation] Frames unchanged, reusing existing overlays');
             if (radarOverlaysMapRef.current.size > 1) {
               startAnimation();
             }
             return;
-          }
-
-          if (radarOverlaysMapRef.current.size > 0 && layerGroupsRef.current.weather) {
-            radarOverlaysMapRef.current.forEach(overlay => {
-              try {
-                layerGroupsRef.current.weather?.removeLayer(overlay);
-              } catch {
-              }
-            });
+          } else {
+            console.log('[WeatherRadarAnimation] Frames unchanged but overlays missing, reloading...');
             radarOverlaysMapRef.current.clear();
           }
+        }
 
-          setRadarFrames(frames);
-          radarFramesRef.current = frames;
-          currentTimestampRef.current = frames.length > 0 ? frames[0].timestamp : null;
-          setCurrentRadarFrameIndex(0);
-
-          const bounds: [[number, number], [number, number]] = [
-            [20, -130],
-            [50, -60]
-          ];
-
-          console.log(`[WeatherRadarAnimation] Preloading ${frames.length} radar frames...`);
-
-          for (const frame of frames) {
+        if (radarOverlaysMapRef.current.size > 0 && layerGroupsRef.current.weather) {
+          radarOverlaysMapRef.current.forEach(overlay => {
             try {
-              const overlay = L.imageOverlay(frame.imageData, bounds, {
-                opacity: frame === frames[0] ? 0.3 : 0,
-                interactive: false,
-                crossOrigin: 'anonymous',
-                alt: 'NOAA Weather Radar',
-                pane: 'overlayPane'
-              });
-              
-              if (layerGroupsRef.current?.weather) {
-                layerGroupsRef.current.weather.addLayer(overlay);
-                overlay.bringToFront();
-                radarOverlaysMapRef.current.set(frame.timestamp, overlay);
-              }
-            } catch (error) {
-              console.warn(`[WeatherRadarAnimation] Failed to load frame ${frame.timestamp}:`, error);
+              layerGroupsRef.current.weather?.removeLayer(overlay);
+            } catch {
             }
+          });
+          radarOverlaysMapRef.current.clear();
+        }
+
+        setRadarFrames(frames);
+        radarFramesRef.current = frames;
+        currentTimestampRef.current = frames.length > 0 ? frames[0].timestamp : null;
+        setCurrentRadarFrameIndex(0);
+
+        const bounds: [[number, number], [number, number]] = [
+          [20, -130],
+          [50, -60]
+        ];
+
+        console.log(`[WeatherRadarAnimation] Preloading ${frames.length} radar frames...`);
+
+        for (const frame of frames) {
+          try {
+            const overlay = L.imageOverlay(frame.imageData, bounds, {
+              opacity: frame === frames[0] ? 0.3 : 0,
+              interactive: false,
+              crossOrigin: 'anonymous',
+              alt: 'NOAA Weather Radar',
+              pane: 'overlayPane'
+            });
+            
+            if (layerGroupsRef.current?.weather) {
+              layerGroupsRef.current.weather.addLayer(overlay);
+              overlay.bringToFront();
+              radarOverlaysMapRef.current.set(frame.timestamp, overlay);
+            }
+          } catch (error) {
+            console.warn(`[WeatherRadarAnimation] Failed to load frame ${frame.timestamp}:`, error);
+          }
+        }
+
+        console.log(`[WeatherRadarAnimation] ✅ Loaded ${radarOverlaysMapRef.current.size} radar overlays`);
+
+        if (radarOverlaysMapRef.current.size === 0) {
+          console.error('[WeatherRadarAnimation] No radar overlays could be loaded');
+          return;
+        }
+
+        const timeIndicatorExists = radarTimeIndicatorRef.current && 
+                                   mapRef.current && 
+                                   mapRef.current.contains(radarTimeIndicatorRef.current);
+
+        if (!timeIndicatorExists && mapRef.current) {
+          if (radarTimeIndicatorRef.current) {
+            try {
+              radarTimeIndicatorRef.current.remove();
+            } catch {
+            }
+            radarTimeIndicatorRef.current = null;
           }
 
-          console.log(`[WeatherRadarAnimation] ✅ Loaded ${radarOverlaysMapRef.current.size} radar overlays`);
+          const timeIndicatorDiv = document.createElement('div');
+          timeIndicatorDiv.id = 'radar-time-indicator';
+          timeIndicatorDiv.style.cssText = `
+            position: absolute;
+            top: 10px;
+            left: 50px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            white-space: nowrap;
+            z-index: 1000;
+            pointer-events: none;
+          `;
+          const firstFrame = frames[0];
+          const frameTime = airportCode 
+            ? formatAirportLocalTimeShort(firstFrame.timestampISO || new Date(firstFrame.timestamp).toISOString(), airportCode, baseline || undefined)
+            : new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          timeIndicatorDiv.textContent = `Radar: ${frameTime}`;
+          mapRef.current.appendChild(timeIndicatorDiv);
+          radarTimeIndicatorRef.current = timeIndicatorDiv;
+        } else if (radarTimeIndicatorRef.current && timeIndicatorExists) {
+          const firstFrame = frames[0];
+          const frameTime = airportCode 
+            ? formatAirportLocalTimeShort(firstFrame.timestampISO || new Date(firstFrame.timestamp).toISOString(), airportCode, baseline || undefined)
+            : new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
+        }
 
-          if (radarOverlaysMapRef.current.size === 0) {
-            console.error('[WeatherRadarAnimation] No radar overlays could be loaded');
-            return;
-          }
-
-          const timeIndicatorExists = radarTimeIndicatorRef.current && 
-                                     mapRef.current && 
-                                     mapRef.current.contains(radarTimeIndicatorRef.current);
-
-          if (!timeIndicatorExists && mapRef.current) {
-            if (radarTimeIndicatorRef.current) {
-              try {
-                radarTimeIndicatorRef.current.remove();
-              } catch {
-              }
-              radarTimeIndicatorRef.current = null;
-            }
-
-            const timeIndicatorDiv = document.createElement('div');
-            timeIndicatorDiv.id = 'radar-time-indicator';
-            timeIndicatorDiv.style.cssText = `
-              position: absolute;
-              top: 10px;
-              left: 50px;
-              background: rgba(0, 0, 0, 0.8);
-              color: white;
-              padding: 4px 8px;
-              border-radius: 4px;
-              font-size: 11px;
-              font-weight: bold;
-              border: 1px solid rgba(255, 255, 255, 0.3);
-              white-space: nowrap;
-              z-index: 1000;
-              pointer-events: none;
-            `;
-            const firstFrame = frames[0];
+        if (radarOverlaysMapRef.current.size === 1) {
+          const singleOverlay = Array.from(radarOverlaysMapRef.current.values())[0];
+          singleOverlay.setOpacity(0.3);
+          currentTimestampRef.current = frames[0].timestamp;
+          setCurrentRadarFrameIndex(0);
+          
+          if (radarTimeIndicatorRef.current && frames[0]) {
             const frameTime = airportCode 
-              ? formatAirportLocalTimeShort(firstFrame.timestampISO || new Date(firstFrame.timestamp).toISOString(), airportCode, baseline || undefined)
-              : new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            timeIndicatorDiv.textContent = `Radar: ${frameTime}`;
-            mapRef.current.appendChild(timeIndicatorDiv);
-            radarTimeIndicatorRef.current = timeIndicatorDiv;
-          } else if (radarTimeIndicatorRef.current && timeIndicatorExists) {
-            const firstFrame = frames[0];
-            const frameTime = airportCode 
-              ? formatAirportLocalTimeShort(firstFrame.timestampISO || new Date(firstFrame.timestamp).toISOString(), airportCode, baseline || undefined)
-              : new Date(firstFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              ? formatAirportLocalTimeShort(frames[0].timestampISO || new Date(frames[0].timestamp).toISOString(), airportCode, baseline || undefined)
+              : new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
             radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
           }
-
-          if (radarOverlaysMapRef.current.size === 1) {
-            const singleOverlay = Array.from(radarOverlaysMapRef.current.values())[0];
-            singleOverlay.setOpacity(0.3);
-            currentTimestampRef.current = frames[0].timestamp;
-            setCurrentRadarFrameIndex(0);
-            
-            if (radarTimeIndicatorRef.current && frames[0]) {
-              const frameTime = airportCode 
-                ? formatAirportLocalTimeShort(frames[0].timestampISO || new Date(frames[0].timestamp).toISOString(), airportCode, baseline || undefined)
-                : new Date(frames[0].timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
-            }
-            return;
-          }
-          
-          startAnimation();
+          return;
+        }
+        
+        startAnimation();
 
         } catch (error) {
+          isLoadingRef.current = false;
           console.error('[WeatherRadarAnimation] Failed to add animated weather radar:', error);
         }
-      } else {
-        console.warn('[WeatherRadarAnimation] No radar layer available');
-      }
     };
 
+    if (!mapInstance || !mapReady) {
+      if (layerGroupReady) {
+        setLayerGroupReady(false);
+      }
+      console.log('[WeatherRadarAnimation] Early return - mapInstance:', !!mapInstance, 'mapReady:', mapReady);
+      return;
+    }
+
+    if (!displayOptions.showWeatherRadar) {
+      console.log('[WeatherRadarAnimation] Early return - showWeatherRadar is false');
+      return;
+    }
+
+    if (!layerGroupsRef.current?.weather) {
+      if (layerGroupReady) {
+        setLayerGroupReady(false);
+      }
+      console.log('[WeatherRadarAnimation] Layer group not ready, starting retry mechanism...');
+      let retryCount = 0;
+      const maxRetries = 100;
+      const retryInterval = 50;
+      
+      const retryCheck = setInterval(() => {
+        retryCount++;
+        if (layerGroupsRef.current?.weather && displayOptions.showWeatherRadar) {
+          console.log(`[WeatherRadarAnimation] Layer group ready after ${retryCount} retries, calling updateWeatherRadar`);
+          clearInterval(retryCheck);
+          setLayerGroupReady(true);
+          updateWeatherRadar();
+        } else if (retryCount >= maxRetries) {
+          clearInterval(retryCheck);
+          console.warn(`[WeatherRadarAnimation] Layer group not ready after ${maxRetries} retries. mapInstance:`, !!mapInstance, 'mapReady:', mapReady, 'layerGroupsRef.current:', Object.keys(layerGroupsRef.current || {}));
+        }
+      }, retryInterval);
+      
+      return () => {
+        clearInterval(retryCheck);
+      };
+    }
+
+    if (!layerGroupReady) {
+      setLayerGroupReady(true);
+    }
+
+    console.log('[WeatherRadarAnimation] Calling updateWeatherRadar - map ready, layer group exists');
     updateWeatherRadar();
 
     return () => {
@@ -429,7 +474,7 @@ export function useWeatherRadarAnimation({
         fadeAnimationFrameRef.current = null;
       }
     };
-  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline, layerGroupsRef, mapRef, setActiveWeatherLayers, startAnimation, layerGroupReady]);
+  }, [mapInstance, mapReady, displayOptions.showWeatherRadar, weatherLayers, airportCode, baseline, layerGroupsRef, mapRef, setActiveWeatherLayers, startAnimation, layerGroupReady]);
 
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;

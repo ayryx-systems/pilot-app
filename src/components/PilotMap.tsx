@@ -182,7 +182,8 @@ export function PilotMap({
     mapRef,
     setActiveWeatherLayers,
     airportCode: airport?.code,
-    baseline
+    baseline,
+    mapReady
   });
   
   // Track highlight overlay references for cleanup
