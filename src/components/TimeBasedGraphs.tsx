@@ -575,7 +575,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       const forecastData = alignedForecastCounts.map(count => count !== null ? count : null);
       
       datasets.push({
-        label: 'FAA Arrival Forecast',
+        label: 'Flight Plans',
         data: forecastData,
         borderColor: '#f59e0b',
         backgroundColor: 'rgba(245, 158, 11, 0.1)',
@@ -814,7 +814,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
                 <strong className="text-green-400">Green Line:</strong> Seasonal average across all days
               </p>
               <p>
-                <strong className="text-orange-400">Orange Line:</strong> FAA arrival forecast (when available)
+                <strong className="text-orange-400">Orange Line:</strong> Flight Plans - FAA forecast based on filed flight plans with arrival times during each 15-minute time slot
               </p>
               <p>
                 <strong className="text-red-400">Red Bar:</strong> Expected arrivals NOW (FAA forecast or baseline)
