@@ -360,7 +360,24 @@ export function useWeatherRadarAnimation({
               const img = new Image();
               img.crossOrigin = 'anonymous';
               
+              const cleanup = () => {
+                const urlIndex = radarBlobUrlsRef.current.indexOf(blobUrl);
+                if (urlIndex !== -1) {
+                  radarBlobUrlsRef.current.splice(urlIndex, 1);
+                }
+                try {
+                  URL.revokeObjectURL(blobUrl);
+                } catch {
+                }
+              };
+              
               img.onload = () => {
+                if (!layerGroupsRef.current?.weather) {
+                  cleanup();
+                  reject(new Error(`Weather layer group not available for frame ${index}`));
+                  return;
+                }
+                
                 const overlay = L.imageOverlay(blobUrl, bounds, {
                   opacity: index === 0 ? 0.3 : 0,
                   interactive: false,
@@ -369,24 +386,53 @@ export function useWeatherRadarAnimation({
                   pane: 'overlayPane'
                 });
                 
-                if (layerGroupsRef.current?.weather) {
+                try {
                   layerGroupsRef.current.weather.addLayer(overlay);
                   overlay.bringToFront();
+                  resolve(overlay);
+                } catch (error) {
+                  cleanup();
+                  reject(new Error(`Failed to add overlay for frame ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`));
                 }
-                
-                resolve(overlay);
               };
               
-              img.onerror = () => {
-                URL.revokeObjectURL(blobUrl);
-                reject(new Error(`Failed to load frame ${index}`));
+              img.onerror = (error) => {
+                cleanup();
+                const errorMsg = `Failed to load frame ${index}`;
+                console.warn(`[WeatherRadarAnimation] ${errorMsg}`, error);
+                reject(new Error(errorMsg));
               };
               
-              img.src = blobUrl;
+              try {
+                img.src = blobUrl;
+              } catch (error) {
+                cleanup();
+                reject(new Error(`Failed to set image source for frame ${index}: ${error instanceof Error ? error.message : 'Unknown error'}`));
+              }
             });
           });
 
-          const overlays = await Promise.all(overlayPromises);
+          const overlayResults = await Promise.allSettled(overlayPromises);
+          const overlays: L.ImageOverlay[] = [];
+          const errors: Error[] = [];
+          
+          overlayResults.forEach((result, index) => {
+            if (result.status === 'fulfilled') {
+              overlays.push(result.value);
+            } else {
+              errors.push(result.reason instanceof Error ? result.reason : new Error(`Frame ${index} failed: ${String(result.reason)}`));
+            }
+          });
+          
+          if (errors.length > 0) {
+            console.warn(`[WeatherRadarAnimation] ${errors.length} of ${frames.length} radar frames failed to load:`, errors);
+          }
+          
+          if (overlays.length === 0) {
+            console.error('[WeatherRadarAnimation] No radar overlays could be loaded');
+            return;
+          }
+          
           radarOverlaysRef.current = overlays;
 
           console.log(`[WeatherRadarAnimation] ✅ All ${overlays.length} radar overlays preloaded`);
