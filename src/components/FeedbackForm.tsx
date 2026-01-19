@@ -180,7 +180,7 @@ export function FeedbackForm({ onSubmit, onCancel, appVersion, airportContext }:
               <Mail className="w-4 h-4 text-gray-500 mt-0.5 flex-shrink-0" />
               <p className="text-xs text-gray-400">
                 Have a question or want to talk directly with the AYRYX team? Email us at{' '}
-                <a href="mailto:feedback@ayryx.com" className="text-blue-400 hover:text-blue-300 underline">
+                <a href="mailto:feedback@ayryx.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">
                   feedback@ayryx.com
                 </a>
               </p>
