@@ -768,16 +768,70 @@ export function PilotDashboard() {
                           return 'Loading traffic forecast...';
                         }
                         
-                        const referenceTime = selectedTime;
-                        const oneHourFromReference = new Date(referenceTime.getTime() + 60 * 60 * 1000);
+                        // Helper functions
+                        const getUTCOffsetHours = (airportCode: string, date: Date, baseline: any) => {
+                          const offsets: Record<string, { winter: number; summer: number }> = {
+                            'KORD': { winter: -6, summer: -5 },
+                            'ORD': { winter: -6, summer: -5 },
+                            'KLGA': { winter: -5, summer: -4 },
+                            'LGA': { winter: -5, summer: -4 },
+                            'KJFK': { winter: -5, summer: -4 },
+                            'JFK': { winter: -5, summer: -4 },
+                            'KLAX': { winter: -8, summer: -7 },
+                            'LAX': { winter: -8, summer: -7 },
+                            'KSFO': { winter: -8, summer: -7 },
+                            'SFO': { winter: -8, summer: -7 },
+                          };
+                          const offset = offsets[airportCode] || { winter: -6, summer: -5 };
+                          if (!baseline?.dstDatesByYear) return offset.winter;
+                          const year = date.getUTCFullYear();
+                          const dstDates = baseline.dstDatesByYear[year];
+                          if (!dstDates) return offset.winter;
+                          const dstStart = new Date(dstDates.start);
+                          const dstEnd = new Date(dstDates.end);
+                          return (date >= dstStart && date < dstEnd) ? offset.summer : offset.winter;
+                        };
                         
-                        // Get selected date string for filtering
+                        const getAirportLocalDateString = (date: Date) => {
+                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
+                          const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
+                          const year = localDate.getUTCFullYear();
+                          const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
+                          const day = String(localDate.getUTCDate()).padStart(2, '0');
+                          return `${year}-${month}-${day}`;
+                        };
+                        
+                        const getDayOfWeek = (dateStr: string) => {
+                          const date = new Date(dateStr + 'T00:00:00Z');
+                          const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+                          return days[date.getUTCDay()];
+                        };
+                        
+                        const getSeason = (date: Date) => {
+                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
+                          const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
+                          const month = localDate.getUTCMonth();
+                          return (month >= 3 && month <= 9) ? 'summer' : 'winter';
+                        };
+                        
+                        const getTimeSlot = (date: Date) => {
+                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
+                          const localTime = new Date(date.getTime() + offset * 60 * 60 * 1000);
+                          const hours = localTime.getUTCHours();
+                          const minutes = localTime.getUTCMinutes();
+                          const slotMinutes = Math.floor(minutes / 15) * 15;
+                          return `${String(hours).padStart(2, '0')}:${String(slotMinutes).padStart(2, '0')}`;
+                        };
+                        
                         const getDateString = (date: Date) => {
                           const year = date.getFullYear();
                           const month = String(date.getMonth() + 1).padStart(2, '0');
                           const day = String(date.getDate()).padStart(2, '0');
                           return `${year}-${month}-${day}`;
                         };
+                        
+                        const referenceTime = selectedTime;
+                        const oneHourFromReference = new Date(referenceTime.getTime() + 60 * 60 * 1000);
                         const selectedDateStr = getDateString(referenceTime);
                         
                         let nextHourCount = 0;
@@ -807,51 +861,6 @@ export function PilotDashboard() {
                         
                         // If no FAA forecast data for this time, fall back to baseline day-of-week average
                         if (!hasForecastData && baseline) {
-                          const getAirportLocalDateString = (date: Date) => {
-                            const offset = getUTCOffsetHours(selectedAirport, date, baseline);
-                            const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
-                            const year = localDate.getUTCFullYear();
-                            const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
-                            const day = String(localDate.getUTCDate()).padStart(2, '0');
-                            return `${year}-${month}-${day}`;
-                          };
-                          
-                          const getDayOfWeek = (dateStr: string) => {
-                            const date = new Date(dateStr + 'T00:00:00Z');
-                            const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-                            return days[date.getUTCDay()];
-                          };
-                          
-                          const getSeason = (date: Date) => {
-                            const offset = getUTCOffsetHours(selectedAirport, date, baseline);
-                            const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
-                            const month = localDate.getUTCMonth();
-                            return (month >= 3 && month <= 9) ? 'summer' : 'winter';
-                          };
-                          
-                          const getUTCOffsetHours = (airportCode: string, date: Date, baseline: any) => {
-                            const offsets: Record<string, { winter: number; summer: number }> = {
-                              'KORD': { winter: -6, summer: -5 },
-                              'ORD': { winter: -6, summer: -5 },
-                              'KLGA': { winter: -5, summer: -4 },
-                              'LGA': { winter: -5, summer: -4 },
-                              'KJFK': { winter: -5, summer: -4 },
-                              'JFK': { winter: -5, summer: -4 },
-                              'KLAX': { winter: -8, summer: -7 },
-                              'LAX': { winter: -8, summer: -7 },
-                              'KSFO': { winter: -8, summer: -7 },
-                              'SFO': { winter: -8, summer: -7 },
-                            };
-                            const offset = offsets[airportCode] || { winter: -6, summer: -5 };
-                            if (!baseline?.dstDatesByYear) return offset.winter;
-                            const year = date.getUTCFullYear();
-                            const dstDates = baseline.dstDatesByYear[year];
-                            if (!dstDates) return offset.winter;
-                            const dstStart = new Date(dstDates.start);
-                            const dstEnd = new Date(dstDates.end);
-                            return (date >= dstStart && date < dstEnd) ? offset.summer : offset.winter;
-                          };
-                          
                           const dateStr = getAirportLocalDateString(referenceTime);
                           const dayOfWeek = getDayOfWeek(dateStr);
                           const season = getSeason(referenceTime);
@@ -894,7 +903,52 @@ export function PilotDashboard() {
                         
                         const timePhrase = isNowMode ? 'next hour' : 'following hour';
                         const dataSource = hasForecastData ? ' (flight plans)' : ' (baseline avg)';
-                        return `${trafficLevel}: ${Math.round(nextHourCount)} arrivals expected ${timePhrase}${dataSource}`;
+                        
+                        // Calculate expected arrivals for the specific 15-minute timeslot
+                        let timeslotArrivals: number | null = null;
+                        const timeslot = getTimeSlot(referenceTime);
+                        
+                        // Try to get forecast data first
+                        if (arrivalForecast && arrivalForecast.timeSlots) {
+                          const slotIndex = arrivalForecast.timeSlots.findIndex((slot, idx) => {
+                            const slotMatches = slot === timeslot;
+                            const dateMatches = !arrivalForecast.slotDates || arrivalForecast.slotDates[idx] === selectedDateStr;
+                            return slotMatches && dateMatches;
+                          });
+                          
+                          if (slotIndex >= 0 && arrivalForecast.arrivalCounts[slotIndex] !== null && arrivalForecast.arrivalCounts[slotIndex] !== undefined) {
+                            timeslotArrivals = arrivalForecast.arrivalCounts[slotIndex];
+                          }
+                        }
+                        
+                        // Fall back to baseline if no forecast data
+                        if (timeslotArrivals === null && baseline) {
+                          const dateStr = getAirportLocalDateString(referenceTime);
+                          const dayOfWeek = getDayOfWeek(dateStr);
+                          const season = getSeason(referenceTime);
+                          const seasonalData = baseline[season];
+                          const dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
+                          
+                          if (dayData && dayData[timeslot]) {
+                            const slotData = dayData[timeslot];
+                            timeslotArrivals = slotData.averageCount || slotData.averageArrivals || null;
+                          }
+                        }
+                        
+                        const summaryLine1 = `${trafficLevel}: ${Math.round(nextHourCount)} arrivals expected ${timePhrase}${dataSource}`;
+                        const summaryLine2 = timeslotArrivals !== null 
+                          ? `${Math.round(timeslotArrivals)} arrivals during the ${timeslot} time slot.`
+                          : null;
+                        
+                        if (summaryLine2) {
+                          return (
+                            <>
+                              <div>{summaryLine1}</div>
+                              <div>{summaryLine2}</div>
+                            </>
+                          );
+                        }
+                        return summaryLine1;
                       })();
                       
                       return (
