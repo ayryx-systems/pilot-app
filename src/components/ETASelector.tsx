@@ -50,6 +50,7 @@ export function ETASelector({
 
   const activeCategory = isNow ? metarCategory : tafCategory;
   const categoryColors = FLIGHT_CATEGORY_COLORS[activeCategory] || FLIGHT_CATEGORY_COLORS.unknown;
+  const metarColors = FLIGHT_CATEGORY_COLORS[metarCategory] || FLIGHT_CATEGORY_COLORS.unknown;
 
   const handleSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseFloat(e.target.value);
@@ -291,20 +292,20 @@ export function ETASelector({
               width: 20px;
               height: 20px;
               border-radius: 50%;
-              background: ${isNow ? '#ffffff' : categoryColors.color};
+              background: ${isNow ? metarColors.color : categoryColors.color};
               cursor: pointer;
               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-              border: ${isNow ? '2px solid #60a5fa' : `2px solid ${categoryColors.border}`};
+              border: ${isNow ? `2px solid ${metarColors.border}` : `2px solid ${categoryColors.border}`};
               margin-top: 0px;
             }
             .eta-slider::-moz-range-thumb {
               width: 20px;
               height: 20px;
               border-radius: 50%;
-              background: ${isNow ? '#ffffff' : categoryColors.color};
+              background: ${isNow ? metarColors.color : categoryColors.color};
               cursor: pointer;
               box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-              border: ${isNow ? '2px solid #60a5fa' : `2px solid ${categoryColors.border}`};
+              border: ${isNow ? `2px solid ${metarColors.border}` : `2px solid ${categoryColors.border}`};
             }
           `
         }} />
