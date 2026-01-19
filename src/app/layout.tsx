@@ -25,8 +25,8 @@ export const metadata: Metadata = {
     description: "Aviation Situational Awareness for Pilots",
   },
   icons: {
-    shortcut: "/ayryx_with_star_white.png",
-    icon: "/ayryx_with_star_white.png",
+    shortcut: "/x_favicon.svg",
+    icon: "/x_favicon.svg",
   },
 };
 
@@ -46,7 +46,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <link rel="icon" href="/ayryx_with_star_white.png" />
+        <link rel="icon" href="/x_favicon.svg" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
