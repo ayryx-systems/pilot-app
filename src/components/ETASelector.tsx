@@ -3,7 +3,7 @@
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Clock, RotateCcw, Radio, Compass } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
-import { BaselineData, FlightCategory } from '@/types';
+import { BaselineData, FlightCategory, SituationSummary } from '@/types';
 import { FLIGHT_CATEGORY_COLORS, computeFlightCategory } from '@/utils/weatherCategory';
 import { HelpButton } from './HelpButton';
 
@@ -27,6 +27,7 @@ interface ETASelectorProps {
   tafCategory: FlightCategory;
   metarCategory?: FlightCategory;
   weather?: WeatherData | null;
+  summary?: SituationSummary | null;
 }
 
 
@@ -39,6 +40,7 @@ export function ETASelector({
   tafCategory,
   metarCategory = 'VFR',
   weather,
+  summary,
 }: ETASelectorProps) {
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
@@ -137,6 +139,7 @@ export function ETASelector({
   const weatherGradient = useMemo(() => {
     const gradientStops: string[] = [];
     const numStops = 50;
+    const utcNow = getCurrentUTCTime();
     
     for (let i = 0; i <= numStops; i++) {
       const position = (i / numStops) * 100;
@@ -146,6 +149,22 @@ export function ETASelector({
       
       if (position === 0) {
         category = metarCategory;
+      } else if (summary?.timeSegments && summary.timeSegments.length > 0) {
+        const targetTime = new Date(utcNow.getTime() + hoursAhead * 60 * 60 * 1000);
+        const targetTimeMs = targetTime.getTime();
+        
+        let foundSegment = summary.timeSegments[0];
+        for (const segment of summary.timeSegments) {
+          const segmentStart = new Date(segment.timeFrom).getTime();
+          const segmentEnd = new Date(segment.timeTo).getTime();
+          
+          if (targetTimeMs >= segmentStart && targetTimeMs < segmentEnd) {
+            foundSegment = segment;
+            break;
+          }
+        }
+        
+        category = foundSegment.flightCategory || 'VFR';
       } else if (weather?.graph) {
         const slotIndex = Math.min(
           Math.max(0, Math.round(hoursAhead * 4)),
@@ -163,7 +182,7 @@ export function ETASelector({
     }
     
     return `linear-gradient(to right, ${gradientStops.join(', ')})`;
-  }, [weather?.graph, metarCategory, tafCategory, maxHoursAhead]);
+  }, [summary?.timeSegments, weather?.graph, metarCategory, tafCategory, maxHoursAhead]);
 
   const isNowRef = useRef(isNow);
   const onTimeChangeRef = useRef(onTimeChange);

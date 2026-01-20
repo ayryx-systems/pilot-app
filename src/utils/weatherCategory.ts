@@ -27,9 +27,9 @@ export const FLIGHT_CATEGORY_COLORS: Record<FlightCategory, { color: string; bg:
     border: 'rgba(34, 197, 94, 0.6)',
   },
   MVFR: {
-    color: 'rgb(59, 130, 246)',
-    bg: 'rgba(59, 130, 246, 0.15)',
-    border: 'rgba(59, 130, 246, 0.6)',
+    color: 'rgb(234, 179, 8)',
+    bg: 'rgba(234, 179, 8, 0.15)',
+    border: 'rgba(234, 179, 8, 0.6)',
   },
   IFR: {
     color: 'rgb(234, 88, 12)',
@@ -61,4 +61,8 @@ export const FLIGHT_CATEGORY_DESCRIPTIONS: Record<FlightCategory, string> = {
   unlimited: 'Clear conditions',
   unknown: 'Unknown conditions',
 };
+
+export function getFlightCategoryColor(category: FlightCategory): string {
+  return FLIGHT_CATEGORY_COLORS[category]?.color || FLIGHT_CATEGORY_COLORS.unknown.color;
+}
 

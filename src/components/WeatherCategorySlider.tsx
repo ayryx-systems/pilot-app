@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { FlightCategory } from '@/types';
+import { FLIGHT_CATEGORY_COLORS, FLIGHT_CATEGORY_DESCRIPTIONS } from '@/utils/weatherCategory';
 
 interface WeatherCategorySliderProps {
   value: FlightCategory;
@@ -15,39 +16,39 @@ const CATEGORIES: FlightCategory[] = ['VFR', 'MVFR', 'IFR', 'LIFR'];
 const CATEGORY_INFO: Record<FlightCategory, { label: string; color: string; bg: string; description: string }> = {
   VFR: {
     label: 'VFR',
-    color: 'rgb(34, 197, 94)',
-    bg: 'rgba(34, 197, 94, 0.1)',
-    description: 'Clear: >5mi vis, >3000ft ceiling',
+    color: FLIGHT_CATEGORY_COLORS.VFR.color,
+    bg: FLIGHT_CATEGORY_COLORS.VFR.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.VFR,
   },
   MVFR: {
     label: 'MVFR',
-    color: 'rgb(59, 130, 246)',
-    bg: 'rgba(59, 130, 246, 0.1)',
-    description: 'Marginal: 3-5mi vis, 1000-3000ft',
+    color: FLIGHT_CATEGORY_COLORS.MVFR.color,
+    bg: FLIGHT_CATEGORY_COLORS.MVFR.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.MVFR,
   },
   IFR: {
     label: 'IFR',
-    color: 'rgb(234, 88, 12)',
-    bg: 'rgba(234, 88, 12, 0.1)',
-    description: 'Poor: 1-3mi vis, 500-1000ft',
+    color: FLIGHT_CATEGORY_COLORS.IFR.color,
+    bg: FLIGHT_CATEGORY_COLORS.IFR.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.IFR,
   },
   LIFR: {
     label: 'LIFR',
-    color: 'rgb(220, 38, 38)',
-    bg: 'rgba(220, 38, 38, 0.1)',
-    description: 'Very poor: <1mi vis, <500ft',
+    color: FLIGHT_CATEGORY_COLORS.LIFR.color,
+    bg: FLIGHT_CATEGORY_COLORS.LIFR.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.LIFR,
   },
   unlimited: {
     label: 'VFR',
-    color: 'rgb(34, 197, 94)',
-    bg: 'rgba(34, 197, 94, 0.1)',
-    description: 'Clear conditions',
+    color: FLIGHT_CATEGORY_COLORS.unlimited.color,
+    bg: FLIGHT_CATEGORY_COLORS.unlimited.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.unlimited,
   },
   unknown: {
     label: '?',
-    color: 'rgb(156, 163, 175)',
-    bg: 'rgba(156, 163, 175, 0.1)',
-    description: 'Unknown conditions',
+    color: FLIGHT_CATEGORY_COLORS.unknown.color,
+    bg: FLIGHT_CATEGORY_COLORS.unknown.bg,
+    description: FLIGHT_CATEGORY_DESCRIPTIONS.unknown,
   },
 };
 
@@ -82,7 +83,7 @@ export function WeatherCategorySlider({
       </div>
       
       <div className="relative">
-        <div className="h-2 rounded-full bg-gradient-to-r from-green-500 via-blue-500 via-orange-500 to-red-500 opacity-40" />
+        <div className="h-2 rounded-full bg-gradient-to-r from-green-500 via-yellow-500 via-orange-500 to-red-500 opacity-40" />
         
         <input
           type="range"

@@ -8,6 +8,7 @@ import {
   WeatherTrend,
 } from '@/types';
 import { ChevronDown, RotateCcw } from 'lucide-react';
+import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
 
 export interface CustomConditions {
   visibilitySM?: number;
@@ -68,15 +69,6 @@ const TREND_OPTIONS: { label: string; value: WeatherTrend }[] = [
   { label: 'Deteriorating', value: 'deteriorating' },
 ];
 
-function getFlightCategoryColor(category: FlightCategory): string {
-  switch (category) {
-    case 'VFR': return '#22c55e';
-    case 'MVFR': return '#3b82f6';
-    case 'IFR': return '#ef4444';
-    case 'LIFR': return '#a855f7';
-    default: return '#6b7280';
-  }
-}
 
 function formatDuration(minutes: number): string {
   if (minutes < 60) {
@@ -260,7 +252,7 @@ export default function ArrivalRiskCone({
   } : situation?.conditions;
 
   const flightCategory = displayConditions?.visibility as FlightCategory || 'VFR';
-  const flightCategoryColor = getFlightCategoryColor(flightCategory);
+  const flightCategoryColor = FLIGHT_CATEGORY_COLORS[flightCategory]?.color || FLIGHT_CATEGORY_COLORS.unknown.color;
 
   if (loading) {
     return (
@@ -376,7 +368,7 @@ export default function ArrivalRiskCone({
             options={VISIBILITY_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
             onChange={(v) => handleConditionChange('visibilitySM', v)}
             disabled={!isCustomMode}
-            categoryColor={getFlightCategoryColor(getVisibilityLabel(customConditions.visibilitySM) as FlightCategory)}
+            categoryColor={FLIGHT_CATEGORY_COLORS[getVisibilityLabel(customConditions.visibilitySM) as FlightCategory]?.color || FLIGHT_CATEGORY_COLORS.unknown.color}
           />
           <Dropdown
             label="CEIL"
@@ -384,7 +376,7 @@ export default function ArrivalRiskCone({
             options={CEILING_OPTIONS.map(o => ({ label: o.label, value: o.value }))}
             onChange={(v) => handleConditionChange('ceilingFt', v)}
             disabled={!isCustomMode}
-            categoryColor={getFlightCategoryColor(getCeilingLabel(customConditions.ceilingFt) as FlightCategory)}
+            categoryColor={FLIGHT_CATEGORY_COLORS[getCeilingLabel(customConditions.ceilingFt) as FlightCategory]?.color || FLIGHT_CATEGORY_COLORS.unknown.color}
           />
           <Dropdown
             label="WIND"
