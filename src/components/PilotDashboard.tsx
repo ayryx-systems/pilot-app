@@ -696,7 +696,7 @@ export function PilotDashboard() {
               {/* ETA Selector - Sticky at top, acts as mode switch */}
               {selectedAirport && (
                 <div className="sticky top-0 z-10 bg-slate-800 rounded-lg border border-slate-700 p-3 shadow-lg">
-                  <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">Select Arrival Time</h3>
+                  <h3 className="text-xs font-semibold text-slate-400 uppercase mb-2">Select Arrival Time ({selectedAirport} local)</h3>
                   <ETASelector
                     airportCode={selectedAirport}
                     selectedTime={selectedTime}
