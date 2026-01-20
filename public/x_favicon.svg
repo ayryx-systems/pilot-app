@@ -8,8 +8,8 @@
    version="1.1"
    id="svg3296"
    inkscape:version="1.2 (dc2aeda, 2022-05-15)"
-   sodipodi:docname="x_favicon3.svg"
-   inkscape:export-filename="x_favicon2.png"
+   sodipodi:docname="x_favicon4.svg"
+   inkscape:export-filename="x_favicon4.png"
    inkscape:export-xdpi="96"
    inkscape:export-ydpi="96"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
@@ -29,7 +29,7 @@
      showgrid="false"
      inkscape:zoom="1.1893044"
      inkscape:cx="261.49739"
-     inkscape:cy="269.06484"
+     inkscape:cy="272.42815"
      inkscape:window-width="1372"
      inkscape:window-height="892"
      inkscape:window-x="1867"
@@ -47,6 +47,26 @@
        orientation="1,0"
        id="guide4536"
        inkscape:locked="false" />
+    <sodipodi:guide
+       position="133.25891,127.06894"
+       orientation="0,-1"
+       id="guide4623"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="136.37348,24.510745"
+       orientation="0,-1"
+       id="guide4625"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="24.916525,158.882"
+       orientation="1,0"
+       id="guide4627"
+       inkscape:locked="false" />
+    <sodipodi:guide
+       position="128.14213,58.326028"
+       orientation="1,0"
+       id="guide4629"
+       inkscape:locked="false" />
   </sodipodi:namedview>
   <defs
      id="defs3293" />
@@ -55,12 +75,11 @@
      inkscape:groupmode="layer"
      id="layer1"
      transform="translate(-28.580942,-73.618526)">
-    <circle
+    <path
        style="fill:#fee000;fill-opacity:1;stroke-width:1.409;paint-order:stroke markers fill"
-       id="path4538"
-       cx="105.33274"
-       cy="148.81303"
-       r="58.509338" />
+       d="m 39.036983,84.297036 c 43.488636,64.778934 43.448647,64.752474 0,131.034234 66.232487,-43.88507 65.881947,-43.82642 132.813977,0.44493 -43.92903,-66.80481 -43.95037,-66.948 0,-132.591508 C 105.36511,127.671 105.3109,127.83988 39.036983,84.297036 Z"
+       id="path4658"
+       sodipodi:nodetypes="ccccc" />
     <path
        id="path2483"
        style="fill:#000000;stroke-width:2.02624;paint-order:stroke markers fill"
