@@ -134,9 +134,7 @@ export function ETASelector({
         
         if (isQuarterHour) {
           let shouldLabel = false;
-          if (isDayBoundary) {
-            shouldLabel = true;
-          } else if (isHour) {
+          if (isHour) {
             const hoursFromStart = Math.round(actualHoursAhead);
             shouldLabel = hoursFromStart % labelInterval === 0;
           }
@@ -308,9 +306,7 @@ export function ETASelector({
             >
               <div
                 className={`w-px ${
-                  mark.isDayBoundary 
-                    ? 'h-full bg-blue-400/70' 
-                    : mark.isHour 
+                  mark.isHour 
                     ? 'h-3 bg-slate-400/60' 
                     : 'h-1.5 bg-slate-500/40'
                 }`}
@@ -327,7 +323,7 @@ export function ETASelector({
                 className="absolute flex flex-col items-center"
                 style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
               >
-                <span className={`text-[10px] ${mark.isDayBoundary ? 'text-blue-400 font-semibold' : 'text-slate-300 font-medium'}`}>
+                <span className="text-[10px] text-slate-300 font-medium">
                   {mark.label}
                 </span>
               </div>
