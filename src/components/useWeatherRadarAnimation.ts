@@ -403,37 +403,89 @@ export function useWeatherRadarAnimation({
   useEffect(() => {
     if (!mapInstance || !displayOptions.showWeatherRadar) return;
     if (radarFrames.length === 0) return;
+    if (!layerGroupsRef.current?.weather) return;
 
     const refreshInterval = setInterval(async () => {
       try {
         const radarLayer = weatherLayers.find(layer => layer.id === 'radar') || 
                           weatherLayers.find(layer => layer.id === 'radar_composite');
         
-        if (!radarLayer) return;
+        if (!radarLayer || isLoadingRef.current) return;
 
         const frames = await weatherService.getWeatherRadarAnimation();
 
-        if (Array.isArray(frames) && frames.length > 0) {
-          const existingTimestamps = Array.from(radarOverlaysMapRef.current.keys()).sort();
-          const newTimestamps = frames.map(f => f.timestamp).sort();
-          
-          const framesUnchanged = existingTimestamps.length === newTimestamps.length &&
-            existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+        if (!Array.isArray(frames) || frames.length === 0) {
+          return;
+        }
 
-          if (!framesUnchanged) {
-            setRadarFrames([]);
-            setTimeout(() => {
-              setRadarFrames(frames);
-            }, 100);
+        const existingTimestamps = Array.from(radarOverlaysMapRef.current.keys()).sort();
+        const newTimestamps = frames.map(f => f.timestamp).sort();
+        
+        const framesUnchanged = existingTimestamps.length === newTimestamps.length &&
+          existingTimestamps.every((ts, i) => ts === newTimestamps[i]);
+
+        if (framesUnchanged) {
+          return;
+        }
+
+        const existingTimestampSet = new Set(existingTimestamps);
+        const newTimestampSet = new Set(newTimestamps);
+        
+        const framesToRemove = existingTimestamps.filter(ts => !newTimestampSet.has(ts));
+        const framesToAdd = frames.filter(f => !existingTimestampSet.has(f.timestamp));
+
+        if (framesToRemove.length > 0) {
+          for (const timestamp of framesToRemove) {
+            const overlay = radarOverlaysMapRef.current.get(timestamp);
+            if (overlay) {
+              try {
+                layerGroupsRef.current?.weather?.removeLayer(overlay);
+              } catch {}
+              radarOverlaysMapRef.current.delete(timestamp);
+            }
+          }
+        }
+
+        if (framesToAdd.length > 0) {
+          const bounds: [[number, number], [number, number]] = [
+            [20, -130],
+            [50, -60]
+          ];
+
+          for (const frame of framesToAdd) {
+            try {
+              const overlay = L.imageOverlay(frame.imageData, bounds, {
+                opacity: 0,
+                interactive: false,
+                crossOrigin: 'anonymous',
+                alt: 'NOAA Weather Radar',
+                pane: 'overlayPane'
+              });
+              
+              if (layerGroupsRef.current?.weather) {
+                layerGroupsRef.current.weather.addLayer(overlay);
+                overlay.bringToFront();
+                radarOverlaysMapRef.current.set(frame.timestamp, overlay);
+              }
+            } catch (error) {
+              console.warn(`[WeatherRadarAnimation] Failed to add new frame ${frame.timestamp}:`, error);
+            }
+          }
+
+          radarFramesRef.current = frames;
+          setRadarFrames(frames);
+
+          if (radarOverlaysMapRef.current.size > 1 && !radarAnimationIntervalRef.current) {
+            startAnimation();
           }
         }
       } catch (error) {
         console.error('[WeatherRadarAnimation] Failed to refresh radar frames:', error);
       }
-    }, 5 * 60 * 1000);
+    }, 2 * 60 * 1000);
 
     return () => clearInterval(refreshInterval);
-  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, radarFrames.length]);
+  }, [mapInstance, displayOptions.showWeatherRadar, weatherLayers, radarFrames.length, layerGroupsRef, startAnimation]);
 
   return {
     radarFrames,

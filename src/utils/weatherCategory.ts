@@ -65,4 +65,3 @@ export const FLIGHT_CATEGORY_DESCRIPTIONS: Record<FlightCategory, string> = {
 export function getFlightCategoryColor(category: FlightCategory): string {
   return FLIGHT_CATEGORY_COLORS[category]?.color || FLIGHT_CATEGORY_COLORS.unknown.color;
 }
-
