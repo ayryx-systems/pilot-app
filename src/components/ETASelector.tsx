@@ -66,7 +66,8 @@ export function ETASelector({
     targetLocalTime.setTime(targetLocalTime.getTime() + targetHours * 60 * 60 * 1000);
     
     const minutes = targetLocalTime.getUTCMinutes();
-    const roundedMinutes = Math.round(minutes / 15) * 15;
+    const seconds = targetLocalTime.getUTCSeconds();
+    const roundedMinutes = Math.round((minutes + seconds / 60) / 15) * 15;
     
     if (roundedMinutes >= 60) {
       targetLocalTime.setUTCHours(targetLocalTime.getUTCHours() + 1, 0, 0, 0);
@@ -97,37 +98,57 @@ export function ETASelector({
   const formatTimeForMark = (date: Date) => {
     const hours = date.getUTCHours();
     const minutes = date.getUTCMinutes();
-    const period = hours >= 12 ? 'PM' : 'AM';
-    const displayHours = hours === 0 ? 12 : hours > 12 ? hours - 12 : hours;
-    return `${displayHours}:${String(minutes).padStart(2, '0')} ${period}`;
+    return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
   };
 
   const getSliderMarks = () => {
-    const marks: Array<{ position: number; label: string; isDayBoundary: boolean }> = [];
+    const marks: Array<{ position: number; label: string; isDayBoundary: boolean; isHour: boolean; isQuarterHour: boolean }> = [];
     
     const currentTime = airportNowLocal.getTime();
+    const currentHour = airportNowLocal.getUTCHours();
+    const currentMinutes = airportNowLocal.getUTCMinutes();
     
-    const targetHours = [6, 12, 18, 0];
+    const nextQuarterHour = Math.ceil(currentMinutes / 15) * 15;
+    const startTime = new Date(airportNowLocal);
+    if (nextQuarterHour >= 60) {
+      startTime.setUTCHours(currentHour + 1, 0, 0, 0);
+    } else {
+      startTime.setUTCHours(currentHour, nextQuarterHour, 0, 0);
+    }
     
-    for (const targetHour of targetHours) {
-      const targetLocalTime = new Date(airportNowLocal);
-      targetLocalTime.setUTCMinutes(0, 0, 0);
-      targetLocalTime.setUTCHours(targetHour, 0, 0, 0);
+    const labelInterval = maxHoursAhead <= 12 ? 2 : maxHoursAhead <= 24 ? 3 : 6;
+    
+    for (let hoursAhead = 0; hoursAhead <= maxHoursAhead; hoursAhead += 0.25) {
+      const targetLocalTime = new Date(startTime);
+      targetLocalTime.setTime(startTime.getTime() + hoursAhead * 60 * 60 * 1000);
       
-      if (targetLocalTime.getTime() <= currentTime) {
-        targetLocalTime.setUTCDate(targetLocalTime.getUTCDate() + 1);
-      }
+      const actualHoursAhead = (targetLocalTime.getTime() - currentTime) / (1000 * 60 * 60);
       
-      const hoursAhead = (targetLocalTime.getTime() - currentTime) / (1000 * 60 * 60);
-      
-      if (hoursAhead > 0 && hoursAhead <= maxHoursAhead) {
-        const position = (hoursAhead / maxHoursAhead) * 100;
-        const isDayBoundary = targetHour === 0;
-        marks.push({
-          position,
-          label: formatTimeForMark(targetLocalTime),
-          isDayBoundary,
-        });
+      if (actualHoursAhead > 0 && actualHoursAhead <= maxHoursAhead) {
+        const position = (actualHoursAhead / maxHoursAhead) * 100;
+        const minutes = targetLocalTime.getUTCMinutes();
+        const hour = targetLocalTime.getUTCHours();
+        const isDayBoundary = hour === 0 && minutes === 0;
+        const isHour = minutes === 0;
+        const isQuarterHour = minutes % 15 === 0;
+        
+        if (isQuarterHour) {
+          let shouldLabel = false;
+          if (isDayBoundary) {
+            shouldLabel = true;
+          } else if (isHour) {
+            const hoursFromStart = Math.round(actualHoursAhead);
+            shouldLabel = hoursFromStart % labelInterval === 0;
+          }
+          
+          marks.push({
+            position,
+            label: shouldLabel ? formatTimeForMark(targetLocalTime) : '',
+            isDayBoundary,
+            isHour,
+            isQuarterHour: true,
+          });
+        }
       }
     }
     
@@ -270,7 +291,7 @@ export function ETASelector({
           type="range"
           min="0"
           max="100"
-          step={0.5}
+          step={0.1}
           value={sliderValue}
           onChange={handleSliderChange}
           className="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer eta-slider"
@@ -286,23 +307,32 @@ export function ETASelector({
               style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
             >
               <div
-                className={`w-px ${mark.isDayBoundary ? 'h-full bg-blue-400/60' : 'h-2 bg-slate-500/50'}`}
+                className={`w-px ${
+                  mark.isDayBoundary 
+                    ? 'h-full bg-blue-400/70' 
+                    : mark.isHour 
+                    ? 'h-3 bg-slate-400/60' 
+                    : 'h-1.5 bg-slate-500/40'
+                }`}
               />
             </div>
           ))}
         </div>
         <div className="relative mt-1.5 h-3">
-          {sliderMarks.map((mark, index) => (
-            <div
-              key={index}
-              className="absolute flex flex-col items-center"
-              style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
-            >
-              <span className={`text-[9px] ${mark.isDayBoundary ? 'text-blue-400 font-medium' : 'text-slate-400'}`}>
-                {mark.label}
-              </span>
-            </div>
-          ))}
+          {sliderMarks.map((mark, index) => {
+            if (!mark.label) return null;
+            return (
+              <div
+                key={index}
+                className="absolute flex flex-col items-center"
+                style={{ left: `${mark.position}%`, transform: 'translateX(-50%)' }}
+              >
+                <span className={`text-[10px] ${mark.isDayBoundary ? 'text-blue-400 font-semibold' : 'text-slate-300 font-medium'}`}>
+                  {mark.label}
+                </span>
+              </div>
+            );
+          })}
         </div>
         <style dangerouslySetInnerHTML={{
           __html: `
