@@ -113,7 +113,7 @@ export function usePilotData() {
   }, [state.selectedAirport]);
 
   // Load data for specific airport
-  const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean }) => {
+  const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean; forceRefreshForecast?: boolean }) => {
     if (!airportId) return;
 
     let currentBaseline: BaselineData | null = null;
@@ -123,7 +123,7 @@ export function usePilotData() {
       currentForecast = prev.arrivalForecast;
       // Only set baselineLoading if we're actually going to fetch baseline
       const willFetchBaseline = !options?.skipBaseline && !prev.baseline;
-      const willFetchForecast = !prev.arrivalForecast;
+      const willFetchForecast = !prev.arrivalForecast || options?.forceRefreshForecast;
       return { 
         ...prev, 
         loading: true, 
@@ -141,7 +141,7 @@ export function usePilotData() {
         ? pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Baseline not available') }))
         : null;
 
-      const shouldFetchForecast = !currentForecast;
+      const shouldFetchForecast = !currentForecast || options?.forceRefreshForecast;
       const forecastPromise = shouldFetchForecast
         ? pilotApi.getArrivalForecast(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Forecast not available') }))
         : null;
@@ -163,11 +163,32 @@ export function usePilotData() {
       }
 
       const responses = await Promise.allSettled(promises);
-      const responseCount = responses.length;
-      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse, baselineResponse, forecastResponse] = 
-        responseCount === 7 ? responses :
-        responseCount === 6 ? [...responses, { status: 'fulfilled' as const, value: { forecast: currentForecast } }] :
-        [...responses, { status: 'fulfilled' as const, value: { baseline: currentBaseline } }, { status: 'fulfilled' as const, value: { forecast: currentForecast } }];
+      
+      // Properly destructure responses based on what we actually fetched
+      // Base responses are always: overview, pireps, tracks, arrivals, summary (5 total)
+      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse] = responses.slice(0, 5);
+      
+      // Get baseline and forecast responses if they were fetched
+      let baselineResponse: PromiseSettledResult<unknown> | null = null;
+      let forecastResponse: PromiseSettledResult<unknown> | null = null;
+      
+      let responseIndex = 5;
+      if (shouldFetchBaseline) {
+        baselineResponse = responses[responseIndex];
+        responseIndex++;
+      }
+      if (shouldFetchForecast) {
+        forecastResponse = responses[responseIndex];
+        responseIndex++;
+      }
+      
+      // Create dummy responses for skipped items to maintain compatibility with existing code
+      if (!baselineResponse) {
+        baselineResponse = { status: 'fulfilled' as const, value: { baseline: currentBaseline } };
+      }
+      if (!forecastResponse) {
+        forecastResponse = { status: 'fulfilled' as const, value: { forecast: currentForecast } };
+      }
 
       const updates: Partial<PilotAppState> = { loading: false };
 
@@ -269,7 +290,8 @@ export function usePilotData() {
       if (shouldFetchForecast) {
         if (forecastResponse.status === 'fulfilled') {
           const newForecast = forecastResponse.value.forecast;
-          if (newForecast !== undefined && newForecast !== currentForecast) {
+          // Always update if force-refreshing, otherwise only update if data changed
+          if (newForecast !== undefined && (options?.forceRefreshForecast || newForecast !== currentForecast)) {
             updates.arrivalForecast = newForecast;
           }
           updates.arrivalForecastLoading = false;
@@ -486,7 +508,19 @@ export function usePilotData() {
     return () => clearInterval(interval);
   }, [state.connectionStatus.connected, state.selectedAirport, loadAirportData]);
 
-  // Removed separate forecast polling - actualCounts now come with arrivals endpoint
+  // Periodic forecast refresh (every 5 minutes to match backend cache TTL)
+  // The backend caches FAA forecast data for 5 minutes, so we refresh slightly after
+  // to ensure we get fresh data when the cache expires
+  useEffect(() => {
+    if (!state.connectionStatus.connected || !state.selectedAirport) return;
+    
+    const interval = setInterval(() => {
+      // Force refresh forecast data to get latest FAA flight plan updates
+      loadAirportData(state.selectedAirport, { skipBaseline: true, forceRefreshForecast: true });
+    }, 5 * 60 * 1000); // Every 5 minutes
+    
+    return () => clearInterval(interval);
+  }, [state.connectionStatus.connected, state.selectedAirport, loadAirportData]);
 
   return {
     selectedAirport: state.selectedAirport,
