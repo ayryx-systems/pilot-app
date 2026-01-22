@@ -193,7 +193,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         ]
       }
     ],
-    dmeRings: [5, 10, 15, 20, 30, 40],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.4 },
       { dir: "NE", bearing: 45, distance: 0.28 },
@@ -271,7 +270,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         approaches: []
       }
     ],
-    dmeRings: [3, 5, 10, 15, 20, 25],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.3 },
       { dir: "NE", bearing: 45, distance: 0.2 },
@@ -315,7 +313,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         ]
       }
     ],
-    dmeRings: [3, 5, 10, 15, 20],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.2 },
       { dir: "NE", bearing: 45, distance: 0.15 },
@@ -436,7 +433,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         approaches: []
       }
     ],
-    dmeRings: [5, 10, 15, 20, 25, 30],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.5 },
       { dir: "NE", bearing: 45, distance: 0.4 },
@@ -506,7 +502,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         approaches: []
       }
     ],
-    dmeRings: [5, 10, 15, 20, 25],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.3 },
       { dir: "NE", bearing: 45, distance: 0.25 },
@@ -593,7 +588,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         approaches: []
       }
     ],
-    dmeRings: [5, 10, 15, 20, 25],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.3 },
       { dir: "NE", bearing: 45, distance: 0.25 },
@@ -658,7 +652,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         ]
       }
     ],
-    dmeRings: [3, 5, 10, 15, 20],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.2 },
       { dir: "NE", bearing: 45, distance: 0.15 },
@@ -847,7 +840,6 @@ export const AIRPORTS: Record<string, AirportData> = {
         approaches: []
       }
     ],
-    dmeRings: [5, 10, 15, 20, 25, 30],
     cardinalDirections: [
       { dir: "N", bearing: 0, distance: 0.4 },
       { dir: "NE", bearing: 45, distance: 0.3 },

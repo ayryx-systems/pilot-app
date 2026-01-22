@@ -613,8 +613,8 @@ export function PilotMap({
       layerGroupsRef.current.dmeRings.clearLayers();
 
       if (displayOptions.showDmeRings) {
-        // Use airport's defined DME rings if available, otherwise use default distances
-        const dmeDistances = airportConfig?.dmeRings || [5, 10, 15, 20, 30];
+        // Always use standard DME rings up to 50nm
+        const dmeDistances = [5, 10, 15, 20, 30, 50];
         // Use the same center as the map
         const dmeCenter: [number, number] = airport?.position
           ? [airport.position.lat, airport.position.lon]
