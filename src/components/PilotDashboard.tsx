@@ -840,6 +840,16 @@ export function PilotDashboard() {
                           return `${String(hours).padStart(2, '0')}:${String(slotMinutes).padStart(2, '0')}`;
                         };
                         
+                        const getTimeSlotRange = (timeSlot: string) => {
+                          const [hours, minutes] = timeSlot.split(':').map(Number);
+                          const endMinutes = minutes + 15;
+                          const endHours = endMinutes >= 60 ? hours + 1 : hours;
+                          const finalEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
+                          const endHoursStr = endHours >= 24 ? String(endHours - 24).padStart(2, '0') : String(endHours).padStart(2, '0');
+                          const endMinutesStr = String(finalEndMinutes).padStart(2, '0');
+                          return `${timeSlot} - ${endHoursStr}:${endMinutesStr}`;
+                        };
+                        
                         const getDateString = (date: Date) => {
                           const year = date.getFullYear();
                           const month = String(date.getMonth() + 1).padStart(2, '0');
@@ -973,7 +983,7 @@ export function PilotDashboard() {
                         
                         const summaryLine1 = `${trafficLevel}: ${Math.round(nextHourCount)} arrivals expected ${timePhrase}${dataSource}`;
                         const summaryLine2 = timeslotArrivals !== null 
-                          ? `${Math.round(timeslotArrivals)} arrivals during the ${timeslot} time slot.`
+                          ? `${Math.round(timeslotArrivals)} arrivals during the ${getTimeSlotRange(timeslot)} timeslot.`
                           : null;
                         
                         if (summaryLine2) {
