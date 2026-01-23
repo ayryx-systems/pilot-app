@@ -848,25 +848,44 @@ export function PilotDashboard() {
                         };
                         
                         const referenceTime = selectedTime;
-                        const oneHourFromReference = new Date(referenceTime.getTime() + 60 * 60 * 1000);
-                        const selectedDateStr = getDateString(referenceTime);
+                        const selectedDateStr = getAirportLocalDateString(referenceTime);
+                        const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
+                        const referenceLocal = new Date(referenceTime.getTime() + offset * 60 * 60 * 1000);
+                        const referenceLocalTime = new Date(
+                          referenceLocal.getUTCFullYear(),
+                          referenceLocal.getUTCMonth(),
+                          referenceLocal.getUTCDate(),
+                          referenceLocal.getUTCHours(),
+                          referenceLocal.getUTCMinutes(),
+                          0,
+                          0
+                        );
+                        const oneHourFromReference = new Date(referenceLocalTime.getTime() + 60 * 60 * 1000);
                         
                         let nextHourCount = 0;
                         let hasForecastData = false;
                         
                         // Sum up FAA forecast data for next hour (filtered by date)
                         arrivalForecast.timeSlots.forEach((slot, idx) => {
+                          // Require slotDates to properly match slots
+                          if (!arrivalForecast.slotDates || !arrivalForecast.slotDates[idx]) {
+                            return;
+                          }
+                          
+                          // Check if this slot matches the selected date
+                          const slotDateStr = arrivalForecast.slotDates[idx];
+                          if (slotDateStr !== selectedDateStr) {
+                            return;
+                          }
+                          
                           const [hours, minutes] = slot.split(':').map(Number);
-                          const slotDate = new Date(referenceTime);
-                          slotDate.setHours(hours, minutes, 0, 0);
                           
-                          // Check if this slot matches the selected date (if slotDates available)
-                          const isCorrectDate = arrivalForecast.slotDates 
-                            ? arrivalForecast.slotDates[idx] === selectedDateStr
-                            : true; // Legacy fallback
+                          // Construct slot date using the actual date from slotDates
+                          const [year, month, day] = slotDateStr.split('-').map(Number);
+                          const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
                           
-                          if (isCorrectDate && 
-                              slotDate.getTime() >= referenceTime.getTime() && 
+                          // Check if slot is within the next hour window
+                          if (slotDate.getTime() >= referenceLocalTime.getTime() && 
                               slotDate.getTime() < oneHourFromReference.getTime()) {
                             const count = arrivalForecast.arrivalCounts[idx];
                             if (count !== null && count !== undefined) {
