@@ -943,9 +943,12 @@ export function PilotDashboard() {
                         }
                         
                         // Determine traffic level using airport-specific thresholds
+                        // Heavy: >= heavy threshold (e.g., >= 80)
+                        // Light: < light threshold (e.g., < 40)
+                        // Moderate: >= light threshold and < heavy threshold (e.g., 40-79)
                         let trafficLevel = 'Moderate';
                         if (nextHourCount >= thresholds.heavy) trafficLevel = 'Heavy';
-                        else if (nextHourCount <= thresholds.light) trafficLevel = 'Light';
+                        else if (nextHourCount < thresholds.light) trafficLevel = 'Light';
                         
                         const timePhrase = isNowMode ? 'next hour' : 'following hour';
                         const dataSource = hasForecastData ? ' (flight plans)' : ' (baseline avg)';
