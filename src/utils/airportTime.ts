@@ -242,3 +242,48 @@ export function getAirportLocalDateString(utcDate: Date, airportCode: string, ba
   const day = String(localDate.getUTCDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
 }
+
+/**
+ * Format a UTC Date to UTC time string (time only, HH:MM:SS)
+ * date should be a UTC Date object representing a moment in time
+ */
+export function formatUTCTime(date: Date): string {
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  const utcSeconds = date.getUTCSeconds();
+  const utcMonth = date.getUTCMonth();
+  const utcDay = date.getUTCDate();
+  
+  return `${utcMonth + 1}/${utcDay} ${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}:${String(utcSeconds).padStart(2, '0')}`;
+}
+
+/**
+ * Format a UTC date/time string to UTC time (with date)
+ * Overload: accepts string (ISO format) instead of Date object
+ */
+export function formatUTCTimeFromString(utcTimeString: string): string {
+  const date = new Date(utcTimeString);
+  return formatUTCTime(date);
+}
+
+/**
+ * Format a UTC date/time string to UTC time (short format, no seconds)
+ */
+export function formatUTCTimeShort(utcTimeString: string): string {
+  const date = new Date(utcTimeString);
+  const utcHours = date.getUTCHours();
+  const utcMinutes = date.getUTCMinutes();
+  
+  return `${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+}
+
+/**
+ * Get UTC date string in YYYY-MM-DD format
+ * Returns the UTC date (not converted to local)
+ */
+export function getUTCDateString(utcDate: Date): string {
+  const year = utcDate.getUTCFullYear();
+  const month = String(utcDate.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(utcDate.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}

@@ -15,8 +15,9 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { BaselineData, ArrivalForecast } from '@/types';
-import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason, getCurrentUTCTime } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason, getCurrentUTCTime, getUTCDateString, formatUTCTimeShort } from '@/utils/airportTime';
 import { HelpButton } from './HelpButton';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 ChartJS.register(
   CategoryScale,
@@ -199,10 +200,63 @@ function getHoursFromNow(timeSlot: string, nowLocal: Date, airportCode: string, 
   return hoursFromNow;
 }
 
-function formatLocalTime(timeSlot: string, dateStr: string): string {
+function formatLocalTime(timeSlot: string, dateStr: string, isUTC: boolean, airportCode: string, baseline: BaselineData | null, utcDate?: Date): string {
   // timeSlot is in HH:MM format, dateStr is YYYY-MM-DD
   // Return just the time portion for display
+  if (isUTC) {
+    if (utcDate) {
+      return formatUTCTimeShort(utcDate.toISOString());
+    }
+    const [hours, minutes] = timeSlot.split(':').map(Number);
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const localDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+    const offsetHours = getAirportUTCOffset(airportCode, localDate, baseline);
+    const utcDateFromLocal = new Date(localDate.getTime() - offsetHours * 60 * 60 * 1000);
+    return formatUTCTimeShort(utcDateFromLocal.toISOString());
+  }
   return timeSlot;
+}
+
+function getAirportUTCOffset(airportCode: string, date: Date, baseline?: BaselineData | null): number {
+  const airportTimezones: Record<string, string> = {
+    KORD: 'America/Chicago',
+    KLGA: 'America/New_York',
+    KJFK: 'America/New_York',
+    KEWR: 'America/New_York',
+    KLAX: 'America/Los_Angeles',
+    KSFO: 'America/Los_Angeles',
+    KDEN: 'America/Denver',
+  };
+  
+  const offsets: Record<string, { winter: number; summer: number }> = {
+    'America/Los_Angeles': { winter: -8, summer: -7 },
+    'America/Denver': { winter: -7, summer: -6 },
+    'America/Chicago': { winter: -6, summer: -5 },
+    'America/New_York': { winter: -5, summer: -4 },
+  };
+  
+  const timezone = airportTimezones[airportCode] || 'America/Chicago';
+  const offset = offsets[timezone] || { winter: -6, summer: -5 };
+  
+  if (!baseline?.dstDatesByYear) {
+    return offset.winter;
+  }
+  
+  const year = date.getUTCFullYear();
+  const dstDates = baseline.dstDatesByYear[year];
+  
+  if (!dstDates) {
+    return offset.winter;
+  }
+  
+  const dstStart = new Date(dstDates.start);
+  const dstEnd = new Date(dstDates.end);
+  
+  if (date >= dstStart && date < dstEnd) {
+    return offset.summer;
+  }
+  
+  return offset.winter;
 }
 
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
@@ -212,6 +266,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   selectedTime,
   loading,
 }: TimeBasedGraphsProps) {
+  const { isUTC } = useTimezonePreference();
   const chartRef = useRef<ChartJS<'line'>>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [chartData, setChartData] = useState<any>(null);
@@ -250,7 +305,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const timeKeyChanged = !prevSelectedTimeRef.current || 
       Math.abs(prevSelectedTimeRef.current.getTime() - selectedTimeKey) > 60000; // 1 minute threshold
     
-    if (!baselineChanged && !timeKeyChanged && !forecastChanged && chartData) {
+    const timezoneChanged = prevChartDataRef.current?.isUTC !== isUTC;
+    
+    if (!baselineChanged && !timeKeyChanged && !forecastChanged && !timezoneChanged && chartData) {
       return; // No need to recalculate - data hasn't meaningfully changed
     }
 
@@ -260,7 +317,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     // Calculate NOW in airport local time
     const nowUTC = getCurrentUTCTime();
     const nowLocal = utcToAirportLocal(nowUTC, airportCode, baseline);
-    const todayDateStr = getAirportLocalDateString(nowUTC, airportCode, baseline);
+    const todayDateStr = isUTC ? getUTCDateString(nowUTC) : getAirportLocalDateString(nowUTC, airportCode, baseline);
     
     // Calculate time window: -2 hours history, extend forward based on ETA
     const isNow = Math.abs(selectedTime.getTime() - nowUTC.getTime()) <= 60000;
@@ -268,8 +325,8 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const windowStartHours = -2; // 2 hours history
     const windowEndHours = isNow ? 2 : Math.max(hoursAhead + 2, 2); // Extend 2 hours past ETA, minimum 2 hours
     
-    // Get the airport local date string for selected time
-    const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
+    // Get the airport local date string for selected time (or UTC date if in UTC mode)
+    const selectedDateStr = isUTC ? getUTCDateString(selectedTime) : getAirportLocalDateString(selectedTime, airportCode, baseline);
     const dayOfWeek = getDayOfWeekName(selectedDateStr);
     const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
@@ -336,10 +393,15 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     alignment.alignedTimeSlots.forEach((ts) => {
       const hoursFromNow = getHoursFromNow(ts, nowLocal, airportCode, baseline, todayDateStr, todayDateStr);
       if (hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours) {
+        const [hours, minutes] = ts.split(':').map(Number);
+        const [year, month, day] = todayDateStr.split('-').map(Number);
+        const localDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+        const offsetHours = getAirportUTCOffset(airportCode, localDate, baseline);
+        const utcDateFromLocal = new Date(localDate.getTime() - offsetHours * 60 * 60 * 1000);
         relativeTimeSlots.push({
           hoursFromNow,
           timeSlot: ts,
-          label: formatLocalTime(ts, todayDateStr),
+          label: formatLocalTime(ts, todayDateStr, isUTC, airportCode, baseline, utcDateFromLocal),
           dateStr: todayDateStr,
         });
       }
@@ -353,10 +415,15 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
           // Only add if not already present (avoid duplicates)
           const exists = relativeTimeSlots.some(rt => rt.timeSlot === ts && rt.dateStr === selectedDateStr);
           if (!exists) {
+            const [hours, minutes] = ts.split(':').map(Number);
+            const [year, month, day] = selectedDateStr.split('-').map(Number);
+            const localDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+            const offsetHours = getAirportUTCOffset(airportCode, localDate, baseline);
+            const utcDateFromLocal = new Date(localDate.getTime() - offsetHours * 60 * 60 * 1000);
             relativeTimeSlots.push({
               hoursFromNow,
               timeSlot: ts,
-              label: formatLocalTime(ts, selectedDateStr),
+              label: formatLocalTime(ts, selectedDateStr, isUTC, airportCode, baseline, utcDateFromLocal),
               dateStr: selectedDateStr,
             });
           }
@@ -636,6 +703,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       etaExpectedArrivals,
       relativeTimeSlots,
       arrivalForecastRef: arrivalForecast, // Store reference to detect changes
+      isUTC, // Store timezone preference to detect changes
     };
 
     // Only update chartData if it's actually different to prevent unnecessary Chart.js updates
@@ -650,7 +718,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       setChartData(newChartData);
       prevChartDataRef.current = newChartData;
     }
-  }, [baseline, airportCode, selectedTimeKey, arrivalForecast, selectedTime]);
+  }, [baseline, airportCode, selectedTimeKey, arrivalForecast, selectedTime, isUTC]);
 
   // Show loading state only if we don't have chart data yet
   // If we have chart data, keep showing it even during refresh to prevent flashing
@@ -775,7 +843,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       x: {
         title: {
           display: true,
-          text: 'Time (Local)',
+          text: isUTC ? 'Time (UTC)' : 'Time (Local)',
           color: '#94a3b8',
           font: {
             size: 10

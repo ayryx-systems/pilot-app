@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import L from 'leaflet';
 import { weatherService } from '../services/weatherService';
-import { formatAirportLocalTimeShort } from '../utils/airportTime';
+import { formatAirportLocalTimeShort, formatUTCTimeShort } from '../utils/airportTime';
 import { BaselineData } from '../types';
+import { useTimezonePreference } from '../hooks/useTimezonePreference';
 
 interface WeatherRadarFrame {
   timestamp: number;
@@ -33,6 +34,7 @@ export function useWeatherRadarAnimation({
   baseline,
   mapReady = false
 }: UseWeatherRadarAnimationProps) {
+  const { isUTC } = useTimezonePreference();
   const [radarFrames, setRadarFrames] = useState<WeatherRadarFrame[]>([]);
   const [currentRadarFrameIndex, setCurrentRadarFrameIndex] = useState(0);
   const radarAnimationIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -136,9 +138,12 @@ export function useWeatherRadarAnimation({
 
       const currentFrame = radarFramesRef.current.find(f => f.timestamp === nextTimestamp);
       if (radarTimeIndicatorRef.current && currentFrame) {
-        const frameTime = airportCode 
-          ? formatAirportLocalTimeShort(currentFrame.timestampISO || new Date(currentFrame.timestamp).toISOString(), airportCode, baseline || undefined)
-          : new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const timestampISO = currentFrame.timestampISO || new Date(currentFrame.timestamp).toISOString();
+        const frameTime = isUTC
+          ? formatUTCTimeShort(timestampISO)
+          : airportCode 
+            ? formatAirportLocalTimeShort(timestampISO, airportCode, baseline || undefined)
+            : new Date(currentFrame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         radarTimeIndicatorRef.current.textContent = `Radar: ${frameTime}`;
       }
       
@@ -152,7 +157,7 @@ export function useWeatherRadarAnimation({
     };
     
     radarAnimationIntervalRef.current = setTimeout(animateFrame, 200) as any;
-  }, [displayOptions.showWeatherRadar, airportCode, baseline]);
+    }, [displayOptions.showWeatherRadar, airportCode, baseline, isUTC]);
 
   useEffect(() => {
     const airportChanged = previousAirportCodeRef.current !== undefined && 
@@ -310,8 +315,12 @@ export function useWeatherRadarAnimation({
         }
 
         const formatFrameTime = (frame: WeatherRadarFrame) => {
+          const timestampISO = frame.timestampISO || new Date(frame.timestamp).toISOString();
+          if (isUTC) {
+            return formatUTCTimeShort(timestampISO);
+          }
           return airportCode 
-            ? formatAirportLocalTimeShort(frame.timestampISO || new Date(frame.timestamp).toISOString(), airportCode, baseline || undefined)
+            ? formatAirportLocalTimeShort(timestampISO, airportCode, baseline || undefined)
             : new Date(frame.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
         };
 

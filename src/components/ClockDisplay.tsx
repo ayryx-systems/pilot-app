@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { getCurrentUTCTime, utcToAirportLocal } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
+import { Globe } from 'lucide-react';
 
 interface ClockDisplayProps {
   airportCode?: string | null;
@@ -11,6 +13,7 @@ interface ClockDisplayProps {
 
 export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
   const [currentTime, setCurrentTime] = useState(getCurrentUTCTime());
+  const { preference, togglePreference } = useTimezonePreference();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -51,6 +54,19 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
         <span className="text-gray-400">UTC:</span>
         <span className="font-mono font-medium">{formatUTCTime(currentTime)}</span>
       </div>
+      <button
+        onClick={togglePreference}
+        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors hover:bg-slate-700/50"
+        title={`Display times in ${preference === 'local' ? 'UTC' : 'Local'} (currently showing ${preference === 'local' ? 'Local' : 'UTC'})`}
+        style={{
+          backgroundColor: preference === 'utc' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
+          border: `1px solid ${preference === 'utc' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(148, 163, 184, 0.3)'}`,
+          color: preference === 'utc' ? '#93c5fd' : '#cbd5e1',
+        }}
+      >
+        <Globe className="w-3 h-3" />
+        <span>{preference === 'utc' ? 'UTC' : 'Local'}</span>
+      </button>
     </div>
   );
 }

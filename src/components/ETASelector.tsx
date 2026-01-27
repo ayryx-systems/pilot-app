@@ -2,10 +2,11 @@
 
 import React, { useEffect, useRef, useMemo } from 'react';
 import { Clock, RotateCcw, Radio, Compass } from 'lucide-react';
-import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
+import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatUTCTime, getUTCDateString } from '@/utils/airportTime';
 import { BaselineData, FlightCategory, SituationSummary } from '@/types';
 import { FLIGHT_CATEGORY_COLORS, computeFlightCategory } from '@/utils/weatherCategory';
 import { HelpButton } from './HelpButton';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 interface WeatherData {
   graph?: {
@@ -42,6 +43,7 @@ export function ETASelector({
   weather,
   summary,
 }: ETASelectorProps) {
+  const { isUTC } = useTimezonePreference();
   const utcNow = getCurrentUTCTime();
   const airportNowLocal = utcToAirportLocal(utcNow, airportCode, baseline);
   const selectedTimeLocal = utcToAirportLocal(selectedTime, airportCode, baseline);
@@ -78,9 +80,27 @@ export function ETASelector({
     onTimeChange(airportLocalToUTC(targetLocalTime, airportCode, baseline));
   };
 
-  const formatTime = (date: Date) => formatAirportLocalTime(date, airportCode, baseline);
+  const formatTime = (date: Date) => {
+    if (isUTC) {
+      return formatUTCTime(date);
+    }
+    return formatAirportLocalTime(date, airportCode, baseline);
+  };
 
   const formatDate = (date: Date) => {
+    if (isUTC) {
+      const dateStr = getUTCDateString(date);
+      const todayStr = getUTCDateString(utcNow);
+      const tomorrowDate = new Date(utcNow);
+      tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+      const tomorrowStr = getUTCDateString(tomorrowDate);
+      
+      if (dateStr === todayStr) return 'Today';
+      if (dateStr === tomorrowStr) return 'Tomorrow';
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return `${monthNames[date.getUTCMonth()]} ${date.getUTCDate()}`;
+    }
+    
     const dateLocal = utcToAirportLocal(date, airportCode, baseline);
     const todayLocal = utcToAirportLocal(utcNow, airportCode, baseline);
     const dateLocalStr = `${dateLocal.getUTCFullYear()}-${String(dateLocal.getUTCMonth() + 1).padStart(2, '0')}-${String(dateLocal.getUTCDate()).padStart(2, '0')}`;
@@ -96,6 +116,12 @@ export function ETASelector({
   };
 
   const formatTimeForMark = (date: Date) => {
+    if (isUTC) {
+      const utcDate = airportLocalToUTC(date, airportCode, baseline);
+      const hours = utcDate.getUTCHours();
+      const minutes = utcDate.getUTCMinutes();
+      return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+    }
     const hours = date.getUTCHours();
     const minutes = date.getUTCMinutes();
     return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;

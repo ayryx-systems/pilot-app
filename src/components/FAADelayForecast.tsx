@@ -13,7 +13,8 @@ import {
   Filler,
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
-import { formatAirportLocalTimeShort } from '@/utils/airportTime';
+import { formatAirportLocalTimeShort, formatUTCTimeShort } from '@/utils/airportTime';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 ChartJS.register(
   CategoryScale,
@@ -38,6 +39,7 @@ interface FAADelayForecastProps {
 }
 
 export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode }: FAADelayForecastProps) {
+  const { isUTC } = useTimezonePreference();
   const chartData = useMemo(() => {
     if (!delayForecast || delayForecast.length === 0 || !forecastStartTime) {
       return null;
@@ -51,7 +53,9 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
       const forecastTime = new Date(startTime);
       forecastTime.setUTCMinutes(forecastTime.getUTCMinutes() + ((forecast.sequence - 1) * 15));
       
-      if (airportCode) {
+      if (isUTC) {
+        labels.push(formatUTCTimeShort(forecastTime.toISOString()));
+      } else if (airportCode) {
         labels.push(formatAirportLocalTimeShort(forecastTime.toISOString(), airportCode));
       } else {
         const hours = forecastTime.getUTCHours();
@@ -75,7 +79,7 @@ export function FAADelayForecast({ delayForecast, forecastStartTime, airportCode
         },
       ],
     };
-  }, [delayForecast, forecastStartTime, airportCode]);
+  }, [delayForecast, forecastStartTime, airportCode, isUTC]);
 
   if (!chartData) {
     return null;

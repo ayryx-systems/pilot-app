@@ -2,8 +2,9 @@
 
 import React, { useEffect, useRef } from 'react';
 import { Clock } from 'lucide-react';
-import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime } from '@/utils/airportTime';
+import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatUTCTime, getUTCDateString } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 interface TimeSliderProps {
   airportCode: string;
@@ -22,6 +23,8 @@ export function TimeSlider({
   maxHoursAhead = 24,
   baseline,
 }: TimeSliderProps) {
+  const { isUTC } = useTimezonePreference();
+  
   // Get current UTC time
   const utcNow = getCurrentUTCTime();
   
@@ -124,11 +127,32 @@ export function TimeSlider({
 
   const formatTime = (date: Date) => {
     // date should be a UTC Date object
-    // formatAirportLocalTime will convert it to airport local time for display
+    if (isUTC) {
+      return formatUTCTime(date);
+    }
     return formatAirportLocalTime(date, airportCode, baseline);
   };
 
   const formatDate = (date: Date) => {
+    if (isUTC) {
+      const dateStr = getUTCDateString(date);
+      const todayStr = getUTCDateString(utcNow);
+      const tomorrowDate = new Date(utcNow);
+      tomorrowDate.setUTCDate(tomorrowDate.getUTCDate() + 1);
+      const tomorrowStr = getUTCDateString(tomorrowDate);
+      
+      if (dateStr === todayStr) {
+        return 'Today';
+      } else if (dateStr === tomorrowStr) {
+        return 'Tomorrow';
+      } else {
+        const month = date.getUTCMonth();
+        const day = date.getUTCDate();
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        return `${monthNames[month]} ${day}`;
+      }
+    }
+    
     const dateLocal = utcToAirportLocal(date, airportCode, baseline);
     const todayLocal = utcToAirportLocal(utcNow, airportCode, baseline);
     
@@ -236,7 +260,7 @@ export function TimeSlider({
               {formatTime(selectedTime)}
             </div>
             <div className="text-xs text-gray-400">
-              {formatDate(selectedTime)} ({airportCode})
+              {formatDate(selectedTime)} ({isUTC ? 'UTC' : airportCode})
             </div>
           </div>
           
