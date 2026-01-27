@@ -197,6 +197,27 @@ export function PilotMap({
     return airport ? AIRPORTS[airport.code] : null;
   }, [airport?.code]);
 
+  // Helper function to safely get map center with validation
+  const getMapCenter = (): [number, number] => {
+    // Check if airport.position exists and has valid lat/lon values
+    if (airport?.position && 
+        typeof airport.position.lat === 'number' && 
+        typeof airport.position.lon === 'number' &&
+        !isNaN(airport.position.lat) && 
+        !isNaN(airport.position.lon)) {
+      return [airport.position.lat, airport.position.lon];
+    }
+    // Fall back to airportConfig position if available
+    if (airportConfig?.position && Array.isArray(airportConfig.position) && airportConfig.position.length >= 2) {
+      const [lat, lon] = airportConfig.position;
+      if (typeof lat === 'number' && typeof lon === 'number' && !isNaN(lat) && !isNaN(lon)) {
+        return [lat, lon];
+      }
+    }
+    // Default to LAX coordinates
+    return [34.0522, -118.2437];
+  };
+
   // Inject custom CSS for map elements
   useEffect(() => {
     if (!document.getElementById("pilot-map-custom-styles")) {
@@ -407,9 +428,7 @@ export function PilotMap({
       console.log('[PilotMap] Creating map for', airportCode);
 
       // Convert position format - API uses {lat, lon}, constants use [lat, lon]
-      const mapCenter: [number, number] = airport.position
-        ? [airport.position.lat, airport.position.lon]
-        : airportConfig?.position || [34.0522, -118.2437]; // Default to LAX if no position available
+      const mapCenter = getMapCenter();
 
       // Create map
       const map = L.map(mapRef.current, {
@@ -616,9 +635,7 @@ export function PilotMap({
         // Always use standard DME rings up to 50nm
         const dmeDistances = [5, 10, 15, 20, 30, 50];
         // Use the same center as the map
-        const dmeCenter: [number, number] = airport?.position
-          ? [airport.position.lat, airport.position.lon]
-          : airportConfig?.position || [34.0522, -118.2437];
+        const dmeCenter = getMapCenter();
 
         dmeDistances.forEach((distance: number) => {
           const dmeRing = L.circle(dmeCenter, {
@@ -3112,9 +3129,7 @@ export function PilotMap({
   useEffect(() => {
     const handleRecenter = () => {
       if (mapInstance && airport) {
-        const mapCenter: [number, number] = airport.position
-          ? [airport.position.lat, airport.position.lon]
-          : airportConfig?.position || [0, 0];
+        const mapCenter = getMapCenter();
         mapInstance.flyTo(mapCenter, 9, { duration: 1.5 }); // Use zoom level 9 for 40nm radius view
       }
     };
@@ -3132,9 +3147,7 @@ export function PilotMap({
         setTimeout(() => {
           mapInstance.invalidateSize();
           if (airport) {
-            const mapCenter: [number, number] = airport.position
-              ? [airport.position.lat, airport.position.lon]
-              : airportConfig?.position || [0, 0];
+            const mapCenter = getMapCenter();
             mapInstance.setView(mapCenter, mapInstance.getZoom());
             mapInstance.fire('resize');
           }
