@@ -484,7 +484,20 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const nowRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === nowTimeSlot && rt.dateStr === todayDateStr);
     
     // ETA is for the selected date
-    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === timeSlot && rt.dateStr === selectedDateStr);
+    // Calculate the exact hours from now for the selected time
+    const selectedHoursFromNow = (selectedTime.getTime() - nowUTC.getTime()) / (1000 * 60 * 60);
+    
+    // Find the slot that's closest to the selected time (within 15 minutes)
+    // This works regardless of UTC vs local mode because we're matching by actual time position
+    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => {
+      // First try exact match by timeSlot and dateStr
+      if (rt.timeSlot === timeSlot && rt.dateStr === selectedDateStr) {
+        return true;
+      }
+      // Fallback: match by hoursFromNow (within 15 minutes = 0.25 hours)
+      // This handles cases where date strings differ but the time position is correct
+      return Math.abs(rt.hoursFromNow - selectedHoursFromNow) < 0.25;
+    });
 
     // Align forecast data with relative time slots
     // Only include forecast slots for today (fixes bug where forecast appears on tomorrow)
