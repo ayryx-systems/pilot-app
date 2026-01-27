@@ -88,6 +88,10 @@ export function ETASelector({
   };
 
   const formatDate = (date: Date) => {
+    if (isNow) {
+      return 'Now';
+    }
+    
     if (isUTC) {
       const dateStr = getUTCDateString(date);
       const todayStr = getUTCDateString(utcNow);
@@ -251,28 +255,16 @@ export function ETASelector({
           <span className={`text-lg font-bold ${isNow ? 'text-blue-300' : 'text-white'}`}>
             {formatTime(selectedTime)}
           </span>
-          <span className="text-xs text-gray-400">{formatDate(selectedTime)}</span>
-          {isNow ? (
-            <>
-              <span className="flex items-center gap-1 px-1.5 py-0.5 bg-emerald-500/20 border border-emerald-400/50 rounded text-[10px] font-medium text-emerald-300">
-                <Radio className="w-2.5 h-2.5 animate-pulse" />
-                LIVE
-              </span>
-              <span className="text-[10px] text-slate-500">· slide to plan →</span>
-            </>
-          ) : (
-            <span 
-              className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium"
-              style={{
-                backgroundColor: categoryColors.bg,
-                color: categoryColors.color,
-                border: `1px solid ${categoryColors.border}`,
-              }}
-            >
-              <Compass className="w-2.5 h-2.5" />
-              PLANNING +{hoursAhead.toFixed(1)}h
+          <div className="flex items-center gap-1.5">
+            <span className={`text-xs font-medium ${isNow ? 'text-blue-300' : 'text-gray-400'}`}>
+              {formatDate(selectedTime)}
             </span>
-          )}
+            {isNow ? (
+              <Radio className="w-2.5 h-2.5 text-blue-400 animate-pulse" />
+            ) : (
+              <Compass className="w-2.5 h-2.5 text-slate-500" />
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           {!isNow && (

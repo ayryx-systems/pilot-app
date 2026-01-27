@@ -134,6 +134,10 @@ export function TimeSlider({
   };
 
   const formatDate = (date: Date) => {
+    if (isNow) {
+      return 'Now';
+    }
+    
     if (isUTC) {
       const dateStr = getUTCDateString(date);
       const todayStr = getUTCDateString(utcNow);
@@ -254,21 +258,24 @@ export function TimeSlider({
           }} />
         </div>
 
-        <div className="flex items-center gap-3 min-w-[200px]">
-          <div className="text-right">
+        <div className="flex items-center gap-2 min-w-[180px]">
+          <div className="text-right flex-1">
             <div className={`text-lg font-bold ${isNow ? 'text-blue-300' : 'text-slate-300'}`}>
               {formatTime(selectedTime)}
             </div>
-            <div className="text-xs text-gray-400">
-              {formatDate(selectedTime)} ({isUTC ? 'UTC' : airportCode})
+            <div className="flex items-center justify-end gap-1.5 text-xs">
+              <span className={`font-medium ${isNow ? 'text-blue-300' : 'text-gray-400'}`}>
+                {formatDate(selectedTime)}
+              </span>
+              {!isNow && (
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-500" />
+              )}
+              {isNow && (
+                <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
+              )}
+              <span className="text-gray-500">({isUTC ? 'UTC' : airportCode})</span>
             </div>
           </div>
-          
-          {isNow && (
-            <div className="px-2 py-1 bg-blue-500/20 border border-blue-400/50 rounded text-xs font-medium text-blue-300">
-              NOW
-            </div>
-          )}
         </div>
       </div>
     </div>
