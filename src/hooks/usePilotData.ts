@@ -10,6 +10,8 @@ import {
 
 export function usePilotData() {
   const [mounted, setMounted] = useState(false);
+  const offlineStartTimeRef = useRef<number | null>(null);
+  const wasConnectedRef = useRef<boolean>(false);
 
   const [state, setState] = useState<PilotAppState>(() => {
     // Initialize with saved airport from localStorage
@@ -55,8 +57,32 @@ export function usePilotData() {
 
   // Test connection and update status
   const testConnection = useCallback(async () => {
+    const wasOffline = offlineStartTimeRef.current !== null;
+    const offlineDuration = wasOffline && offlineStartTimeRef.current 
+      ? Date.now() - offlineStartTimeRef.current 
+      : 0;
+
+    // Only count offline time if app was actively being used (has airports loaded)
+    const activeOfflineDuration = wasOffline && state.airports.length > 0 
+      ? offlineDuration 
+      : 0;
+
     try {
-      const result = await pilotApi.testConnection();
+      const result = await pilotApi.testConnection(activeOfflineDuration);
+      
+      if (result.connected) {
+        // Connection restored - clear offline tracking
+        if (offlineStartTimeRef.current !== null) {
+          offlineStartTimeRef.current = null;
+        }
+        wasConnectedRef.current = true;
+      } else {
+        // Connection lost - start tracking offline time
+        if (offlineStartTimeRef.current === null && wasConnectedRef.current) {
+          offlineStartTimeRef.current = Date.now();
+        }
+      }
+
       setState(prev => ({
         ...prev,
         connectionStatus: {
@@ -68,6 +94,11 @@ export function usePilotData() {
       }));
       return result.connected;
     } catch (error) {
+      // Connection failed - start tracking offline time if we were connected
+      if (offlineStartTimeRef.current === null && wasConnectedRef.current) {
+        offlineStartTimeRef.current = Date.now();
+      }
+
       setState(prev => ({
         ...prev,
         connectionStatus: {
@@ -78,7 +109,7 @@ export function usePilotData() {
       }));
       return false;
     }
-  }, [mounted]);
+  }, [mounted, state.airports.length]);
 
   // Load airports list
   const loadAirports = useCallback(async () => {
@@ -447,7 +478,9 @@ export function usePilotData() {
 
   // Initial connection test on mount
   useEffect(() => {
-    testConnection();
+    testConnection().then(connected => {
+      wasConnectedRef.current = connected;
+    });
   }, []); // Only run on mount
 
   // Handle initial load when connection is established

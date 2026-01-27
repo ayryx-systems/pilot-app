@@ -28,6 +28,24 @@ class ApiError extends Error {
 }
 
 class PilotApiService {
+  private offlineDurationMs: number = 0;
+
+  setOfflineDuration(ms: number) {
+    this.offlineDurationMs = ms;
+  }
+
+  clearOfflineDuration() {
+    this.offlineDurationMs = 0;
+  }
+
+  private addOfflineDurationToUrl(url: string): string {
+    if (this.offlineDurationMs > 0) {
+      const separator = url.includes('?') ? '&' : '?';
+      return `${url}${separator}offlineDurationMs=${this.offlineDurationMs}`;
+    }
+    return url;
+  }
+
   private async fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
@@ -38,7 +56,8 @@ class PilotApiService {
     }
 
     try {
-      const response = await fetch(url, {
+      const urlWithOffline = this.addOfflineDurationToUrl(url);
+      const response = await fetch(urlWithOffline, {
         ...options,
         signal: controller.signal,
         headers: {
@@ -549,8 +568,12 @@ class PilotApiService {
   /**
    * Test connection and measure latency (bypasses service worker cache)
    */
-  async testConnection(): Promise<{ connected: boolean; latency: number; error?: string }> {
+  async testConnection(offlineDurationMs?: number): Promise<{ connected: boolean; latency: number; error?: string }> {
     const startTime = Date.now();
+
+    if (offlineDurationMs !== undefined) {
+      this.setOfflineDuration(offlineDurationMs);
+    }
 
     try {
       // Use a cache-busting parameter and no-cache headers to ensure real connection test
@@ -569,6 +592,7 @@ class PilotApiService {
 
       await this.handleResponse<{ status: string; timestamp: string }>(response);
       const latency = Date.now() - startTime;
+      this.clearOfflineDuration();
       return { connected: true, latency };
     } catch (error) {
       const latency = Date.now() - startTime;
