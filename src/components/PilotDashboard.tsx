@@ -1114,7 +1114,7 @@ export function PilotDashboard() {
                       
                       return (
                         <CollapsibleCard
-                          title={`Arrival Durations (${timeLabel})`}
+                          title={`Arrival Durations from 50nm (${timeLabel})`}
                           icon={PlaneIcon}
                           summary={arrivalsSummary}
                           defaultExpanded={false}

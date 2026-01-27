@@ -488,7 +488,7 @@ export function ArrivalTimeline({
   return (
     <div className="w-full">
       <div className="flex items-center justify-between mb-2">
-        <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Durations</h4>
+        <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Durations from 50nm</h4>
         <HelpButton
           title="Arrival Durations"
           size="sm"
