@@ -76,9 +76,9 @@ export function SimpleDataAge({
     }
 
     return (
-        <div className={`flex items-center space-x-1 ${getStatusColor()} ${sizeClass}`}>
+        <div className={`flex items-center gap-1 ${getStatusColor()} ${sizeClass}`}>
             {getIcon()}
-            <span>{formatAge(timestamp)}</span>
+            <span className="whitespace-nowrap">{formatAge(timestamp)}</span>
         </div>
     );
 }

@@ -13,7 +13,7 @@ interface ClockDisplayProps {
 
 export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
   const [currentTime, setCurrentTime] = useState(getCurrentUTCTime());
-  const { preference, togglePreference } = useTimezonePreference();
+  const { preference, togglePreference, isUTC } = useTimezonePreference();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -44,29 +44,18 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
     return null;
   }
 
+  const displayedTime = isUTC ? formatUTCTime(currentTime) : formatAirportLocalTime(currentTime);
+  const timezoneLabel = isUTC ? 'UTC' : airportCode;
+
   return (
-    <div className="flex items-center gap-2 text-xs text-gray-300">
-      <div className="flex items-center gap-1">
-        <span className="text-gray-400">{airportCode}:</span>
-        <span className="font-mono font-medium">{formatAirportLocalTime(currentTime)}</span>
-      </div>
-      <div className="flex items-center gap-1">
-        <span className="text-gray-400">UTC:</span>
-        <span className="font-mono font-medium">{formatUTCTime(currentTime)}</span>
-      </div>
-      <button
-        onClick={togglePreference}
-        className="flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors hover:bg-slate-700/50"
-        title={`Display times in ${preference === 'local' ? 'UTC' : 'Local'} (currently showing ${preference === 'local' ? 'Local' : 'UTC'})`}
-        style={{
-          backgroundColor: preference === 'utc' ? 'rgba(59, 130, 246, 0.2)' : 'transparent',
-          border: `1px solid ${preference === 'utc' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(148, 163, 184, 0.3)'}`,
-          color: preference === 'utc' ? '#93c5fd' : '#cbd5e1',
-        }}
-      >
-        <Globe className="w-3 h-3" />
-        <span>{preference === 'utc' ? 'UTC' : 'Local'}</span>
-      </button>
-    </div>
+    <button
+      onClick={togglePreference}
+      className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all hover:bg-slate-700/50 active:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500/70"
+      title={`Click to switch to ${isUTC ? 'local time' : 'UTC'} (currently showing ${isUTC ? 'UTC' : 'local time'})`}
+    >
+      <span className="font-mono font-semibold text-gray-200">{displayedTime}</span>
+      <span className="text-gray-400 font-normal">({timezoneLabel})</span>
+      <Globe className="w-3 h-3 text-gray-400 flex-shrink-0" />
+    </button>
   );
 }
