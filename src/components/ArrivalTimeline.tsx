@@ -18,11 +18,12 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData, HistoricalArrival, FlightCategory, MatchedDaysResponse } from '@/types';
-import { utcToAirportLocal, getSeason } from '@/utils/airportTime';
+import { utcToAirportLocal, getSeason, formatUTCTime, getCurrentUTCTime } from '@/utils/airportTime';
 import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
 import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { ExampleDayCard } from './ExampleDayCard';
 import { HelpButton } from './HelpButton';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 ChartJS.register(
   CategoryScale,
@@ -109,6 +110,7 @@ export function ArrivalTimeline({
   weatherCategory = 'VFR',
   onPointClick,
 }: ArrivalTimelineProps) {
+  const { isUTC } = useTimezonePreference();
   const chartRef = useRef<ChartJS<'scatter'>>(null);
   
   const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
@@ -399,7 +401,7 @@ export function ArrivalTimeline({
           max: chartData?.timeRange.max ?? 1,
           title: {
             display: true,
-            text: 'Time (Local)',
+            text: isUTC ? 'Time (UTC)' : 'Time (Local)',
             font: { size: 10 },
             color: '#94a3b8',
           },
@@ -409,27 +411,35 @@ export function ArrivalTimeline({
           ticks: {
             color: '#94a3b8',
             font: { size: 9 },
-            stepSize: 2,
+            stepSize: 1,
+            maxTicksLimit: 6,
             callback: (value) => {
               const v = Number(value);
               if (Math.abs(v) < 0.01) return 'Now';
               
-              // Convert hours from now to local time
-              const now = new Date();
-              const nowLocal = utcToAirportLocal(now, airportCode, baseline);
-              const nowHours = nowLocal.getUTCHours();
-              const nowMinutes = nowLocal.getUTCMinutes();
-              
-              // Calculate target time
-              const targetHours = nowHours + v;
-              const targetMinutes = nowMinutes;
-              
-              // Handle day wrap-around
-              let displayHours = Math.floor(targetHours);
-              if (displayHours < 0) displayHours += 24;
-              if (displayHours >= 24) displayHours -= 24;
-              
-              return `${String(displayHours).padStart(2, '0')}:${String(Math.floor(targetMinutes)).padStart(2, '0')}`;
+              if (isUTC) {
+                // Convert hours from now to UTC time
+                const now = getCurrentUTCTime();
+                const targetTime = new Date(now.getTime() + v * 60 * 60 * 1000);
+                return formatUTCTime(targetTime).split(' ')[1].substring(0, 5);
+              } else {
+                // Convert hours from now to local time
+                const now = getCurrentUTCTime();
+                const nowLocal = utcToAirportLocal(now, airportCode, baseline);
+                const nowHours = nowLocal.getUTCHours();
+                const nowMinutes = nowLocal.getUTCMinutes();
+                
+                // Calculate target time
+                const targetHours = nowHours + v;
+                const targetMinutes = nowMinutes;
+                
+                // Handle day wrap-around
+                let displayHours = Math.floor(targetHours);
+                if (displayHours < 0) displayHours += 24;
+                if (displayHours >= 24) displayHours -= 24;
+                
+                return `${String(displayHours).padStart(2, '0')}:${String(Math.floor(targetMinutes)).padStart(2, '0')}`;
+              }
             },
           },
         },
@@ -463,7 +473,7 @@ export function ArrivalTimeline({
         }
       },
     };
-  }, [chartData, isAtNow, hoursAhead, weatherCategory, matchedDaysData, onPointClick]);
+  }, [chartData, isAtNow, hoursAhead, weatherCategory, matchedDaysData, onPointClick, isUTC, airportCode, baseline]);
 
   if (!chartData || chartData.datasets.length === 0) {
     return (

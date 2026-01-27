@@ -15,7 +15,10 @@ import {
 } from 'chart.js';
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
-import { getCurrentUTCTime } from '@/utils/airportTime';
+import { getCurrentUTCTime, formatUTCTimeShort, getAirportUTCOffset } from '@/utils/airportTime';
+import { BaselineData } from '@/types';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
+import { BaselineData } from '@/types';
 
 /**
  * Component to render weather event bars aligned with Chart.js x-axis
@@ -199,13 +202,18 @@ interface WeatherGraphsProps {
   };
   selectedTime: Date;
   isNow: boolean;
+  airportCode?: string;
+  baseline?: BaselineData | null;
 }
 
 export const WeatherGraphs = memo(function WeatherGraphs({
   weather,
   selectedTime,
   isNow,
+  airportCode,
+  baseline,
 }: WeatherGraphsProps) {
+  const { isUTC } = useTimezonePreference();
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [visibilityData, setVisibilityData] = useState<any>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -233,6 +241,9 @@ export const WeatherGraphs = memo(function WeatherGraphs({
     
     const labels: string[] = [];
     let lastHour = '';
+    const now = getCurrentUTCTime();
+    const todayDateStr = now.toISOString().split('T')[0];
+    const [todayYear, todayMonth, todayDay] = todayDateStr.split('-').map(Number);
     
     graphData.timeSlots.forEach((label) => {
       if (label === 'NOW') {
@@ -242,21 +253,33 @@ export const WeatherGraphs = memo(function WeatherGraphs({
       
       const [hours, minutes] = label.split(':').map(Number);
       
-      // Round to nearest hour for display
-      const roundedHour = minutes >= 30 ? (hours + 1) % 24 : hours;
-      const hourLabel = `${String(roundedHour).padStart(2, '0')}:00`;
+      let displayTime: string;
+      if (isUTC && airportCode && baseline) {
+        // Convert local time to UTC
+        const localDate = new Date(Date.UTC(todayYear, todayMonth - 1, todayDay, hours, minutes));
+        const offsetHours = getAirportUTCOffset(airportCode, localDate, baseline);
+        const utcDate = new Date(localDate.getTime() - offsetHours * 60 * 60 * 1000);
+        const utcHours = utcDate.getUTCHours();
+        const utcMinutes = utcDate.getUTCMinutes();
+        const roundedHour = utcMinutes >= 30 ? (utcHours + 1) % 24 : utcHours;
+        displayTime = `${String(roundedHour).padStart(2, '0')}:00`;
+      } else {
+        // Round to nearest hour for display (local time)
+        const roundedHour = minutes >= 30 ? (hours + 1) % 24 : hours;
+        displayTime = `${String(roundedHour).padStart(2, '0')}:00`;
+      }
       
       // Only include label if it's a new hour (avoid duplicates)
-      if (hourLabel !== lastHour) {
-        labels.push(hourLabel);
-        lastHour = hourLabel;
+      if (displayTime !== lastHour) {
+        labels.push(displayTime);
+        lastHour = displayTime;
       } else {
         labels.push('');
       }
     });
     
     return labels;
-  }, [graphData?.timeSlots]);
+  }, [graphData?.timeSlots, isUTC, airportCode, baseline]);
 
   // Memoize selected index calculation
   // Backend provides timeSlots as local time strings (e.g., "08:00", "08:15", "NOW")

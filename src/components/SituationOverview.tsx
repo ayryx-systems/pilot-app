@@ -446,6 +446,8 @@ export const SituationOverview = memo(function SituationOverview({
                     weather={weather}
                     selectedTime={currentTime}
                     isNow={isNow}
+                    airportCode={airportCode}
+                    baseline={baseline}
                   />
                 </div>
               )}
