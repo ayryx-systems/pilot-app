@@ -777,7 +777,7 @@ export function PilotDashboard() {
                       const timeLabel = isNowMode 
                         ? 'Now'
                         : isUTC
-                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}`
+                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}Z`
                           : (() => {
                               if (!selectedAirport) {
                                 const hours = selectedTime.getUTCHours();
@@ -1057,7 +1057,7 @@ export function PilotDashboard() {
                       const timeLabel = isNowMode 
                         ? 'Now'
                         : isUTC
-                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}`
+                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}Z`
                           : (() => {
                               if (!selectedAirport) {
                                 const hours = selectedTime.getUTCHours();

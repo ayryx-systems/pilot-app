@@ -188,7 +188,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </div>
           <p className="text-slate-300 text-xs">{status.groundStop.impactingCondition}</p>
           <p className="text-slate-400 text-xs mt-1">
-            Until: {airportId ? (isUTC ? formatUTCTimeFromString(status.groundStop.endTime) : formatAirportLocalTimeFromString(status.groundStop.endTime, airportId)) : new Date(status.groundStop.endTime).toLocaleString()}
+            Until: {airportId ? (isUTC ? formatUTCTimeFromString(status.groundStop.endTime) : `${formatAirportLocalTimeFromString(status.groundStop.endTime, airportId)} (${airportId})`) : new Date(status.groundStop.endTime).toLocaleString()}
           </p>
           {status.groundStop.probabilityOfExtension && status.groundStop.probabilityOfExtension !== 'NONE' && (
             <p className="text-slate-400 text-xs">
@@ -216,7 +216,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           <p className="text-slate-400 text-xs mt-1">{status.groundDelay.impactingCondition}</p>
           {status.groundDelay.startTime && (
             <p className="text-slate-400 text-xs">
-              Started: {airportId ? (isUTC ? formatUTCTimeFromString(status.groundDelay.startTime) : formatAirportLocalTimeFromString(status.groundDelay.startTime, airportId)) : new Date(status.groundDelay.startTime).toLocaleString()}
+              Started: {airportId ? (isUTC ? formatUTCTimeFromString(status.groundDelay.startTime) : `${formatAirportLocalTimeFromString(status.groundDelay.startTime, airportId)} (${airportId})`) : new Date(status.groundDelay.startTime).toLocaleString()}
             </p>
           )}
           {status.groundDelay.delayForecast && status.groundDelay.delayForecast.length > 0 && (
@@ -247,7 +247,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           )}
           {status.departureDelay.updateTime && (
             <p className="text-slate-400 text-xs">
-              Updated: {airportId ? (isUTC ? formatUTCTimeFromString(status.departureDelay.updateTime) : formatAirportLocalTimeFromString(status.departureDelay.updateTime, airportId)) : new Date(status.departureDelay.updateTime).toLocaleString()}
+              Updated: {airportId ? (isUTC ? formatUTCTimeFromString(status.departureDelay.updateTime) : `${formatAirportLocalTimeFromString(status.departureDelay.updateTime, airportId)} (${airportId})`) : new Date(status.departureDelay.updateTime).toLocaleString()}
             </p>
           )}
         </div>
@@ -271,7 +271,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           )}
           {status.arrivalDelay.updateTime && (
             <p className="text-slate-400 text-xs">
-              Updated: {airportId ? (isUTC ? formatUTCTimeFromString(status.arrivalDelay.updateTime) : formatAirportLocalTimeFromString(status.arrivalDelay.updateTime, airportId)) : new Date(status.arrivalDelay.updateTime).toLocaleString()}
+              Updated: {airportId ? (isUTC ? formatUTCTimeFromString(status.arrivalDelay.updateTime) : `${formatAirportLocalTimeFromString(status.arrivalDelay.updateTime, airportId)} (${airportId})`) : new Date(status.arrivalDelay.updateTime).toLocaleString()}
             </p>
           )}
         </div>
@@ -288,7 +288,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           </div>
           <p className="text-slate-300 text-xs">{status.airportClosure.text}</p>
           <p className="text-slate-400 text-xs mt-1">
-            {airportId ? (isUTC ? formatUTCTimeFromString(status.airportClosure.startTime) : formatAirportLocalTimeFromString(status.airportClosure.startTime, airportId)) : new Date(status.airportClosure.startTime).toLocaleString()} - {airportId ? (isUTC ? formatUTCTimeFromString(status.airportClosure.endTime) : formatAirportLocalTimeFromString(status.airportClosure.endTime, airportId)) : new Date(status.airportClosure.endTime).toLocaleString()}
+            {airportId ? (isUTC ? formatUTCTimeFromString(status.airportClosure.startTime) : `${formatAirportLocalTimeFromString(status.airportClosure.startTime, airportId)} (${airportId})`) : new Date(status.airportClosure.startTime).toLocaleString()} - {airportId ? (isUTC ? formatUTCTimeFromString(status.airportClosure.endTime) : `${formatAirportLocalTimeFromString(status.airportClosure.endTime, airportId)} (${airportId})`) : new Date(status.airportClosure.endTime).toLocaleString()}
           </p>
         </div>
       )}
@@ -313,7 +313,7 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             <span className="font-semibold text-cyan-400">Deicing Active</span>
           </div>
           <p className="text-slate-400 text-xs">
-            Until: {airportId ? (isUTC ? formatUTCTimeFromString(status.deicing.expTime) : formatAirportLocalTimeFromString(status.deicing.expTime, airportId)) : new Date(status.deicing.expTime).toLocaleString()}
+            Until: {airportId ? (isUTC ? formatUTCTimeFromString(status.deicing.expTime) : `${formatAirportLocalTimeFromString(status.deicing.expTime, airportId)} (${airportId})`) : new Date(status.deicing.expTime).toLocaleString()}
           </p>
         </div>
       )}

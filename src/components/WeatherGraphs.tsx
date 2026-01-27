@@ -262,7 +262,7 @@ export const WeatherGraphs = memo(function WeatherGraphs({
         const utcHours = utcDate.getUTCHours();
         const utcMinutes = utcDate.getUTCMinutes();
         const roundedHour = utcMinutes >= 30 ? (utcHours + 1) % 24 : utcHours;
-        displayTime = `${String(roundedHour).padStart(2, '0')}:00`;
+        displayTime = `${String(roundedHour).padStart(2, '0')}:00Z`;
       } else {
         // Round to nearest hour for display (local time)
         const roundedHour = minutes >= 30 ? (hours + 1) % 24 : hours;

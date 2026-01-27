@@ -421,7 +421,9 @@ export function ArrivalTimeline({
                 // Convert hours from now to UTC time
                 const now = getCurrentUTCTime();
                 const targetTime = new Date(now.getTime() + v * 60 * 60 * 1000);
-                return formatUTCTime(targetTime).split(' ')[1].substring(0, 5);
+                const utcHours = targetTime.getUTCHours();
+                const utcMinutes = targetTime.getUTCMinutes();
+                return `${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}Z`;
               } else {
                 // Convert hours from now to local time
                 const now = getCurrentUTCTime();

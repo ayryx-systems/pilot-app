@@ -408,7 +408,7 @@ export const SituationOverview = memo(function SituationOverview({
         const timeLabel = isNowMode 
           ? 'Now'
           : isUTC
-            ? `at ${(selectedTime || now).getUTCHours().toString().padStart(2, '0')}:${(selectedTime || now).getUTCMinutes().toString().padStart(2, '0')}`
+            ? `at ${(selectedTime || now).getUTCHours().toString().padStart(2, '0')}:${(selectedTime || now).getUTCMinutes().toString().padStart(2, '0')}Z`
             : (() => {
                 const timeToFormat = selectedTime || now;
                 const localTime = airportCode && baseline 

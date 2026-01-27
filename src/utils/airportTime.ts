@@ -254,7 +254,7 @@ export function formatUTCTime(date: Date): string {
   const utcMonth = date.getUTCMonth();
   const utcDay = date.getUTCDate();
   
-  return `${utcMonth + 1}/${utcDay} ${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}:${String(utcSeconds).padStart(2, '0')}`;
+  return `${utcMonth + 1}/${utcDay} ${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}:${String(utcSeconds).padStart(2, '0')}Z`;
 }
 
 /**
@@ -274,7 +274,7 @@ export function formatUTCTimeShort(utcTimeString: string): string {
   const utcHours = date.getUTCHours();
   const utcMinutes = date.getUTCMinutes();
   
-  return `${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}`;
+  return `${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}Z`;
 }
 
 /**
