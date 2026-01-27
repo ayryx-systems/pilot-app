@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { getCurrentUTCTime, utcToAirportLocal } from '@/utils/airportTime';
 import { BaselineData } from '@/types';
 import { useTimezonePreference } from '@/hooks/useTimezonePreference';
-import { Globe } from 'lucide-react';
 
 interface ClockDisplayProps {
   airportCode?: string | null;
@@ -44,18 +43,41 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
     return null;
   }
 
-  const displayedTime = isUTC ? formatUTCTime(currentTime) : formatAirportLocalTime(currentTime);
-  const timezoneLabel = isUTC ? 'UTC' : airportCode;
+  const utcTime = formatUTCTime(currentTime);
+  const localTime = formatAirportLocalTime(currentTime);
 
   return (
-    <button
-      onClick={togglePreference}
-      className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all hover:bg-slate-700/50 active:bg-slate-700/70 border border-slate-600/50 hover:border-slate-500/70"
-      title={`Click to switch to ${isUTC ? 'local time' : 'UTC'} (currently showing ${isUTC ? 'UTC' : 'local time'})`}
-    >
-      <span className="font-mono font-semibold text-gray-200">{displayedTime}</span>
-      <span className="text-gray-400 font-normal">({timezoneLabel})</span>
-      <Globe className="w-3 h-3 text-gray-400 flex-shrink-0" />
-    </button>
+    <div className="flex items-center gap-2">
+      <div className="font-mono font-semibold text-gray-200 text-xs">
+        {isUTC ? utcTime : localTime}
+      </div>
+      
+      <button
+        onClick={togglePreference}
+        className="relative inline-flex items-center rounded-md bg-slate-700/50 border border-slate-600/50 hover:border-slate-500/70 p-0.5 transition-all cursor-pointer"
+        title={`Click to switch to ${isUTC ? 'local time' : 'UTC'}`}
+        aria-label={`Switch to ${isUTC ? 'local time' : 'UTC'}`}
+      >
+        <div className="relative flex">
+          <div 
+            className={`absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] bg-blue-600 rounded transition-all duration-200 ease-in-out ${
+              isUTC ? 'left-0.5' : 'right-0.5'
+            }`}
+          />
+          <div className="relative flex items-center">
+            <span className={`px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
+              isUTC ? 'text-white' : 'text-gray-400'
+            }`}>
+              UTC
+            </span>
+            <span className={`px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
+              !isUTC ? 'text-white' : 'text-gray-400'
+            }`}>
+              {airportCode}
+            </span>
+          </div>
+        </div>
+      </button>
+    </div>
   );
 }
