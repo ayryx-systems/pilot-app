@@ -419,12 +419,8 @@ export const SituationOverview = memo(function SituationOverview({
         
         return (
           <div className="space-y-2">
-            <div className="flex items-center gap-2 mb-2">
-              <div className="h-px flex-1 bg-slate-700"></div>
-              <span className="text-xs font-semibold text-slate-400 uppercase tracking-wide">
-                Weather
-              </span>
-              <div className="h-px flex-1 bg-slate-700"></div>
+            <div className="mb-2">
+              <div className="h-px bg-slate-700"></div>
             </div>
             
             <div className="rounded-xl border-2 border-slate-500 bg-slate-700/80">
