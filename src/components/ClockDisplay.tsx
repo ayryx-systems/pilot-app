@@ -22,34 +22,42 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
     return () => clearInterval(interval);
   }, []);
 
-  const formatAirportLocalTime = (utcDate: Date): string => {
-    if (!airportCode) return '--:--:--';
+  const formatAirportLocalTime = (utcDate: Date, includeSeconds: boolean = true): string => {
+    if (!airportCode) return includeSeconds ? '--:--:--' : '--:--';
     
     const localDate = utcToAirportLocal(utcDate, airportCode, baseline);
     const hours = localDate.getUTCHours().toString().padStart(2, '0');
     const minutes = localDate.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = localDate.getUTCSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}`;
+    if (includeSeconds) {
+      const seconds = localDate.getUTCSeconds().toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}`;
+    }
+    return `${hours}:${minutes}`;
   };
 
-  const formatUTCTime = (date: Date): string => {
+  const formatUTCTime = (date: Date, includeSeconds: boolean = true): string => {
     const hours = date.getUTCHours().toString().padStart(2, '0');
     const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-    const seconds = date.getUTCSeconds().toString().padStart(2, '0');
-    return `${hours}:${minutes}:${seconds}Z`;
+    if (includeSeconds) {
+      const seconds = date.getUTCSeconds().toString().padStart(2, '0');
+      return `${hours}:${minutes}:${seconds}Z`;
+    }
+    return `${hours}:${minutes}Z`;
   };
 
   if (!airportCode) {
     return null;
   }
 
-  const utcTime = formatUTCTime(currentTime);
-  const localTime = formatAirportLocalTime(currentTime);
-
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-1.5 sm:gap-2">
       <div className="font-mono font-semibold text-gray-200 text-xs">
-        {isUTC ? utcTime : localTime}
+        <span className="max-[375px]:hidden">
+          {isUTC ? formatUTCTime(currentTime, true) : formatAirportLocalTime(currentTime, true)}
+        </span>
+        <span className="hidden max-[375px]:inline">
+          {isUTC ? formatUTCTime(currentTime, false) : formatAirportLocalTime(currentTime, false)}
+        </span>
       </div>
       
       <button
@@ -65,12 +73,12 @@ export function ClockDisplay({ airportCode, baseline }: ClockDisplayProps) {
             }`}
           />
           <div className="relative flex items-center">
-            <span className={`px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
+            <span className={`px-1 max-[375px]:px-0.5 sm:px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
               isUTC ? 'text-white' : 'text-gray-400'
             }`}>
               UTC
             </span>
-            <span className={`px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
+            <span className={`px-1 max-[375px]:px-0.5 sm:px-2 py-0.5 text-[10px] font-medium transition-colors whitespace-nowrap ${
               !isUTC ? 'text-white' : 'text-gray-400'
             }`}>
               {airportCode}
