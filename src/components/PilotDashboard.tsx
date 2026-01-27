@@ -33,7 +33,7 @@ import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory, Situatio
 import { MapControls } from './MapControls';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
-import { getCurrentUTCTime } from '@/utils/airportTime';
+import { getCurrentUTCTime, formatUTCTimeShort } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
 import { WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
@@ -46,8 +46,10 @@ import { CollapsibleCard } from './CollapsibleCard';
 import { TrendingUp, Plane as PlaneIcon, Sliders } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
 import { WeatherScenarioToggle } from './WeatherScenarioToggle';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 export function PilotDashboard() {
+  const { isUTC } = useTimezonePreference();
   const [mounted, setMounted] = useState(false);
   const [selectedTime, setSelectedTime] = useState<Date>(() => new Date());
 
@@ -831,6 +833,7 @@ export function PilotDashboard() {
                           return (month >= 3 && month <= 9) ? 'summer' : 'winter';
                         };
                         
+                        // Always get local time slot for matching forecast data (forecast uses local time slots)
                         const getTimeSlot = (date: Date) => {
                           const offset = getUTCOffsetHours(selectedAirport, date, baseline);
                           const localTime = new Date(date.getTime() + offset * 60 * 60 * 1000);
@@ -840,14 +843,29 @@ export function PilotDashboard() {
                           return `${String(hours).padStart(2, '0')}:${String(slotMinutes).padStart(2, '0')}`;
                         };
                         
-                        const getTimeSlotRange = (timeSlot: string) => {
-                          const [hours, minutes] = timeSlot.split(':').map(Number);
+                        // Convert local time slot to UTC time slot for display
+                        const getUTCTimeSlot = (date: Date) => {
+                          const hours = date.getUTCHours();
+                          const minutes = date.getUTCMinutes();
+                          const slotMinutes = Math.floor(minutes / 15) * 15;
+                          return `${String(hours).padStart(2, '0')}:${String(slotMinutes).padStart(2, '0')}`;
+                        };
+                        
+                        const getTimeSlotRange = (timeSlot: string, displayDate?: Date) => {
+                          let displayTimeSlot = timeSlot;
+                          
+                          // If UTC mode and we have a date, convert the local time slot to UTC for display
+                          if (isUTC && displayDate) {
+                            displayTimeSlot = getUTCTimeSlot(displayDate);
+                          }
+                          
+                          const [hours, minutes] = displayTimeSlot.split(':').map(Number);
                           const endMinutes = minutes + 15;
                           const endHours = endMinutes >= 60 ? hours + 1 : hours;
                           const finalEndMinutes = endMinutes >= 60 ? endMinutes - 60 : endMinutes;
                           const endHoursStr = endHours >= 24 ? String(endHours - 24).padStart(2, '0') : String(endHours).padStart(2, '0');
                           const endMinutesStr = String(finalEndMinutes).padStart(2, '0');
-                          return `${timeSlot} - ${endHoursStr}:${endMinutesStr}`;
+                          return `${displayTimeSlot} - ${endHoursStr}:${endMinutesStr}`;
                         };
                         
                         const getDateString = (date: Date) => {
@@ -858,6 +876,8 @@ export function PilotDashboard() {
                         };
                         
                         const referenceTime = selectedTime;
+                        // Always use local date string for matching forecast data (forecast uses local dates)
+                        // But display times in UTC when isUTC is true
                         const selectedDateStr = getAirportLocalDateString(referenceTime);
                         const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
                         const referenceLocal = new Date(referenceTime.getTime() + offset * 60 * 60 * 1000);
@@ -986,7 +1006,7 @@ export function PilotDashboard() {
                         
                         const summaryLine1 = `${trafficLevel}: ${Math.round(nextHourCount)} arrivals expected ${timePhrase}${dataSource}`;
                         const summaryLine2 = timeslotArrivals !== null 
-                          ? `${Math.round(timeslotArrivals)} arrivals during the ${getTimeSlotRange(timeslot)} timeslot.`
+                          ? `${Math.round(timeslotArrivals)} arrivals during the ${getTimeSlotRange(timeslot, referenceTime)} timeslot.`
                           : null;
                         
                         if (summaryLine2) {
