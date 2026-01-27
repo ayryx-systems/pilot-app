@@ -32,6 +32,8 @@ interface FAAStatus {
     endTime: string;
     center: string;
     advisoryUrl: string;
+    departureScope: number | null;
+    includedFacilities: string[] | null;
     delayForecast: Array<{ sequence: number; delayMinutes: number }> | null;
     forecastStartTime: string | null;
   } | null;
@@ -218,6 +220,26 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
             <p className="text-slate-400 text-xs">
               Started: {airportId ? (isUTC ? formatUTCTimeFromString(status.groundDelay.startTime) : `${formatAirportLocalTimeFromString(status.groundDelay.startTime, airportId)} (${airportId})`) : new Date(status.groundDelay.startTime).toLocaleString()}
             </p>
+          )}
+          {status.groundDelay.departureScope && (
+            <p className="text-slate-400 text-xs">
+              Scope: {status.groundDelay.departureScope} nm
+            </p>
+          )}
+          {status.groundDelay.includedFacilities && status.groundDelay.includedFacilities.length > 0 && (
+            <p className="text-slate-400 text-xs">
+              Affected facilities: {status.groundDelay.includedFacilities.join(', ')}
+            </p>
+          )}
+          {status.groundDelay.advisoryUrl && (
+            <a
+              href={status.groundDelay.advisoryUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-blue-400 hover:underline mt-2 inline-block"
+            >
+              View Advisory →
+            </a>
           )}
           {status.groundDelay.delayForecast && status.groundDelay.delayForecast.length > 0 && (
             <FAADelayForecast
