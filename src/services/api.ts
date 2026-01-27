@@ -29,21 +29,44 @@ class ApiError extends Error {
 
 class PilotApiService {
   private offlineDurationMs: number = 0;
+  private sessionId: string;
+
+  constructor() {
+    this.sessionId = this.getOrCreateSessionId();
+  }
+
+  private getOrCreateSessionId(): string {
+    if (typeof window === 'undefined') return 'server';
+    
+    const storageKey = 'pilot_app_session_id';
+    let sessionId = localStorage.getItem(storageKey);
+    
+    if (!sessionId) {
+      sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem(storageKey, sessionId);
+    }
+    
+    return sessionId;
+  }
 
   setOfflineDuration(ms: number) {
-    this.offlineDurationMs = ms;
+    this.offlineDurationMs = Math.min(ms, 5 * 60 * 1000); // Cap at 5 minutes
   }
 
   clearOfflineDuration() {
     this.offlineDurationMs = 0;
   }
 
-  private addOfflineDurationToUrl(url: string): string {
+  private addTrackingParams(url: string): string {
+    const params = new URLSearchParams();
+    
     if (this.offlineDurationMs > 0) {
-      const separator = url.includes('?') ? '&' : '?';
-      return `${url}${separator}offlineDurationMs=${this.offlineDurationMs}`;
+      params.append('offlineDurationMs', this.offlineDurationMs.toString());
     }
-    return url;
+    params.append('sessionId', this.sessionId);
+    
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}${params.toString()}`;
   }
 
   private async fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000): Promise<Response> {
@@ -56,8 +79,8 @@ class PilotApiService {
     }
 
     try {
-      const urlWithOffline = this.addOfflineDurationToUrl(url);
-      const response = await fetch(urlWithOffline, {
+      const urlWithTracking = this.addTrackingParams(url);
+      const response = await fetch(urlWithTracking, {
         ...options,
         signal: controller.signal,
         headers: {
