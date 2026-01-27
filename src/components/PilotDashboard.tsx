@@ -601,9 +601,9 @@ export function PilotDashboard() {
       <AppUpdateNotifier />
 
       {/* Demo Disclaimer */}
-      <div className="bg-blue-900/30 border-blue-500/40 border-l-4 p-1.5 mx-3 mt-1 rounded text-xs">
+      <div className="bg-blue-900/30 border-blue-500/40 border-l-2 py-0.5 px-1.5 mx-3 mt-1 rounded text-xs">
         <div className="flex items-center text-blue-200">
-          <AlertTriangle className="w-3 h-3 mr-1" />
+          <AlertTriangle className="w-2.5 h-2.5 mr-1" />
           <span className="font-medium">DEMO ONLY - NOT FOR FLIGHT OPERATIONS</span>
         </div>
       </div>
