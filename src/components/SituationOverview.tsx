@@ -8,6 +8,8 @@ import { ConditionModal } from './ConditionModal';
 import { WeatherGraphs } from './WeatherGraphs';
 import { HelpButton } from './HelpButton';
 import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
+import { useTimezonePreference } from '@/hooks/useTimezonePreference';
+import { utcToAirportLocal, getAirportUTCOffset } from '@/utils/airportTime';
 
 interface WeatherData {
   metar: string;
@@ -123,6 +125,7 @@ export const SituationOverview = memo(function SituationOverview({
   selectedTime,
   arrivalForecast,
 }: SituationOverviewProps) {
+  const { isUTC } = useTimezonePreference();
   const [isWeatherModalOpen, setIsWeatherModalOpen] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [selectedCondition, setSelectedCondition] = useState<{ key: string; condition: any } | null>(null);
@@ -404,7 +407,15 @@ export const SituationOverview = memo(function SituationOverview({
         const isNowMode = selectedTime ? Math.abs(selectedTime.getTime() - now.getTime()) < 60000 : true;
         const timeLabel = isNowMode 
           ? 'Now'
-          : `at ${(selectedTime || now).getHours().toString().padStart(2, '0')}:${(selectedTime || now).getMinutes().toString().padStart(2, '0')}`;
+          : isUTC
+            ? `at ${(selectedTime || now).getUTCHours().toString().padStart(2, '0')}:${(selectedTime || now).getUTCMinutes().toString().padStart(2, '0')}`
+            : (() => {
+                const timeToFormat = selectedTime || now;
+                const localTime = airportCode && baseline 
+                  ? utcToAirportLocal(timeToFormat, airportCode, baseline)
+                  : timeToFormat;
+                return `at ${localTime.getUTCHours().toString().padStart(2, '0')}:${localTime.getUTCMinutes().toString().padStart(2, '0')}`;
+              })();
         
         return (
           <div className="space-y-2">

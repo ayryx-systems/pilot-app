@@ -33,7 +33,7 @@ import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory, Situatio
 import { MapControls } from './MapControls';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
-import { getCurrentUTCTime, formatUTCTimeShort } from '@/utils/airportTime';
+import { getCurrentUTCTime, formatUTCTimeShort, getAirportUTCOffset, utcToAirportLocal } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
 import { WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
@@ -776,7 +776,17 @@ export function PilotDashboard() {
                       
                       const timeLabel = isNowMode 
                         ? 'Now'
-                        : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
+                        : isUTC
+                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}`
+                          : (() => {
+                              if (!selectedAirport) {
+                                const hours = selectedTime.getUTCHours();
+                                const minutes = selectedTime.getUTCMinutes();
+                                return `at ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                              }
+                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline);
+                              return `at ${localTime.getUTCHours().toString().padStart(2, '0')}:${localTime.getUTCMinutes().toString().padStart(2, '0')}`;
+                            })();
                       
                       // Get airport-specific traffic thresholds
                       const currentAirport = airports.find(a => a.id === selectedAirport);
@@ -1046,7 +1056,17 @@ export function PilotDashboard() {
                       
                       const timeLabel = isNowMode 
                         ? 'Now'
-                        : `at ${selectedTime.getHours().toString().padStart(2, '0')}:${selectedTime.getMinutes().toString().padStart(2, '0')}`;
+                        : isUTC
+                          ? `at ${selectedTime.getUTCHours().toString().padStart(2, '0')}:${selectedTime.getUTCMinutes().toString().padStart(2, '0')}`
+                          : (() => {
+                              if (!selectedAirport) {
+                                const hours = selectedTime.getUTCHours();
+                                const minutes = selectedTime.getUTCMinutes();
+                                return `at ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
+                              }
+                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline);
+                              return `at ${localTime.getUTCHours().toString().padStart(2, '0')}:${localTime.getUTCMinutes().toString().padStart(2, '0')}`;
+                            })();
                       
                       const arrivalsSummary = (() => {
                         if (isNowMode) {
