@@ -34,6 +34,7 @@ interface FAAStatus {
     advisoryUrl: string;
     departureScope: number | null;
     includedFacilities: string[] | null;
+    includedFlights: string | null;
     delayForecast: Array<{ sequence: number; delayMinutes: number }> | null;
     forecastStartTime: string | null;
   } | null;
@@ -229,6 +230,11 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
           {status.groundDelay.includedFacilities && status.groundDelay.includedFacilities.length > 0 && (
             <p className="text-slate-400 text-xs">
               Affected facilities: {status.groundDelay.includedFacilities.join(', ')}
+            </p>
+          )}
+          {status.groundDelay.includedFlights && (
+            <p className="text-slate-400 text-xs">
+              Included flights: {status.groundDelay.includedFlights}
             </p>
           )}
           {status.groundDelay.advisoryUrl && (
