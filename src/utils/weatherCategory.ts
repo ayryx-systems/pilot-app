@@ -54,12 +54,21 @@ export const FLIGHT_CATEGORY_COLORS: Record<FlightCategory, { color: string; bg:
 };
 
 export const FLIGHT_CATEGORY_DESCRIPTIONS: Record<FlightCategory, string> = {
-  VFR: 'Clear: >5mi vis, >3000ft ceiling',
-  MVFR: 'Marginal: 3-5mi vis, 1000-3000ft',
-  IFR: 'Poor: 1-3mi vis, 500-1000ft',
-  LIFR: 'Very poor: <1mi vis, <500ft',
+  VFR: '>5mi vis, >3000ft ceiling',
+  MVFR: '3-5mi vis, 1000-3000ft',
+  IFR: '1-3mi vis, 500-1000ft',
+  LIFR: '<1mi vis, <500ft',
   unlimited: 'Clear conditions',
   unknown: 'Unknown conditions',
+};
+
+export const FLIGHT_CATEGORY_THRESHOLDS: Record<FlightCategory, string> = {
+  VFR: '>5mi, >3000ft',
+  MVFR: '3-5mi, 1000-3000ft',
+  IFR: '1-3mi, 500-1000ft',
+  LIFR: '<1mi, <500ft',
+  unlimited: 'Clear',
+  unknown: '?',
 };
 
 export function getFlightCategoryColor(category: FlightCategory): string {

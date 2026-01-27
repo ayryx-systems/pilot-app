@@ -4,7 +4,7 @@ import React, { useEffect, useRef, useMemo } from 'react';
 import { Clock, RotateCcw, Radio, Compass } from 'lucide-react';
 import { getCurrentUTCTime, utcToAirportLocal, airportLocalToUTC, formatAirportLocalTime, formatUTCTime, getUTCDateString } from '@/utils/airportTime';
 import { BaselineData, FlightCategory, SituationSummary } from '@/types';
-import { FLIGHT_CATEGORY_COLORS, computeFlightCategory } from '@/utils/weatherCategory';
+import { FLIGHT_CATEGORY_COLORS, FLIGHT_CATEGORY_DESCRIPTIONS, computeFlightCategory } from '@/utils/weatherCategory';
 import { HelpButton } from './HelpButton';
 import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
@@ -375,7 +375,7 @@ export function ETASelector({
       </div>
 
       <div className="flex items-center justify-between pt-1.5 border-t border-slate-700/50">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <span
             className="text-[10px] font-semibold px-1.5 py-0.5 rounded"
             style={{
@@ -384,6 +384,9 @@ export function ETASelector({
             }}
           >
             {activeCategory} ({isNow ? 'METAR' : 'TAF'})
+          </span>
+          <span className="text-[10px] text-gray-500">
+            {FLIGHT_CATEGORY_DESCRIPTIONS[activeCategory]}
           </span>
         </div>
       </div>

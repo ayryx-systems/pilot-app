@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { FlightCategory } from '@/types';
-import { FLIGHT_CATEGORY_COLORS } from '@/utils/weatherCategory';
+import { FLIGHT_CATEGORY_COLORS, FLIGHT_CATEGORY_THRESHOLDS } from '@/utils/weatherCategory';
 import { Zap } from 'lucide-react';
 
 interface WeatherScenarioToggleProps {
@@ -74,31 +74,40 @@ export function WeatherScenarioToggle({
       </div>
 
       {isManual && (
-        <div className="flex gap-1.5 pt-1">
-          {CATEGORIES.map((cat) => {
-            const catColors = FLIGHT_CATEGORY_COLORS[cat];
-            const isSelected = manualCategory === cat;
-            
-            return (
-              <button
-                key={cat}
-                onClick={() => onCategoryChange(cat)}
-                className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded transition-all ${
-                  isSelected 
-                    ? 'ring-2 ring-offset-1 ring-offset-slate-800' 
-                    : 'opacity-60 hover:opacity-80'
-                }`}
-                style={{
-                  backgroundColor: isSelected ? catColors.bg : 'rgba(55, 65, 81, 0.5)',
-                  color: isSelected ? catColors.color : 'rgb(156, 163, 175)',
-                  border: `1px solid ${isSelected ? catColors.border : 'rgba(75, 85, 99, 0.5)'}`,
-                  boxShadow: isSelected ? `0 0 8px ${catColors.bg}` : 'none',
-                }}
-              >
-                {cat}
-              </button>
-            );
-          })}
+        <div className="space-y-1">
+          <div className="flex gap-1.5">
+            {CATEGORIES.map((cat) => {
+              const catColors = FLIGHT_CATEGORY_COLORS[cat];
+              const isSelected = manualCategory === cat;
+              
+              return (
+                <button
+                  key={cat}
+                  onClick={() => onCategoryChange(cat)}
+                  className={`flex-1 py-1.5 px-2 text-xs font-semibold rounded transition-all ${
+                    isSelected 
+                      ? 'ring-2 ring-offset-1 ring-offset-slate-800' 
+                      : 'opacity-60 hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: isSelected ? catColors.bg : 'rgba(55, 65, 81, 0.5)',
+                    color: isSelected ? catColors.color : 'rgb(156, 163, 175)',
+                    border: `1px solid ${isSelected ? catColors.border : 'rgba(75, 85, 99, 0.5)'}`,
+                    boxShadow: isSelected ? `0 0 8px ${catColors.bg}` : 'none',
+                  }}
+                >
+                  {cat}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex gap-1.5 text-[10px] text-gray-500 text-center">
+            {CATEGORIES.map((cat) => (
+              <div key={cat} className="flex-1 truncate">
+                {FLIGHT_CATEGORY_THRESHOLDS[cat]}
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
