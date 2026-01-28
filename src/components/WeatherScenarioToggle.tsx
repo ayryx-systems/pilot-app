@@ -101,7 +101,7 @@ export function WeatherScenarioToggle({
               );
             })}
           </div>
-          <div className="flex gap-1.5 text-[10px] text-gray-500 text-center">
+          <div className="flex gap-1.5 text-[10px] text-gray-300 text-center">
             {CATEGORIES.map((cat) => (
               <div key={cat} className="flex-1 truncate">
                 {FLIGHT_CATEGORY_THRESHOLDS[cat]}

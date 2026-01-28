@@ -148,7 +148,7 @@ export function WeatherCategorySlider({
         ))}
       </div>
       
-      <p className="text-xs text-gray-400 mt-2 text-center">
+      <p className="text-xs text-gray-200 mt-2 text-center">
         {info.description}
       </p>
     </div>

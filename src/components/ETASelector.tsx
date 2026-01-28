@@ -385,7 +385,7 @@ export function ETASelector({
           >
             {activeCategory} ({isNow ? 'METAR' : 'TAF'})
           </span>
-          <span className="text-[10px] text-gray-500">
+          <span className="text-[10px] text-gray-300">
             {FLIGHT_CATEGORY_DESCRIPTIONS[activeCategory]}
           </span>
         </div>
