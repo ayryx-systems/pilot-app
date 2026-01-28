@@ -569,11 +569,11 @@ export function ArrivalTimeline({
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
         <div className="mt-1.5 flex items-center justify-center gap-4 text-[13px]">
-          <span className="text-gray-400">Best <span className="font-bold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-400">Typical <span className="font-bold text-white">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-400">Extended <span className="font-bold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-500">(10% flights)</span></span>
-          <span className="text-gray-400">Extreme <span className="font-bold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-500">(5% flights)</span></span>
-          <span className="text-gray-400">Baseline <span className="font-bold text-gray-300">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-300">Best <span className="font-bold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-300">Typical <span className="font-bold text-white">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
+          <span className="text-gray-300">Extended <span className="font-bold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(10% flights)</span></span>
+          <span className="text-gray-300">Extreme <span className="font-bold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(5% flights)</span></span>
+          <span className="text-gray-300">Baseline <span className="font-bold text-gray-300">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
         </div>
       )}
       
