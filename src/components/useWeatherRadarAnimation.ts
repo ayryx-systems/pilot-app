@@ -195,28 +195,39 @@ export function useWeatherRadarAnimation({
 
     const updateWeatherRadar = async () => {
       if (!displayOptions.showWeatherRadar) {
+        if (fadeAnimationFrameRef.current !== null) {
+          cancelAnimationFrame(fadeAnimationFrameRef.current);
+          fadeAnimationFrameRef.current = null;
+        }
+
+        if (radarAnimationIntervalRef.current) {
+          clearTimeout(radarAnimationIntervalRef.current as any);
+          clearInterval(radarAnimationIntervalRef.current as any);
+          radarAnimationIntervalRef.current = null;
+        }
+
         if (layerGroupsRef.current?.weather) {
+          radarOverlaysMapRef.current.forEach(overlay => {
+            try {
+              overlay.setOpacity(0);
+              if (mapInstance && mapInstance.hasLayer(overlay)) {
+                mapInstance.removeLayer(overlay);
+              }
+              layerGroupsRef.current?.weather?.removeLayer(overlay);
+            } catch {}
+          });
+          radarOverlaysMapRef.current.clear();
+          
           setActiveWeatherLayers(prev => {
             const newMap = new Map(prev);
             newMap.delete('radar');
             return newMap;
           });
-          radarOverlaysMapRef.current.forEach(overlay => {
-            try {
-              layerGroupsRef.current?.weather?.removeLayer(overlay);
-            } catch {}
-          });
-          radarOverlaysMapRef.current.clear();
         }
 
         if (radarTimeIndicatorRef.current && mapRef.current) {
           radarTimeIndicatorRef.current.remove();
           radarTimeIndicatorRef.current = null;
-        }
-
-        if (radarAnimationIntervalRef.current) {
-          clearInterval(radarAnimationIntervalRef.current);
-          radarAnimationIntervalRef.current = null;
         }
 
         setRadarFrames([]);
@@ -379,7 +390,16 @@ export function useWeatherRadarAnimation({
         }
     };
 
-    if (!mapInstance || !mapReady || !displayOptions.showWeatherRadar) {
+    if (!mapInstance) {
+      return;
+    }
+
+    if (!displayOptions.showWeatherRadar) {
+      updateWeatherRadar();
+      return;
+    }
+
+    if (!mapReady) {
       return;
     }
 
@@ -415,6 +435,10 @@ export function useWeatherRadarAnimation({
     if (!layerGroupsRef.current?.weather) return;
 
     const refreshInterval = setInterval(async () => {
+      if (!displayOptions.showWeatherRadar) {
+        return;
+      }
+      
       try {
         const radarLayer = weatherLayers.find(layer => layer.id === 'radar') || 
                           weatherLayers.find(layer => layer.id === 'radar_composite');
