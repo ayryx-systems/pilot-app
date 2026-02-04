@@ -574,6 +574,15 @@ export function PilotDashboard() {
                       This is a demonstration system. Always use official aviation authorities for flight planning.
                     </p>
                   </div>
+                  <div className="border-t border-gray-600 pt-3 mt-3">
+                    <p className="text-xs text-gray-400">
+                      <strong className="text-gray-300">Ayryx, Inc.</strong><br />
+                      20 Rose Ln<br />
+                      Presque Isle, ME 04769, USA<br />
+                      <a href="https://www.ayryx.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">www.ayryx.com</a><br />
+                      <a href="mailto:info@ayryx.com" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 underline">info@ayryx.com</a>
+                    </p>
+                  </div>
                 </div>
               }
             />
