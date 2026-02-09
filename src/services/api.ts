@@ -80,13 +80,17 @@ class PilotApiService {
 
     try {
       const urlWithTracking = this.addTrackingParams(url);
+      const hasBody = options.body != null && (options.method === 'POST' || options.method === 'PUT' || options.method === 'PATCH' || !options.method);
+      const headers: HeadersInit = {
+        ...options.headers,
+      };
+      if (hasBody) {
+        (headers as Record<string, string>)['Content-Type'] = 'application/json';
+      }
       const response = await fetch(urlWithTracking, {
         ...options,
         signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-          ...options.headers,
-        },
+        headers,
       });
 
       clearTimeout(timeoutId);
