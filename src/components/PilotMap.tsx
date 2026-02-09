@@ -274,6 +274,20 @@ export function PilotMap({
           min-width: 200px;
         }
         
+        .custom-pirep-marker {
+          background: transparent !important;
+          border: none !important;
+        }
+        
+        .custom-pirep-marker img {
+          width: 30px !important;
+          height: 27px !important;
+          max-width: 30px !important;
+          max-height: 27px !important;
+          object-fit: contain !important;
+          display: block !important;
+        }
+        
         /* Ensure PIREP popups render above all map elements */
         .leaflet-popup-pane {
           z-index: 3500 !important;
@@ -796,44 +810,23 @@ export function PilotMap({
             console.warn('[PilotMap] Invalid PIREP data:', pirep);
             return;
           }
-          // Determine priority styling based on conditions
-          const isUrgent = pirep.conditions?.some(c =>
-            c.type === 'TURBULENCE' && (c.severity === 'SEVERE' || c.severity === 'EXTREME') ||
-            c.type === 'ICING' && (c.severity === 'SEVERE' || c.severity === 'TRACE')
-          ) || false;
-
-          const hasModerate = pirep.conditions?.some(c => c.severity === 'MODERATE') || false;
-
-          // Choose color based on priority
-          let color = '#f59e0b'; // Yellow for light/normal conditions (warnings should not be green)
-          if (isUrgent) {
+          // Determine icon color based on priority (matching PirepsList logic)
+          let iconColor = 'blue';
+          let color = '#3b82f6'; // Blue for normal
+          if (pirep.priority === 'urgent') {
+            iconColor = 'red';
             color = '#ef4444'; // Red for urgent
-          } else if (hasModerate) {
-            color = '#f59e0b'; // Yellow for moderate
+          } else if (pirep.priority === 'high') {
+            iconColor = 'yellow';
+            color = '#f59e0b'; // Yellow for high
           }
 
-          // Create custom PIREP icon with warning triangle - distinct triangular design
+          // Create PIREP icon using image files (40x36 aspect ratio = 10:9)
           const pirepIcon = L.divIcon({
-            html: `<div style="
-              width: 0;
-              height: 0;
-              border-left: 14px solid transparent;
-              border-right: 14px solid transparent;
-              border-bottom: 24px solid ${color};
-              filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
-              position: relative;
-            "><div style="
-              position: absolute;
-              top: 2px;
-              left: -10px;
-              font-size: 12px;
-              font-weight: bold;
-              color: white;
-              text-shadow: 0 1px 2px rgba(0,0,0,0.5);
-            ">⚠</div></div>`,
+            html: `<img src="/icons/pirep-icon-${iconColor}.png" style="width: 30px; height: 27px; display: block; object-fit: contain;" />`,
             className: 'custom-pirep-marker',
-            iconSize: [28, 28],
-            iconAnchor: [14, 24]
+            iconSize: [30, 27],
+            iconAnchor: [15, 27]
           });
 
           const marker = L.marker([pirep.location.lat, pirep.location.lon], { 
