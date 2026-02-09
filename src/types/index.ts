@@ -126,6 +126,7 @@ export interface PiRep {
   }>;
   remarks?: string;
   dismissed?: boolean;
+  isDemo?: boolean;
 }
 
 export interface GroundTrack {
