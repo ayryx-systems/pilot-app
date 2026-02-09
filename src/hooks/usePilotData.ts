@@ -143,7 +143,9 @@ export function usePilotData() {
     return null;
   }, [state.selectedAirport]);
 
-  // Load data for specific airport
+  // Load data for specific airport.
+  // Phase 1 (critical): overview + tracks — show map as soon as these complete.
+  // Phase 2 (background): pireps, arrivals, summary, baseline, forecast — fill in when ready.
   const loadAirportData = useCallback(async (airportId: string, options?: { skipBaseline?: boolean; forceRefreshForecast?: boolean }) => {
     if (!airportId) return;
 
@@ -152,91 +154,94 @@ export function usePilotData() {
     setState(prev => {
       currentBaseline = prev.baseline;
       currentForecast = prev.arrivalForecast;
-      // Only set baselineLoading if we're actually going to fetch baseline
       const willFetchBaseline = !options?.skipBaseline && !prev.baseline;
       const willFetchForecast = !prev.arrivalForecast || options?.forceRefreshForecast;
-      return { 
-        ...prev, 
-        loading: true, 
+      return {
+        ...prev,
+        loading: true,
         baselineLoading: willFetchBaseline,
         arrivalForecastLoading: willFetchForecast,
-        error: null 
+        error: null
       };
     });
 
+    const shouldFetchBaseline = !options?.skipBaseline && !currentBaseline;
+    const shouldFetchForecast = !currentForecast || options?.forceRefreshForecast;
+
     try {
-      // Only fetch baseline if we don't already have it for this airport
-      // If skipping, don't include it in Promise.allSettled to avoid unnecessary state updates
-      const shouldFetchBaseline = !options?.skipBaseline && !currentBaseline;
+      const criticalResponses = await Promise.allSettled([
+        pilotApi.getAirportOverview(airportId),
+        pilotApi.getGroundTracks(airportId),
+      ]);
+      const [overviewResponse, tracksResponse] = criticalResponses;
+
+      const criticalUpdates: Partial<PilotAppState> = { loading: false };
+
+      if (overviewResponse.status === 'fulfilled') {
+        criticalUpdates.airportOverview = overviewResponse.value;
+      } else {
+        console.error('Failed to load airport overview:', overviewResponse.reason);
+        criticalUpdates.airportOverview = null;
+      }
+
+      if (tracksResponse.status === 'fulfilled') {
+        criticalUpdates.tracks = tracksResponse.value.tracks;
+        criticalUpdates.tracksMetadata = {
+          active: tracksResponse.value.active ?? true,
+          message: tracksResponse.value.message
+        };
+      } else {
+        console.error('Failed to load ground tracks:', tracksResponse.reason);
+        criticalUpdates.tracks = [];
+        criticalUpdates.tracksMetadata = {
+          active: false,
+          message: tracksResponse.reason instanceof Error && tracksResponse.reason.message.includes('offline')
+            ? 'Ground tracks unavailable - check internet connection'
+            : 'Failed to load ground tracks'
+        };
+      }
+
+      const criticalFailed = overviewResponse.status === 'rejected' && tracksResponse.status === 'rejected';
+      if (criticalFailed) {
+        const offline = [overviewResponse, tracksResponse].every(r =>
+          r.status === 'rejected' && r.reason instanceof Error && r.reason.message.includes('offline')
+        );
+        criticalUpdates.error = offline
+          ? 'No data available - check your internet connection and try again'
+          : 'No data available - server error occurred';
+      }
+
+      setState(prev => (prev.selectedAirport !== airportId ? prev : { ...prev, ...criticalUpdates }));
+
       const baselinePromise = shouldFetchBaseline
         ? pilotApi.getBaseline(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Baseline not available') }))
         : null;
-
-      const shouldFetchForecast = !currentForecast || options?.forceRefreshForecast;
       const forecastPromise = shouldFetchForecast
         ? pilotApi.getArrivalForecast(airportId).catch(() => ({ status: 'rejected' as const, reason: new Error('Forecast not available') }))
         : null;
 
-      // Load all data in parallel (only include baseline/forecast if we're actually fetching them)
-      const promises = [
-        pilotApi.getAirportOverview(airportId),
+      const backgroundPromises: Promise<unknown>[] = [
         pilotApi.getPireps(airportId),
-        pilotApi.getGroundTracks(airportId),
         pilotApi.getArrivals(airportId),
         pilotApi.getSituationSummary(airportId),
       ];
-      
-      if (baselinePromise) {
-        promises.push(baselinePromise);
-      }
-      if (forecastPromise) {
-        promises.push(forecastPromise);
-      }
+      if (baselinePromise) backgroundPromises.push(baselinePromise);
+      if (forecastPromise) backgroundPromises.push(forecastPromise);
 
-      const responses = await Promise.allSettled(promises);
-      
-      // Properly destructure responses based on what we actually fetched
-      // Base responses are always: overview, pireps, tracks, arrivals, summary (5 total)
-      const [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse] = responses.slice(0, 5);
-      
-      // Get baseline and forecast responses if they were fetched
-      let baselineResponse: PromiseSettledResult<unknown> | null = null;
-      let forecastResponse: PromiseSettledResult<unknown> | null = null;
-      
-      let responseIndex = 5;
-      if (shouldFetchBaseline) {
-        baselineResponse = responses[responseIndex];
-        responseIndex++;
-      }
-      if (shouldFetchForecast) {
-        forecastResponse = responses[responseIndex];
-        responseIndex++;
-      }
-      
-      // Create dummy responses for skipped items to maintain compatibility with existing code
-      if (!baselineResponse) {
-        baselineResponse = { status: 'fulfilled' as const, value: { baseline: currentBaseline } };
-      }
-      if (!forecastResponse) {
-        forecastResponse = { status: 'fulfilled' as const, value: { forecast: currentForecast } };
-      }
+      const backgroundResponses = await Promise.allSettled(backgroundPromises);
+      const [pirepsResponse, arrivalsResponse, summaryResponse] = backgroundResponses.slice(0, 3);
+      const baselineResponse: PromiseSettledResult<unknown> = shouldFetchBaseline && backgroundResponses[3] != null
+        ? backgroundResponses[3]
+        : { status: 'fulfilled' as const, value: { baseline: currentBaseline } };
+      const forecastResponse: PromiseSettledResult<unknown> = shouldFetchForecast && backgroundResponses[shouldFetchBaseline ? 4 : 3] != null
+        ? backgroundResponses[shouldFetchBaseline ? 4 : 3]
+        : { status: 'fulfilled' as const, value: { forecast: currentForecast } };
 
-      const updates: Partial<PilotAppState> = { loading: false };
-
-      // Process results and handle failures
-      if (overviewResponse.status === 'fulfilled') {
-        updates.airportOverview = overviewResponse.value;
-      } else {
-        console.error('Failed to load airport overview:', overviewResponse.reason);
-        updates.airportOverview = null;
-      }
+      const updates: Partial<PilotAppState> = {};
 
       if (pirepsResponse.status === 'fulfilled') {
         updates.pireps = pirepsResponse.value.pireps;
-        updates.pirepsMetadata = {
-          active: pirepsResponse.value.active ?? true,
-          message: pirepsResponse.value.message
-        };
+        updates.pirepsMetadata = { active: pirepsResponse.value.active ?? true, message: pirepsResponse.value.message };
       } else {
         console.error('Failed to load PIREPs:', pirepsResponse.reason);
         updates.pireps = [];
@@ -248,29 +253,9 @@ export function usePilotData() {
         };
       }
 
-      if (tracksResponse.status === 'fulfilled') {
-        updates.tracks = tracksResponse.value.tracks;
-        updates.tracksMetadata = {
-          active: tracksResponse.value.active ?? true,
-          message: tracksResponse.value.message
-        };
-      } else {
-        console.error('Failed to load ground tracks:', tracksResponse.reason);
-        updates.tracks = [];
-        updates.tracksMetadata = {
-          active: false,
-          message: tracksResponse.reason instanceof Error && tracksResponse.reason.message.includes('offline')
-            ? 'Ground tracks unavailable - check internet connection'
-            : 'Failed to load ground tracks'
-        };
-      }
-
       if (arrivalsResponse.status === 'fulfilled') {
         updates.arrivals = arrivalsResponse.value.arrivals;
-        updates.arrivalsMetadata = {
-          active: arrivalsResponse.value.active ?? true,
-          message: arrivalsResponse.value.message
-        };
+        updates.arrivalsMetadata = { active: arrivalsResponse.value.active ?? true, message: arrivalsResponse.value.message };
       } else {
         console.error('Failed to load arrivals:', arrivalsResponse.reason);
         updates.arrivals = [];
@@ -284,29 +269,19 @@ export function usePilotData() {
 
       if (summaryResponse.status === 'fulfilled') {
         updates.summary = summaryResponse.value.summary;
-        updates.summaryMetadata = {
-          active: summaryResponse.value.active ?? true,
-          generated: summaryResponse.value.generated
-        };
+        updates.summaryMetadata = { active: summaryResponse.value.active ?? true, generated: summaryResponse.value.generated };
       } else {
         console.error('Failed to load situation summary:', summaryResponse.reason);
         updates.summary = null;
-        updates.summaryMetadata = {
-          active: false,
-          generated: false
-        };
+        updates.summaryMetadata = { active: false, generated: false };
       }
 
-      // Only process baseline response if we actually fetched it
       if (shouldFetchBaseline) {
         if (baselineResponse.status === 'fulfilled') {
           const newBaseline = baselineResponse.value.baseline;
-          if (newBaseline !== undefined && newBaseline !== currentBaseline) {
-            updates.baseline = newBaseline;
-          }
+          if (newBaseline !== undefined && newBaseline !== currentBaseline) updates.baseline = newBaseline;
           updates.baselineLoading = false;
         } else {
-          // Baseline fetch failed
           if (!currentBaseline) {
             console.warn('Baseline data not available:', baselineResponse.reason);
             updates.baseline = null;
@@ -314,20 +289,15 @@ export function usePilotData() {
           updates.baselineLoading = false;
         }
       }
-      // If we skipped baseline, don't touch baseline or baselineLoading in updates
-      // This prevents unnecessary state changes and re-renders
 
-      // Only process forecast response if we actually fetched it
       if (shouldFetchForecast) {
         if (forecastResponse.status === 'fulfilled') {
           const newForecast = forecastResponse.value.forecast;
-          // Always update if force-refreshing, otherwise only update if data changed
           if (newForecast !== undefined && (options?.forceRefreshForecast || newForecast !== currentForecast)) {
             updates.arrivalForecast = newForecast;
           }
           updates.arrivalForecastLoading = false;
         } else {
-          // Forecast fetch failed
           if (!currentForecast) {
             console.warn('Arrival forecast not available:', forecastResponse.reason);
             updates.arrivalForecast = null;
@@ -335,78 +305,31 @@ export function usePilotData() {
           updates.arrivalForecastLoading = false;
         }
       }
-      // If we skipped forecast, don't touch forecast or forecastLoading in updates
-      // This prevents unnecessary state changes and re-renders
 
-      // Merge actualCounts from arrivals into arrivalForecast after both are processed
-      // This handles the race condition where arrivals loads before forecast
       const finalForecast = updates.arrivalForecast ?? currentForecast;
       if (arrivalsResponse.status === 'fulfilled' && arrivalsResponse.value.actualCounts && finalForecast) {
         const actualCountsMap = new Map<string, number>();
         arrivalsResponse.value.actualCounts.timeSlots.forEach((slot, idx) => {
           actualCountsMap.set(slot, arrivalsResponse.value.actualCounts!.counts[idx]);
         });
-        
         updates.arrivalForecast = {
           ...finalForecast,
-          actualCounts: finalForecast.timeSlots.map(slot => 
-            actualCountsMap.get(slot) ?? null
-          )
+          actualCounts: finalForecast.timeSlots.map(slot => actualCountsMap.get(slot) ?? null)
         };
       }
 
-      // Set error message based on failed requests
-      const failedRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
-        .filter(response => response.status === 'rejected');
-
-      const successfulRequests = [overviewResponse, pirepsResponse, tracksResponse, arrivalsResponse, summaryResponse]
-        .filter(response => response.status === 'fulfilled');
-
-      const hasNoData = successfulRequests.length === 0;
-
-      // Set error message based on data availability
-      if (hasNoData && failedRequests.length > 0) {
-        const offlineErrors = failedRequests.filter(req =>
-          req.reason instanceof Error && req.reason.message.includes('offline')
-        );
-
-        if (offlineErrors.length > 0) {
-          updates.error = 'No data available - check your internet connection and try again';
-        } else {
-          updates.error = 'No data available - server error occurred';
-        }
-      } else if (failedRequests.length > 0) {
-        updates.error = `${failedRequests.length} of ${failedRequests.length + successfulRequests.length} data sources failed to load`;
-      } else {
+      const failed = [pirepsResponse, arrivalsResponse, summaryResponse].filter(r => r.status === 'rejected');
+      const succeeded = [pirepsResponse, arrivalsResponse, summaryResponse].filter(r => r.status === 'fulfilled');
+      if (failed.length > 0 && !criticalUpdates.error) {
+        updates.error = `${failed.length} of ${failed.length + succeeded.length} data sources failed to load`;
+      } else if (failed.length === 0 && criticalUpdates.error) {
         updates.error = null;
       }
 
-      // Only update state if there are actual changes
-      // This prevents unnecessary re-renders when data hasn't changed
       setState(prev => {
-        // Check if any meaningful updates exist
-        const hasUpdates = Object.keys(updates).length > 0 && (
-          updates.airportOverview !== undefined ||
-          updates.pireps !== undefined ||
-          updates.tracks !== undefined ||
-          updates.arrivals !== undefined ||
-          updates.summary !== undefined ||
-          updates.baseline !== undefined ||
-          updates.baselineLoading !== undefined ||
-          updates.arrivalForecast !== undefined ||
-          updates.arrivalForecastLoading !== undefined ||
-          updates.loading !== undefined ||
-          updates.error !== undefined ||
-          updates.pirepsMetadata !== undefined ||
-          updates.tracksMetadata !== undefined ||
-          updates.arrivalsMetadata !== undefined ||
-          updates.summaryMetadata !== undefined
-        );
-        
-        if (!hasUpdates) {
-          return prev; // No changes, return previous state to prevent re-render
-        }
-        
+        if (prev.selectedAirport !== airportId) return prev;
+        const hasUpdates = Object.keys(updates).length > 0;
+        if (!hasUpdates) return prev;
         return { ...prev, ...updates };
       });
     } catch (error) {
