@@ -1515,22 +1515,30 @@ export function PilotMap({
       stationWinds.sort((a: any, b: any) => a.level - b.level);
       const wind = stationWinds[0];
 
-      // Calculate offset away from airport to avoid masking airport info
+      // Calculate offset away from airport using fixed pixel distance
       let offsetLat = wind.lat;
       let offsetLon = wind.lon;
       
       if (airportPos) {
-        // Calculate bearing from airport to wind station
-        const bearing = calculateBearing(airportPos.lat, airportPos.lon, wind.lat, wind.lon);
+        // Use fixed pixel offset (100 pixels to the northeast) from airport position
+        const pixelOffsetX = 100; // pixels east
+        const pixelOffsetY = -100; // pixels north (negative because screen Y increases downward)
         
-        // Offset the wind barb further away from the airport
-        const offsetDistance = 0.05; // ~3nm offset
-        const bearingRad = (bearing * Math.PI) / 180;
+        // Convert airport position to container point (pixels)
+        const airportPoint = mapInstance.latLngToContainerPoint(airportPos);
         
-        offsetLat = wind.lat + offsetDistance * Math.cos(bearingRad);
-        offsetLon = wind.lon + offsetDistance * Math.sin(bearingRad);
+        // Apply pixel offset
+        const offsetPoint = L.point(
+          airportPoint.x + pixelOffsetX,
+          airportPoint.y + pixelOffsetY
+        );
+        
+        // Convert back to lat/lon - this gives us a fixed pixel offset from airport
+        const offsetLatLng = mapInstance.containerPointToLatLng(offsetPoint);
+        offsetLat = offsetLatLng.lat;
+        offsetLon = offsetLatLng.lng;
       } else {
-        // If no airport, add small random offset
+        // If no airport, use wind station position with small random offset
         offsetLat = wind.lat + (Math.random() - 0.5) * 0.01;
         offsetLon = wind.lon + (Math.random() - 0.5) * 0.01;
       }
