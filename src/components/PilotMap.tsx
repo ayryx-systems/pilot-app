@@ -805,33 +805,35 @@ export function PilotMap({
           const hasModerate = pirep.conditions?.some(c => c.severity === 'MODERATE') || false;
 
           // Choose color based on priority
-          let color = '#10b981'; // Green for light/normal conditions
+          let color = '#f59e0b'; // Yellow for light/normal conditions (warnings should not be green)
           if (isUrgent) {
             color = '#ef4444'; // Red for urgent
           } else if (hasModerate) {
-            color = '#f59e0b'; // Amber for moderate
+            color = '#f59e0b'; // Yellow for moderate
           }
 
-          // Create custom PIREP icon with warning triangle - more prominent
+          // Create custom PIREP icon with warning triangle - distinct triangular design
           const pirepIcon = L.divIcon({
             html: `<div style="
-              width: 24px;
-              height: 24px;
-              background: ${color};
-              border: 3px solid #ffffff;
-              border-radius: 4px;
-              box-shadow: 0 3px 6px rgba(0,0,0,0.4);
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              font-size: 14px;
+              width: 0;
+              height: 0;
+              border-left: 14px solid transparent;
+              border-right: 14px solid transparent;
+              border-bottom: 24px solid ${color};
+              filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+              position: relative;
+            "><div style="
+              position: absolute;
+              top: 2px;
+              left: -10px;
+              font-size: 12px;
               font-weight: bold;
               color: white;
-              position: relative;
-            ">⚠</div>`,
+              text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+            ">⚠</div></div>`,
             className: 'custom-pirep-marker',
-            iconSize: [30, 30],
-            iconAnchor: [15, 15]
+            iconSize: [28, 28],
+            iconAnchor: [14, 24]
           });
 
           const marker = L.marker([pirep.location.lat, pirep.location.lon], { 
@@ -1904,7 +1906,7 @@ export function PilotMap({
                               (pirep.icgInt1 && ['MOD', 'MOD-SEV'].includes(pirep.icgInt1)) || false;
 
             // Choose color based on priority - using darker, muted colors for better text readability
-            let color = '#10b981'; // Dark green for light/normal conditions
+            let color = '#d97706'; // Dark yellow/amber for light/normal conditions (warnings should not be green)
             if (isUrgent) {
               color = '#dc2626'; // Dark red for urgent
             } else if (hasModerate) {
@@ -2240,13 +2242,13 @@ export function PilotMap({
               return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
             };
 
-            // Create METAR station icon (square with station ID)
+            // Create METAR station icon (square with station ID) - thinner border for less prominence
             const metarIcon = L.divIcon({
               html: `<div style="
                 width: 36px;
                 height: 24px;
                 background: ${color};
-                border: 2px solid ${borderColor};
+                border: 1px solid ${borderColor};
                 border-radius: 3px;
                 box-shadow: 0 2px 4px rgba(0,0,0,0.4);
                 display: flex;
