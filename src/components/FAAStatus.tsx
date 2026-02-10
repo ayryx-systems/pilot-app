@@ -91,6 +91,7 @@ interface FAAStatus {
     expTime: string;
   } | null;
   lastUpdated: string;
+  isDemo?: boolean;
 }
 
 interface FAAStatusProps {
@@ -150,9 +151,14 @@ export function FAAStatus({ airportId }: FAAStatusProps) {
 
   return (
     <div className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 space-y-3">
-      <div className="flex items-center gap-2 mb-3">
+      <div className="flex items-center gap-2 mb-3 flex-wrap">
         <AlertTriangle className="h-4 w-4 text-yellow-400" />
         <h3 className="text-sm font-semibold text-slate-200">FAA NAS Status</h3>
+        {status.isDemo && (
+          <span className="text-xs font-medium px-2 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40">
+            Demo data
+          </span>
+        )}
         <HelpButton
           title="FAA NAS Status"
           size="sm"
