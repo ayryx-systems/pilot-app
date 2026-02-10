@@ -41,7 +41,7 @@ export function AirportSelector({
     setOpen(false);
   };
 
-  if (loading || airports.length === 0) {
+  if (airports.length === 0) {
     return (
       <div className="bg-slate-700 text-slate-400 px-2 sm:px-3 py-1 sm:py-2 rounded-lg text-xs sm:text-sm">
         {loading ? 'Loading...' : 'No airports'}
@@ -53,7 +53,7 @@ export function AirportSelector({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setOpen(!open)}
-        disabled={loading}
+        disabled={loading && airports.length === 0}
         className="flex items-center gap-1.5 bg-slate-700 text-white px-2 sm:px-3 py-1 sm:py-2 rounded-lg 
                    border focus:outline-none
                    disabled:opacity-50 disabled:cursor-not-allowed text-xs sm:text-sm font-medium
