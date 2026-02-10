@@ -333,7 +333,7 @@ export const SituationOverview = memo(function SituationOverview({
   };
 
 
-  if (loading) {
+  if (loading && !summary) {
     return (
       <div className="animate-pulse">
         <div className="space-y-2">
