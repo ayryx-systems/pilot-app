@@ -326,7 +326,7 @@ class PilotApiService {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
-      });
+      }, 25000);
       return await this.handleResponse<ArrivalsResponse>(response);
     } catch (error) {
       console.error(`Failed to fetch arrivals for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
@@ -406,7 +406,7 @@ class PilotApiService {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
-      });
+      }, 25000);
       return await this.handleResponse<ArrivalForecastResponse>(response);
     } catch (error) {
       console.error(`Failed to fetch arrival forecast for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
