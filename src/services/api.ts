@@ -69,7 +69,7 @@ class PilotApiService {
     return `${url}${separator}${params.toString()}`;
   }
 
-  private async fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 10000): Promise<Response> {
+  private async fetchWithTimeout(url: string, options: RequestInit = {}, timeout = 25000): Promise<Response> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), timeout);
 
@@ -198,7 +198,7 @@ class PilotApiService {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
-      }, 8000);
+      }, 25000);
       return await this.handleResponse<Record<string, unknown>>(response);
     } catch (error) {
       if (error instanceof ApiError && error.status === 404) {
@@ -220,14 +220,13 @@ class PilotApiService {
     }
 
     try {
-      // Backend now responds within 2-3 seconds max, but use 8 seconds timeout for safety
       const response = await this.fetchWithTimeout(`${API_BASE_URL}/api/pilot/${airportId}/overview?t=${Date.now()}`, {
         cache: 'no-cache',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache'
         }
-      }, 8000); // 8 second timeout (backend responds within 2-3 seconds)
+      }, 25000);
       return await this.handleResponse<AirportOverview>(response);
     } catch (error) {
       console.error(`Failed to fetch airport overview for ${airportId}:`, error instanceof Error ? error.message : 'Unknown error');
