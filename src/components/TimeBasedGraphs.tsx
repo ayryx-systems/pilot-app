@@ -314,19 +314,15 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     prevBaselineRef.current = baseline;
     prevSelectedTimeRef.current = new Date(selectedTimeKey);
 
-    // Calculate NOW in airport local time
     const nowUTC = getCurrentUTCTime();
     const nowLocal = utcToAirportLocal(nowUTC, airportCode, baseline);
-    const todayDateStr = isUTC ? getUTCDateString(nowUTC) : getAirportLocalDateString(nowUTC, airportCode, baseline);
+    const todayDateStr = getAirportLocalDateString(nowUTC, airportCode, baseline);
+    const selectedDateStr = getAirportLocalDateString(selectedTime, airportCode, baseline);
     
-    // Calculate time window: -2 hours history, extend forward based on ETA
     const isNow = Math.abs(selectedTime.getTime() - nowUTC.getTime()) <= 60000;
     const hoursAhead = (selectedTime.getTime() - nowUTC.getTime()) / (1000 * 60 * 60);
-    const windowStartHours = -2; // 2 hours history
-    const windowEndHours = isNow ? 2 : Math.max(hoursAhead + 2, 2); // Extend 2 hours past ETA, minimum 2 hours
-    
-    // Get the airport local date string for selected time (or UTC date if in UTC mode)
-    const selectedDateStr = isUTC ? getUTCDateString(selectedTime) : getAirportLocalDateString(selectedTime, airportCode, baseline);
+    const windowStartHours = -2;
+    const windowEndHours = isNow ? 2 : Math.max(hoursAhead + 2, 2);
     const dayOfWeek = getDayOfWeekName(selectedDateStr);
     const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
