@@ -614,7 +614,7 @@ class PilotApiService {
             'Pragma': 'no-cache'
           }
         },
-        5000 // Shorter timeout for connection test
+        15000 // Relaxed timeout so slow responses don't flip to offline
       );
 
       await this.handleResponse<{ status: string; timestamp: string }>(response);

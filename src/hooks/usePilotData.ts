@@ -12,6 +12,7 @@ export function usePilotData() {
   const [mounted, setMounted] = useState(false);
   const offlineStartTimeRef = useRef<number | null>(null);
   const wasConnectedRef = useRef<boolean>(false);
+  const consecutiveFailuresRef = useRef<number>(0);
 
   const [state, setState] = useState<PilotAppState>(() => {
     // Initialize with saved airport from localStorage
@@ -69,43 +70,45 @@ export function usePilotData() {
 
     try {
       const result = await pilotApi.testConnection(activeOfflineDuration);
-      
+
       if (result.connected) {
-        // Connection restored - clear offline tracking
+        consecutiveFailuresRef.current = 0;
         if (offlineStartTimeRef.current !== null) {
           offlineStartTimeRef.current = null;
         }
         wasConnectedRef.current = true;
       } else {
-        // Connection lost - start tracking offline time
+        consecutiveFailuresRef.current += 1;
         if (offlineStartTimeRef.current === null && wasConnectedRef.current) {
           offlineStartTimeRef.current = Date.now();
         }
       }
 
+      const showOffline = !result.connected && (consecutiveFailuresRef.current >= 2 || !wasConnectedRef.current);
       setState(prev => ({
         ...prev,
         connectionStatus: {
-          connected: result.connected,
+          connected: !showOffline,
           lastUpdate: mounted ? new Date() : prev.connectionStatus.lastUpdate,
           latency: result.latency,
         },
-        error: result.connected ? null : (result.error || 'Connection failed'),
+        error: showOffline ? (result.error || 'Connection failed') : null,
       }));
       return result.connected;
     } catch (error) {
-      // Connection failed - start tracking offline time if we were connected
+      consecutiveFailuresRef.current += 1;
       if (offlineStartTimeRef.current === null && wasConnectedRef.current) {
         offlineStartTimeRef.current = Date.now();
       }
 
+      const showOffline = consecutiveFailuresRef.current >= 2 || !wasConnectedRef.current;
       setState(prev => ({
         ...prev,
         connectionStatus: {
-          connected: false,
+          connected: !showOffline,
           lastUpdate: mounted ? new Date() : prev.connectionStatus.lastUpdate,
         },
-        error: error instanceof Error ? error.message : 'Connection test failed',
+        error: showOffline ? (error instanceof Error ? error.message : 'Connection test failed') : null,
       }));
       return false;
     }
