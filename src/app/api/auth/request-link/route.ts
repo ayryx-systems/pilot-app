@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
         html: `
           <p>Click the link below to sign in to AYRYX:</p>
           <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
-          <p>This link expires in 15 minutes.</p>
+          <p>This link expires in 1 hour.</p>
           <p>If you didn't request this, you can ignore this email.</p>
         `,
       });

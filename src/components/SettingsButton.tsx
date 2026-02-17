@@ -59,7 +59,7 @@ export function SettingsButton() {
               className="flex items-center gap-2 px-3 py-2 text-slate-300 hover:bg-slate-700/50 text-sm"
               onClick={() => setOpen(false)}
             >
-              Access
+              Manage access
             </Link>
           )}
           <a

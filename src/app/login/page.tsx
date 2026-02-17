@@ -68,7 +68,7 @@ function LoginForm() {
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-200 text-sm">
               {successKind === 'magic_link'
-                ? 'Check your email. Click the link to sign in. It expires in 15 minutes.'
+                ? 'Check your email. Click the link to sign in. It expires in 1 hour.'
                 : successMessage || 'Request submitted. An approver will review it.'}
             </div>
             <button
