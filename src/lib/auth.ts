@@ -33,9 +33,27 @@ export function consumeMagicLinkToken(token: string): string | null {
   return entry.email;
 }
 
-export function isEmailWhitelisted(email: string): boolean {
-  const list = process.env.EMAIL_WHITELIST?.toLowerCase().split(',').map((e) => e.trim()) ?? [];
-  return list.includes(email.toLowerCase().trim());
+export function createApproveToken(email: string): string {
+  const exp = Date.now() + 24 * 60 * 60 * 1000;
+  const payload = JSON.stringify({ email: email.toLowerCase().trim(), exp, t: 'approve' });
+  const encoded = Buffer.from(payload, 'utf8').toString('base64url');
+  const sig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
+  return `${encoded}.${sig}`;
+}
+
+export function consumeApproveToken(token: string): string | null {
+  const [encoded, sig] = token.split('.');
+  if (!encoded || !sig) return null;
+  try {
+    const expectedSig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
+    if (sig !== expectedSig) return null;
+    const payload = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8'));
+    if (payload.t !== 'approve' || !payload.email) return null;
+    if (payload.exp && Date.now() > payload.exp) return null;
+    return payload.email;
+  } catch {
+    return null;
+  }
 }
 
 export function createSessionCookie(email: string): { name: string; value: string; options: Record<string, unknown> } {

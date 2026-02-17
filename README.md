@@ -21,8 +21,14 @@ npm install
 
 2. Configure environment (create `.env.local`):
 ```
-ACCESS_CODES=your-access-code-here
 NEXT_PUBLIC_API_BASE_URL=http://localhost:3001
+NEXT_PUBLIC_PILOT_APP_URL=http://localhost:3006
+EMAIL_WHITELIST=you@example.com
+RESEND_API_KEY=re_xxx
+SESSION_SECRET=<32+ chars>
+ADMIN_EMAILS=admin@example.com
+APPROVER_EMAILS=admin@example.com
+WHITELIST_S3_BUCKET=ayryx-pilot
 ```
 
 3. Start the development server:
@@ -32,26 +38,48 @@ npm run dev
 
 4. Access the app:
 ```
-http://localhost:3006/your-access-code-here
+http://localhost:3006
 ```
 
 ## Access Control
 
-Magic link (email whitelist): Pilots enter their email and receive a sign-in link. Only whitelisted emails can request a link.
-- Access via: `https://pilot.ayryx.com` → enter email → click link in email
+Magic link with S3-backed whitelist:
+- Pilots enter email → whitelisted users get sign-in link; others can request access
+- Requests trigger approval emails; one-click approve adds to whitelist
+- Admin at `/admin` for whitelist management (add/remove, approve/deny pending)
 - Session cookie lasts 30 days
 
 ## Environment Variables
 
 ### Required
-- `NEXT_PUBLIC_API_BASE_URL` - Backend API URL (e.g., `https://api.ayryx.com`)
-- `NEXT_PUBLIC_PILOT_APP_URL` - App URL for magic links (e.g. `http://localhost:3006` local, `https://pilot.ayryx.com` prod)
-- `EMAIL_WHITELIST` - Comma-separated allowed emails
-- `RESEND_API_KEY` - Resend API key for sending magic link emails
-- `SESSION_SECRET` - Secret for signing session cookies (min 32 chars)
+- `NEXT_PUBLIC_API_BASE_URL` - Backend API URL
+- `NEXT_PUBLIC_PILOT_APP_URL` - App URL for magic links
+- `EMAIL_WHITELIST` - Initial whitelist (used if S3 empty; seeded to S3 on first run)
+- `RESEND_API_KEY` - Resend API key
+- `SESSION_SECRET` - Session signing secret (min 32 chars)
+- `ADMIN_EMAILS` - Comma-separated emails that can access `/admin`
+- `APPROVER_EMAILS` - Emails notified when someone requests access
+- `WHITELIST_S3_BUCKET` - S3 bucket for whitelist JSON
+
+### AWS (for S3)
+- `AWS_REGION` - Default us-east-1
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` - Or use IAM role on EC2
+
+**IAM policy** for whitelist S3 access (EC2 role or credentials):
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [{
+    "Effect": "Allow",
+    "Action": ["s3:GetObject", "s3:PutObject"],
+    "Resource": ["arn:aws:s3:::ayryx-pilot/*"]
+  }]
+}
+```
 
 ### Optional
-- `RESEND_FROM_DOMAIN` - Domain for "From" address (default: mail.ayryx.com)
+- `RESEND_FROM_DOMAIN` - From address domain (default: mail.ayryx.com)
+- `WHITELIST_S3_KEY` - S3 key (default: config/pilot-whitelist.json)
 
 ## Production Deployment
 

@@ -20,11 +20,18 @@ export async function middleware(request: NextRequest) {
 
   const sessionCookie = request.cookies.get('pilot_session');
   const email = await verifySessionCookie(sessionCookie?.value);
-  if (email) {
-    return NextResponse.next();
+  if (!email) {
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 
-  return NextResponse.redirect(new URL('/login', request.url));
+  if (path === '/admin') {
+    const admins = process.env.ADMIN_EMAILS?.toLowerCase().split(',').map((e) => e.trim()) ?? [];
+    if (!admins.includes(email.toLowerCase())) {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

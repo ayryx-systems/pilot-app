@@ -8,6 +8,8 @@ function LoginForm() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
+  const [successKind, setSuccessKind] = useState<'magic_link' | 'pending'>('magic_link');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const errorParam = searchParams.get('error');
   const initialError = errorParam === 'expired' 
@@ -39,6 +41,8 @@ function LoginForm() {
       }
 
       setStatus('success');
+      setSuccessKind((data.kind as 'magic_link' | 'pending') || 'magic_link');
+      setSuccessMessage(data.message);
       setEmail('');
     } catch {
       setStatus('error');
@@ -51,7 +55,7 @@ function LoginForm() {
       <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-xl font-semibold text-slate-100 mb-1">AYRYX</h1>
-          <p className="text-slate-400 text-sm">Enter your email to receive a sign-in link</p>
+          <p className="text-slate-400 text-sm">Enter your email to sign in or request access</p>
         </div>
 
         {initialError && (
@@ -63,14 +67,16 @@ function LoginForm() {
         {status === 'success' ? (
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-200 text-sm">
-              Check your email. Click the link to sign in. It expires in 15 minutes.
+              {successKind === 'magic_link'
+                ? 'Check your email. Click the link to sign in. It expires in 15 minutes.'
+                : successMessage || 'Request submitted. An approver will review it.'}
             </div>
             <button
               type="button"
-              onClick={() => { setStatus('idle'); setErrorMsg(''); }}
+              onClick={() => { setStatus('idle'); setErrorMsg(''); setSuccessKind('magic_link'); setSuccessMessage(''); }}
               className="w-full py-2.5 text-slate-300 hover:text-slate-100 text-sm"
             >
-              Send another link
+              {successKind === 'magic_link' ? 'Send another link' : 'Submit another request'}
             </button>
           </div>
         ) : (
