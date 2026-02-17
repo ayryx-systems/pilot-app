@@ -549,7 +549,7 @@ export function PilotDashboard() {
               loading={loading}
             />
             <HelpButton
-              title="AYRYX Pilot"
+              title="AYRYX"
               size="md"
               content={
                 <div className="space-y-2">

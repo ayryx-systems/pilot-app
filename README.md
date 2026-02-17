@@ -37,17 +37,21 @@ http://localhost:3006/your-access-code-here
 
 ## Access Control
 
-The app uses a simple URL-based access control mechanism:
-- Access via: `https://pilot.ayryx.com/<ACCESS_CODE>`
-- Valid codes are set in the `ACCESS_CODES` environment variable (comma-separated)
-- On first access, a secure cookie is set for 30 days
-- Subsequent visits don't require the code in the URL
+Magic link (email whitelist): Pilots enter their email and receive a sign-in link. Only whitelisted emails can request a link.
+- Access via: `https://pilot.ayryx.com` → enter email → click link in email
+- Session cookie lasts 30 days
 
 ## Environment Variables
 
 ### Required
-- `ACCESS_CODES` - Comma-separated list of valid access codes
 - `NEXT_PUBLIC_API_BASE_URL` - Backend API URL (e.g., `https://api.ayryx.com`)
+- `NEXT_PUBLIC_PILOT_APP_URL` - App URL for magic links (e.g. `http://localhost:3006` local, `https://pilot.ayryx.com` prod)
+- `EMAIL_WHITELIST` - Comma-separated allowed emails
+- `RESEND_API_KEY` - Resend API key for sending magic link emails
+- `SESSION_SECRET` - Secret for signing session cookies (min 32 chars)
+
+### Optional
+- `RESEND_FROM_DOMAIN` - Domain for "From" address (default: mail.ayryx.com)
 
 ## Production Deployment
 

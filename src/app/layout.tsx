@@ -14,15 +14,15 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "AYRYX Pilot",
+  title: "AYRYX",
   description: "Aviation Situational Awareness for Pilots",
   formatDetection: {
     telephone: false,
   },
   openGraph: {
     type: "website",
-    siteName: "AYRYX Pilot",
-    title: "AYRYX Pilot",
+    siteName: "AYRYX",
+    title: "AYRYX",
     description: "Aviation Situational Awareness for Pilots",
   },
   icons: {
