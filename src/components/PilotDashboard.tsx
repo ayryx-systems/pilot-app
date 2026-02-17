@@ -46,6 +46,7 @@ import { CollapsibleCard } from './CollapsibleCard';
 import { TrendingUp, Plane as PlaneIcon, Sliders } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
 import { WeatherScenarioToggle } from './WeatherScenarioToggle';
+import { SettingsButton } from './SettingsButton';
 import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
 export function PilotDashboard() {
@@ -600,6 +601,7 @@ export function PilotDashboard() {
               size="sm"
             />
           )}
+          {mounted && <SettingsButton />}
         </div>
       </header>
 
