@@ -74,12 +74,11 @@ export async function POST(request: NextRequest) {
         await resend.emails.send({
           from: `AYRYX <noreply@${fromDomain}>`,
           to: email,
-          subject: 'Sign in to AYRYX',
+          subject: "You're approved for AYRYX",
           html: `
             <p>You've been approved for AYRYX. Click the link below to sign in:</p>
             <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
-            <p>This link expires in 1 hour.</p>
-            <p>If you don't see this email, check your spam folder.</p>
+            <p>Once approved, you can always sign in by going to the app and entering your email — we'll send you a new link whenever you need one.</p>
           `,
         });
       }
@@ -115,10 +114,9 @@ export async function POST(request: NextRequest) {
       to: email,
       subject: 'Sign in to AYRYX',
       html: `
-        <p>You've been approved for AYRYX. Click the link below to sign in:</p>
+        <p>Click the link below to sign in to AYRYX:</p>
         <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
-        <p>This link expires in 1 hour.</p>
-        <p>If you don't see this email, check your spam folder.</p>
+        <p>This link is valid for 30 days. Need a new one? Just enter your email at the app and we'll send another.</p>
       `,
     });
     if (error) {

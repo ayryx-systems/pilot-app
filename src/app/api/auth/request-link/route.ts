@@ -55,8 +55,7 @@ export async function POST(request: NextRequest) {
         html: `
           <p>Click the link below to sign in to AYRYX:</p>
           <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
-          <p>This link expires in 1 hour.</p>
-          <p>If you don't see this email, check your spam folder.</p>
+          <p>This link is valid for 30 days. Need a new one? Just enter your email at the app and we'll send another.</p>
           <p>If you didn't request this, you can ignore this email.</p>
         `,
       });
@@ -73,10 +72,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { added, alreadyPending } = await addPendingRequest(email);
-    const pendingMessage = 'This email address is not yet approved for AYRYX. A request for approval has been sent. You will receive a sign-in link once an approver adds you.';
+    const pendingMessage = 'This email address is not yet approved for AYRYX. A request for approval has been sent. Once approved, you can sign in anytime by entering your email here — we\'ll send you a link.';
     if (alreadyPending) {
       return NextResponse.json(
-        { success: true, kind: 'pending', message: 'This email address is not yet approved. Your prior request is still pending. You will receive a sign-in link once an approver adds you.' }
+        { success: true, kind: 'pending', message: 'This email address is not yet approved. Your prior request is still pending. Once approved, you can sign in anytime by entering your email here — we\'ll send you a link.' }
       );
     }
 
@@ -105,7 +104,6 @@ export async function POST(request: NextRequest) {
         <p><strong>${email}</strong> has requested access to AYRYX.</p>
         <p><a href="${approveUrl}">Approve</a> — one click adds them to the whitelist.</p>
         <p>Or manage requests at <a href="${baseUrl}/admin">${baseUrl}/admin</a></p>
-        <p>If you don't see this email, check your spam folder.</p>
       `,
     });
 

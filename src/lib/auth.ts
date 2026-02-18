@@ -1,6 +1,6 @@
 import { createHmac } from 'crypto';
 
-const MAGIC_LINK_EXPIRY_MS = 60 * 60 * 1000;
+const MAGIC_LINK_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
 
 function getSecret(): string {
@@ -35,7 +35,7 @@ export function consumeMagicLinkToken(token: string): string | null {
 }
 
 export function createApproveToken(email: string): string {
-  const exp = Date.now() + 24 * 60 * 60 * 1000;
+  const exp = Date.now() + 7 * 24 * 60 * 60 * 1000;
   const payload = JSON.stringify({ email: email.toLowerCase().trim(), exp, t: 'approve' });
   const encoded = Buffer.from(payload, 'utf8').toString('base64url');
   const sig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
