@@ -99,7 +99,7 @@ function LoginForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@airline.com"
+                placeholder={isEinSubdomain ? 'you@aerlingus.com' : 'you@airline.com'}
                 required
                 autoComplete="email"
                 disabled={status === 'loading'}
