@@ -22,19 +22,29 @@ function getRedirectOrigin(request: NextRequest): string {
     : 'http://localhost:3006';
 }
 
+function getRequestHostname(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  const raw = forwarded || host || '';
+  return raw.split(',')[0].trim().split(':')[0] || '';
+}
+
 export async function GET(request: NextRequest) {
   const redirectOrigin = getRedirectOrigin(request);
   const response = NextResponse.redirect(`${redirectOrigin}/login`);
-  const hostname = new URL(redirectOrigin).hostname;
+  const hostname = getRequestHostname(request) || new URL(redirectOrigin).hostname;
   const domain = getCookieDomain(hostname);
-  const options: Record<string, unknown> = {
+  const baseOptions: Record<string, unknown> = {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     maxAge: 0,
+    expires: new Date(0),
     path: '/',
   };
-  if (domain) options.domain = domain;
-  response.cookies.set('pilot_session', '', options);
+  response.cookies.set('pilot_session', '', baseOptions);
+  if (domain) {
+    response.cookies.set('pilot_session', '', { ...baseOptions, domain });
+  }
   return response;
 }
