@@ -14,9 +14,20 @@ function getClientIp(request: NextRequest): string {
   );
 }
 
+function isValidBaseUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
+    if (u.hostname.endsWith('.ayryx.com')) return true;
+    return false;
+  } catch {
+    return false;
+  }
+}
+
 export async function POST(request: NextRequest) {
   const airline = getAirline(request);
-  const baseUrl = getBaseUrl(request);
+  let baseUrl = getBaseUrl(request);
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -37,6 +48,10 @@ export async function POST(request: NextRequest) {
     const email = typeof body.email === 'string' ? body.email.trim() : '';
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    }
+    const clientBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : '';
+    if (clientBaseUrl && isValidBaseUrl(clientBaseUrl)) {
+      baseUrl = clientBaseUrl.replace(/\/$/, '');
     }
 
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
