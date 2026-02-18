@@ -34,7 +34,10 @@ export function AirlineProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me', { headers: getAirlineHeaders() });
+      const res = await fetch('/api/auth/me', {
+        headers: getAirlineHeaders(),
+        cache: 'no-store',
+      });
       if (res.ok) {
         const data = await res.json();
         setState({

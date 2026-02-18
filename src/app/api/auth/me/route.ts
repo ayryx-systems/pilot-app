@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     name: config.name,
   };
   if (request.nextUrl.searchParams.get('debug') === '1') {
-    payload._debug = { admins, emailLower, match: isAdmin };
+    payload._debug = { admins, emailLower, match: isAdmin, configLogo: config.logo, configName: config.name };
   }
   return NextResponse.json(payload);
 }
