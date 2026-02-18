@@ -1,7 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
 const BUCKET = process.env.WHITELIST_S3_BUCKET || process.env.S3_BUCKET_NAME || 'ayryx-pilot';
-const KEY = process.env.WHITELIST_S3_KEY || 'config/pilot-whitelist.json';
 const CACHE_TTL_MS = 30 * 1000;
 
 interface WhitelistData {
@@ -9,8 +8,8 @@ interface WhitelistData {
   pending: { email: string; requestedAt: string }[];
 }
 
+const cache = new Map<string, { data: WhitelistData; at: number }>();
 let s3Client: S3Client | null = null;
-let cache: { data: WhitelistData; at: number } | null = null;
 
 function getClient(): S3Client | null {
   if (s3Client) return s3Client;
@@ -27,24 +26,32 @@ function getClient(): S3Client | null {
   return s3Client;
 }
 
+function getKey(airline: string): string {
+  return `config/${airline}/whitelist.json`;
+}
+
 function normalize(email: string): string {
   return email.toLowerCase().trim();
 }
 
-function defaultData(): WhitelistData {
-  const envList = process.env.EMAIL_WHITELIST?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? [];
+function defaultData(airline: string): WhitelistData {
+  const envKey = `EMAIL_WHITELIST_${airline.toUpperCase()}`;
+  const envList = process.env[envKey]?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
+    ?? process.env.EMAIL_WHITELIST?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
+    ?? [];
   return { emails: [...new Set(envList)], pending: [] };
 }
 
-export async function getWhitelist(): Promise<WhitelistData> {
+export async function getWhitelist(airline: string): Promise<WhitelistData> {
   const now = Date.now();
-  if (cache && now - cache.at < CACHE_TTL_MS) return cache.data;
+  const cached = cache.get(airline);
+  if (cached && now - cached.at < CACHE_TTL_MS) return cached.data;
 
   const client = getClient();
-  if (!client) return defaultData();
+  if (!client) return defaultData(airline);
 
   try {
-    const res = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: KEY }));
+    const res = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: getKey(airline) }));
     const body = await res.Body?.transformToString();
     if (body) {
       const data = JSON.parse(body) as WhitelistData;
@@ -54,7 +61,7 @@ export async function getWhitelist(): Promise<WhitelistData> {
         requestedAt: p.requestedAt || new Date().toISOString(),
       }));
       const parsed: WhitelistData = { emails: [...new Set(emails)], pending };
-      cache = { data: parsed, at: now };
+      cache.set(airline, { data: parsed, at: now });
       return parsed;
     }
   } catch (err: unknown) {
@@ -63,75 +70,75 @@ export async function getWhitelist(): Promise<WhitelistData> {
     }
   }
 
-  const data = defaultData();
-  cache = { data, at: now };
+  const data = defaultData(airline);
+  cache.set(airline, { data, at: now });
   if (data.emails.length > 0) {
-    saveWhitelist(data).catch(() => {});
+    saveWhitelist(airline, data).catch(() => {});
   }
   return data;
 }
 
-export async function saveWhitelist(data: WhitelistData): Promise<void> {
+export async function saveWhitelist(airline: string, data: WhitelistData): Promise<void> {
   const client = getClient();
   if (!client) throw new Error('S3 not configured');
 
   const body = JSON.stringify(data, null, 2);
   await client.send(new PutObjectCommand({
     Bucket: BUCKET,
-    Key: KEY,
+    Key: getKey(airline),
     Body: body,
     ContentType: 'application/json',
   }));
-  cache = { data, at: Date.now() };
+  cache.set(airline, { data, at: Date.now() });
 }
 
-export async function isEmailWhitelisted(email: string): Promise<boolean> {
-  const { emails } = await getWhitelist();
+export async function isEmailWhitelisted(airline: string, email: string): Promise<boolean> {
+  const { emails } = await getWhitelist(airline);
   return emails.includes(normalize(email));
 }
 
-export async function addToWhitelist(email: string): Promise<void> {
-  const data = await getWhitelist();
+export async function addToWhitelist(airline: string, email: string): Promise<void> {
+  const data = await getWhitelist(airline);
   const n = normalize(email);
   if (data.emails.includes(n)) return;
   data.emails.push(n);
   data.emails.sort();
-  await saveWhitelist(data);
+  await saveWhitelist(airline, data);
 }
 
-export async function removeFromWhitelist(email: string): Promise<void> {
-  const data = await getWhitelist();
+export async function removeFromWhitelist(airline: string, email: string): Promise<void> {
+  const data = await getWhitelist(airline);
   const n = normalize(email);
   data.emails = data.emails.filter((e) => e !== n);
   data.pending = data.pending.filter((p) => p.email !== n);
-  await saveWhitelist(data);
+  await saveWhitelist(airline, data);
 }
 
-export async function addPendingRequest(email: string): Promise<{ added: boolean; alreadyPending: boolean }> {
-  const data = await getWhitelist();
+export async function addPendingRequest(airline: string, email: string): Promise<{ added: boolean; alreadyPending: boolean }> {
+  const data = await getWhitelist(airline);
   const n = normalize(email);
   if (data.emails.includes(n)) return { added: false, alreadyPending: false };
   const existing = data.pending.find((p) => p.email === n);
   if (existing) return { added: false, alreadyPending: true };
   data.pending.push({ email: n, requestedAt: new Date().toISOString() });
-  await saveWhitelist(data);
+  await saveWhitelist(airline, data);
   return { added: true, alreadyPending: false };
 }
 
-export async function approvePending(email: string): Promise<boolean> {
-  const data = await getWhitelist();
+export async function approvePending(airline: string, email: string): Promise<boolean> {
+  const data = await getWhitelist(airline);
   const n = normalize(email);
   if (data.emails.includes(n)) return true;
   data.emails.push(n);
   data.emails.sort();
   data.pending = data.pending.filter((p) => p.email !== n);
-  await saveWhitelist(data);
+  await saveWhitelist(airline, data);
   return true;
 }
 
-export async function denyPending(email: string): Promise<void> {
-  const data = await getWhitelist();
+export async function denyPending(airline: string, email: string): Promise<void> {
+  const data = await getWhitelist(airline);
   const n = normalize(email);
   data.pending = data.pending.filter((p) => p.email !== n);
-  await saveWhitelist(data);
+  await saveWhitelist(airline, data);
 }

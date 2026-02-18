@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { consumeApproveToken } from '@/lib/auth';
 import { approvePending } from '@/lib/whitelistService';
+import { getAirline } from '@/lib/getAirline';
 
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
@@ -13,7 +14,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=expired', request.url));
   }
 
-  await approvePending(email);
+  const airline = getAirline(request);
+  await approvePending(airline, email);
 
   const url = new URL('/admin', request.url);
   url.searchParams.set('approved', email);

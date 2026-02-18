@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createMagicLinkToken, createApproveToken } from '@/lib/auth';
 import { isEmailWhitelisted, addPendingRequest } from '@/lib/whitelistService';
+import { getAirlineConfig } from '@/lib/airlineConfig';
+import { getAirline, getBaseUrl } from '@/lib/getAirline';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 function getClientIp(request: NextRequest): string {
@@ -13,6 +15,9 @@ function getClientIp(request: NextRequest): string {
 }
 
 export async function POST(request: NextRequest) {
+  const airline = getAirline(request);
+  const baseUrl = getBaseUrl(request);
+
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'Email not configured' }, { status: 503 });
@@ -34,18 +39,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
 
-    const baseUrl = process.env.NEXT_PUBLIC_PILOT_APP_URL;
-    if (!baseUrl) {
-      return NextResponse.json(
-        { error: 'NEXT_PUBLIC_PILOT_APP_URL is not configured' },
-        { status: 503 }
-      );
-    }
-
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
     const resend = new Resend(apiKey);
 
-    if (await isEmailWhitelisted(email)) {
+    if (await isEmailWhitelisted(airline, email)) {
       const token = createMagicLinkToken(email);
       const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
       const { error } = await resend.emails.send({
@@ -71,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, kind: 'magic_link' });
     }
 
-    const { added, alreadyPending } = await addPendingRequest(email);
+    const { added, alreadyPending } = await addPendingRequest(airline, email);
     const pendingMessage = 'This email address is not yet approved for AYRYX. A request for approval has been sent. Once approved, you can sign in anytime by entering your email here — we\'ll send you a link.';
     if (alreadyPending) {
       return NextResponse.json(
@@ -86,7 +83,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const approverEmails = process.env.APPROVER_EMAILS?.split(',').map((e) => e.trim()).filter(Boolean) ?? [];
+    const config = await getAirlineConfig(airline);
+    const approverEmails = config.approverEmails;
     if (approverEmails.length === 0) {
       return NextResponse.json(
         { success: true, kind: 'pending', message: pendingMessage }

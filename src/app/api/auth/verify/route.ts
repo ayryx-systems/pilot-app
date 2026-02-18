@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { consumeMagicLinkToken, createSessionCookie } from '@/lib/auth';
 
+function getCookieDomain(hostname: string): string | undefined {
+  if (hostname.endsWith('.ayryx.com')) return '.ayryx.com';
+  return undefined;
+}
+
 export async function GET(request: NextRequest) {
   const token = request.nextUrl.searchParams.get('token');
   if (!token) {
@@ -12,7 +17,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(new URL('/login?error=expired', request.url));
   }
 
-  const { name, value, options } = createSessionCookie(email);
+  const hostname = request.nextUrl.hostname;
+  const domain = getCookieDomain(hostname);
+  const { name, value, options } = createSessionCookie(email, domain ? { domain } : undefined);
   const response = NextResponse.redirect(new URL('/', request.url));
   response.cookies.set(name, value, options);
   return response;

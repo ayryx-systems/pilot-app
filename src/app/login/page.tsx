@@ -2,6 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { getRequestUrl } from '@/lib/clientAirline';
 
 function LoginForm() {
   const searchParams = useSearchParams();
@@ -12,11 +13,11 @@ function LoginForm() {
   const [successMessage, setSuccessMessage] = useState('');
 
   const errorParam = searchParams.get('error');
-  const initialError = errorParam === 'expired' 
+  const initialError = errorParam === 'expired'
     ? 'Your sign-in link expired. Please request a new one.'
     : errorParam === 'invalid'
-    ? 'Invalid or expired link. Please request a new sign-in link.'
-    : '';
+      ? 'Invalid or expired link. Please request a new sign-in link.'
+      : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,7 +28,8 @@ function LoginForm() {
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/auth/request-link', {
+      const url = getRequestUrl('/api/auth/request-link');
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: trimmed }),

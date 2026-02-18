@@ -3,24 +3,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Settings, LogOut } from 'lucide-react';
 import Link from 'next/link';
+import { useAirline } from '@/contexts/AirlineContext';
 
 export function SettingsButton() {
+  const { email, isAdmin } = useAirline();
   const [open, setOpen] = useState(false);
-  const [email, setEmail] = useState<string | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    fetch('/api/auth/me')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data) => {
-        if (data) {
-          setEmail(data.email);
-          setIsAdmin(data.isAdmin ?? false);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   useEffect(() => {
     if (!open) return;

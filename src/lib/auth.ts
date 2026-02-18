@@ -57,21 +57,22 @@ export function consumeApproveToken(token: string): string | null {
   }
 }
 
-export function createSessionCookie(email: string): { name: string; value: string; options: Record<string, unknown> } {
+export function createSessionCookie(
+  email: string,
+  overrides?: { domain?: string }
+): { name: string; value: string; options: Record<string, unknown> } {
   const payload = JSON.stringify({ email, exp: Date.now() + SESSION_COOKIE_MAX_AGE * 1000 });
   const encoded = Buffer.from(payload, 'utf8').toString('base64url');
   const sig = createHmac('sha256', getSecret()).update(encoded).digest('base64url');
-  return {
-    name: 'pilot_session',
-    value: `${encoded}.${sig}`,
-    options: {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax' as const,
-      maxAge: SESSION_COOKIE_MAX_AGE,
-      path: '/',
-    },
+  const options: Record<string, unknown> = {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax' as const,
+    maxAge: SESSION_COOKIE_MAX_AGE,
+    path: '/',
   };
+  if (overrides?.domain) options.domain = overrides.domain;
+  return { name: 'pilot_session', value: `${encoded}.${sig}`, options };
 }
 
 export function verifySessionCookie(cookieValue: string | undefined): string | null {

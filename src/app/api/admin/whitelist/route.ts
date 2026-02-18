@@ -1,40 +1,42 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { verifySessionCookie, createMagicLinkToken } from '@/lib/auth';
+import { getAirlineConfig } from '@/lib/airlineConfig';
 import { getWhitelist, addToWhitelist, removeFromWhitelist, approvePending, denyPending, isEmailWhitelisted } from '@/lib/whitelistService';
+import { getAirline, getBaseUrl } from '@/lib/getAirline';
 
-function getAdminEmails(): string[] {
-  return process.env.ADMIN_EMAILS?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? [];
-}
-
-function isAdmin(email: string): boolean {
-  return getAdminEmails().includes(email.toLowerCase().trim());
-}
-
-async function requireAdmin(request: NextRequest): Promise<{ email: string } | NextResponse> {
+async function requireAdmin(request: NextRequest): Promise<{ email: string; airline: string } | NextResponse> {
+  const airline = getAirline(request);
   const sessionCookie = request.cookies.get('pilot_session');
   if (!sessionCookie?.value) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
   const email = verifySessionCookie(sessionCookie.value);
-  if (!email || !isAdmin(email)) {
+  if (!email) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  const config = await getAirlineConfig(airline);
+  const admins = config.adminEmails.map((e) => e.toLowerCase().trim());
+  if (!admins.includes(email.toLowerCase())) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
-  return { email };
+  return { email, airline };
 }
 
 export async function GET(request: NextRequest) {
   const admin = await requireAdmin(request);
   if (admin instanceof NextResponse) return admin;
 
-  const data = await getWhitelist();
-  return NextResponse.json(data);
+  const data = await getWhitelist(admin.airline);
+  return NextResponse.json({ ...data, airline: admin.airline });
 }
 
 export async function POST(request: NextRequest) {
   const admin = await requireAdmin(request);
   if (admin instanceof NextResponse) return admin;
 
+  const { airline } = admin;
+  const baseUrl = getBaseUrl(request);
   const body = await request.json();
   const action = body.action as string;
   const email = typeof body.email === 'string' ? body.email.trim() : '';
@@ -44,69 +46,62 @@ export async function POST(request: NextRequest) {
   }
 
   if (action === 'add') {
-    await addToWhitelist(email);
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    await addToWhitelist(airline, email);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   if (action === 'remove') {
-    await removeFromWhitelist(email);
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    await removeFromWhitelist(airline, email);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   if (action === 'approve') {
-    await approvePending(email);
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    await approvePending(airline, email);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   if (action === 'approve_send') {
-    await approvePending(email);
+    await approvePending(airline, email);
     const apiKey = process.env.RESEND_API_KEY;
     if (apiKey) {
-      const baseUrl = process.env.NEXT_PUBLIC_PILOT_APP_URL?.replace(/\/$/, '');
-      if (baseUrl) {
-        const token = createMagicLinkToken(email);
-        const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
-        const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
-        const resend = new Resend(apiKey);
-        await resend.emails.send({
-          from: `AYRYX <noreply@${fromDomain}>`,
-          to: email,
-          subject: "You're approved for AYRYX",
-          html: `
+      const token = createMagicLinkToken(email);
+      const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
+      const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
+      const resend = new Resend(apiKey);
+      await resend.emails.send({
+        from: `AYRYX <noreply@${fromDomain}>`,
+        to: email,
+        subject: "You're approved for AYRYX",
+        html: `
             <p>You've been approved for AYRYX. Click the link below to sign in:</p>
             <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
             <p>Once approved, you can always sign in by going to the app and entering your email — we'll send you a new link whenever you need one.</p>
           `,
-        });
-      }
+      });
     }
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   if (action === 'deny') {
-    await denyPending(email);
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    await denyPending(airline, email);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   if (action === 'send_link') {
-    if (!(await isEmailWhitelisted(email))) {
+    if (!(await isEmailWhitelisted(airline, email))) {
       return NextResponse.json({ error: 'Email must be on whitelist' }, { status: 400 });
     }
     const apiKey = process.env.RESEND_API_KEY;
     if (!apiKey) {
       return NextResponse.json({ error: 'Email not configured' }, { status: 503 });
     }
-    const baseUrl = process.env.NEXT_PUBLIC_PILOT_APP_URL?.replace(/\/$/, '');
-    if (!baseUrl) {
-      return NextResponse.json({ error: 'NEXT_PUBLIC_PILOT_APP_URL not configured' }, { status: 503 });
-    }
     const token = createMagicLinkToken(email);
-    const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
+    const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({
@@ -122,8 +117,8 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
     }
-    const data = await getWhitelist();
-    return NextResponse.json(data);
+    const data = await getWhitelist(airline);
+    return NextResponse.json({ ...data, airline });
   }
 
   return NextResponse.json({ error: 'Invalid action' }, { status: 400 });

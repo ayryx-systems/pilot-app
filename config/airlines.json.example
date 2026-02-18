@@ -1,0 +1,9 @@
+{
+  "ein": {
+    "adminEmails": ["admin@example.com"],
+    "approverEmails": ["approver@example.com"],
+    "features": {},
+    "logo": "/logos/ein.svg",
+    "name": "Aer Lingus"
+  }
+}
