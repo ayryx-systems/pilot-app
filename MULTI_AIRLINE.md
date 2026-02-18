@@ -18,34 +18,38 @@ config/
     whitelist.json    # Whitelist for Aer Lingus
 ```
 
-### config/airlines.json
+### Quick setup
 
-```json
-{
-  "ein": {
-    "adminEmails": ["you@ayryx.com"],
-    "approverEmails": ["approver@airline.com"],
-    "features": {},
-    "logo": "/logos/ein.svg",
-    "name": "Aer Lingus"
-  }
-}
+```bash
+cd pilot-app
+./scripts/setup-s3-whitelist.sh
 ```
 
-- `adminEmails`: Can manage whitelist at `/admin`
-- `approverEmails`: Receive and can approve access requests
-- `features`: Per-airline feature flags (e.g. `weatherRadar: true`)
-- `logo`, `name`: Branding for the client
+This script uploads `config/airlines.json` from the example if missing, migrates `config/pilot-whitelist.json` → `config/ein/whitelist.json` if the old file exists, or creates empty `config/ein/whitelist.json` otherwise.
 
-### config/ein/whitelist.json
+### config/airlines.json
 
-Migrate from the legacy `config/pilot-whitelist.json` if it existed:
+| Field | Purpose |
+|-------|---------|
+| `adminEmails` | Can manage whitelist at `/admin` |
+| `approverEmails` | Receive and can approve access requests |
+| `features` | Per-airline feature flags |
+| `logo`, `name` | Branding for the client |
 
-```json
-{
-  "emails": ["pilot@airline.com"],
-  "pending": []
-}
+Templates: `config/airlines.json.example`, `config/ein/whitelist.json.example`
+
+### Manual upload (AWS CLI)
+
+```bash
+aws s3 cp config/airlines.json.example s3://ayryx-pilot/config/airlines.json
+aws s3 cp config/ein/whitelist.json.example s3://ayryx-pilot/config/ein/whitelist.json
+```
+
+### Migrating from config/pilot-whitelist.json
+
+```bash
+aws s3 cp s3://ayryx-pilot/config/pilot-whitelist.json s3://ayryx-pilot/config/ein/whitelist.json
+# Optional: aws s3 rm s3://ayryx-pilot/config/pilot-whitelist.json
 ```
 
 ## Env Fallbacks
@@ -66,19 +70,3 @@ Add your super-user email to `adminEmails` in multiple airline entries in `airli
 
 Session cookies use domain `.ayryx.com`, so one sign-in works across all `*.ayryx.com` subdomains.
 
-## Migrating from pilot-whitelist.json
-
-If you had `config/pilot-whitelist.json`:
-
-```bash
-aws s3 cp s3://ayryx-pilot/config/pilot-whitelist.json /tmp/old.json
-# Edit to ensure valid JSON, then:
-aws s3 cp /tmp/old.json s3://ayryx-pilot/config/ein/whitelist.json
-```
-
-## Uploading Config (AWS CLI)
-
-```bash
-aws s3 cp config/airlines.json.example s3://ayryx-pilot/config/airlines.json
-# Edit airlines.json with real emails, then upload
-```

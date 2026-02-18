@@ -79,7 +79,6 @@ Magic link with S3-backed whitelist:
 
 ### Optional
 - `RESEND_FROM_DOMAIN` - From address domain (default: mail.ayryx.com)
-- `WHITELIST_S3_KEY` - S3 key (default: config/pilot-whitelist.json)
 
 ## Production Deployment
 
