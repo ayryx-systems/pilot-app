@@ -168,22 +168,24 @@ function AdminContent() {
                 {data.emails.map((email) => (
                   <li key={email} className="flex items-center justify-between px-4 py-3 gap-2">
                     <span className="text-slate-200 text-sm font-mono truncate min-w-0 flex-1">{email}</span>
-                    <div className="flex items-center gap-0.5 shrink-0">
+                    <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleAction('send_link', email)}
                         disabled={actioning === email}
-                        className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 transition-colors disabled:opacity-50"
+                        className="px-2 py-1 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 text-sm"
                         title="Send sign-in link"
                       >
-                        <Mail size={16} />
+                        <Mail size={14} />
+                        Send link
                       </button>
                       <button
                         onClick={() => handleAction('remove', email)}
                         disabled={actioning === email}
-                        className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                        className="px-2 py-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 text-sm"
                         title="Remove"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
+                        Remove
                       </button>
                     </div>
                   </li>
@@ -203,37 +205,40 @@ function AdminContent() {
             {data?.pending.length ? (
               <ul className="divide-y divide-slate-700/50">
                 {data.pending.map(({ email, requestedAt }) => (
-                  <li key={email} className="flex items-center justify-between px-4 py-3 gap-3">
+                  <li key={email} className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-3">
                     <div className="min-w-0 flex-1">
                       <span className="text-slate-200 text-sm font-mono block truncate">{email}</span>
                       <span className="text-slate-500 text-xs">
                         {new Date(requestedAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-0.5 shrink-0">
-                      <button
-                        onClick={() => handleAction('approve', email)}
-                        disabled={actioning === email}
-                        className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
-                        title="Approve"
-                      >
-                        <Check size={18} />
-                      </button>
+                    <div className="flex flex-wrap items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleAction('approve_send', email)}
                         disabled={actioning === email}
-                        className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                        className="px-2.5 py-1 rounded text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50 flex items-center gap-1.5 text-sm font-medium"
                         title="Approve and send sign-in link"
                       >
-                        <Mail size={16} />
+                        <Mail size={14} />
+                        Approve & send link
+                      </button>
+                      <button
+                        onClick={() => handleAction('approve', email)}
+                        disabled={actioning === email}
+                        className="px-2 py-1 rounded text-slate-400 hover:bg-slate-700/50 transition-colors disabled:opacity-50 flex items-center gap-1.5 text-sm"
+                        title="Approve only (no email)"
+                      >
+                        <Check size={14} />
+                        Approve only
                       </button>
                       <button
                         onClick={() => handleAction('deny', email)}
                         disabled={actioning === email}
-                        className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                        className="px-2 py-1 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50 flex items-center gap-1.5 text-sm"
                         title="Deny"
                       >
-                        <X size={18} />
+                        <X size={14} />
+                        Deny
                       </button>
                     </div>
                   </li>
