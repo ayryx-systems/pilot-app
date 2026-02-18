@@ -15,10 +15,18 @@ function getAirlineFromHost(hostname: string, searchParams: URLSearchParams): st
   return process.env.DEFAULT_AIRLINE || 'ein';
 }
 
+function getHostname(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-host');
+  const host = request.headers.get('host');
+  if (forwarded) return forwarded.split(',')[0].trim().split(':')[0];
+  if (host) return host.split(',')[0].trim().split(':')[0];
+  return request.nextUrl.hostname;
+}
+
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
-
-  const airline = getAirlineFromHost(request.nextUrl.hostname, request.nextUrl.searchParams);
+  const hostname = getHostname(request);
+  const airline = getAirlineFromHost(hostname, request.nextUrl.searchParams);
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-airline', airline);
 

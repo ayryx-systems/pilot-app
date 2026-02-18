@@ -56,8 +56,8 @@ export async function getAirlineConfig(airline: string): Promise<AirlineConfig> 
       const cfg = data[airline];
       if (cfg) {
         return {
-          adminEmails: cfg.adminEmails ?? [],
-          approverEmails: cfg.approverEmails ?? [],
+          adminEmails: Array.isArray(cfg.adminEmails) ? cfg.adminEmails : [],
+          approverEmails: Array.isArray(cfg.approverEmails) ? cfg.approverEmails : [],
           features: cfg.features ?? {},
           logo: cfg.logo,
           name: cfg.name,
