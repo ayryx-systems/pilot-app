@@ -1,4 +1,4 @@
-const MAX_REQUESTS_PER_HOUR = 5;
+const MAX_REQUESTS_PER_HOUR = 20;
 const WINDOW_MS = 60 * 60 * 1000;
 
 const store = new Map<string, { count: number; resetAt: number }>();
