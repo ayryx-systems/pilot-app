@@ -84,8 +84,9 @@ Magic link with S3-backed whitelist:
 ## Production Deployment
 
 The app is deployed on AWS EC2 and served via nginx:
-- URL: `https://pilot.ayryx.com`
-- Uses CloudFlare for DNS and SSL
+- URL: `https://pilot.ayryx.com` (and `https://ein.ayryx.com` for multi-airline)
+- Nginx config: `deployment/nginx/ayryx-pilot.conf` — copy to `/etc/nginx/conf.d/` on the Pilot App EC2
+- CloudFlare for DNS and SSL
 - Process managed by PM2: `pm2 start npm --name pilot-app -- start`
 
 ## Building

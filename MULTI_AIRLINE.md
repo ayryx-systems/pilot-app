@@ -5,7 +5,7 @@ Subdomain-based multi-tenancy allows one email to be admin for multiple airlines
 ## DNS
 
 - Add A record: `ein` → same IP as `pilot` (52.52.150.29)
-- See `core/deployment/nginx/README.md` for nginx config (add ein.ayryx.com to pilot-ec2)
+- See `pilot-app/deployment/nginx/README.md` for nginx config on Pilot App EC2
 
 ## S3 Structure
 
