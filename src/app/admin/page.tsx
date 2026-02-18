@@ -103,9 +103,12 @@ function AdminContent() {
   if (error && !data) {
     return (
       <div className="min-h-dvh bg-slate-900 flex items-center justify-center p-4">
-        <div className="text-center">
-          <p className="text-red-400 mb-4">{error}</p>
-          <Link href="/" className="text-slate-400 hover:text-slate-200 text-sm">Back to app</Link>
+        <div className="text-center space-y-3">
+          <p className="text-red-400">{error}</p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link href="/" className="text-slate-400 hover:text-slate-200 text-sm">Back to app</Link>
+            <a href="/api/auth/signout" className="text-slate-400 hover:text-slate-200 text-sm">Sign out</a>
+          </div>
         </div>
       </div>
     );

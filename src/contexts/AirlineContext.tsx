@@ -11,6 +11,7 @@ export interface AirlineConfig {
   logo: string | undefined;
   name: string | undefined;
   loading: boolean;
+  configError: boolean;
   refresh: () => Promise<void>;
 }
 
@@ -22,6 +23,7 @@ const defaultConfig: AirlineConfig = {
   logo: undefined,
   name: undefined,
   loading: true,
+  configError: false,
   refresh: async () => {},
 };
 
@@ -30,6 +32,7 @@ const AirlineContext = createContext<AirlineConfig>(defaultConfig);
 export function AirlineProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<Omit<AirlineConfig, 'refresh'>>({
     ...defaultConfig,
+    configError: false,
   });
 
   const refresh = useCallback(async () => {
@@ -48,7 +51,10 @@ export function AirlineProvider({ children }: { children: React.ReactNode }) {
           logo: data.logo,
           name: data.name,
           loading: false,
+          configError: false,
         });
+      } else if (res.status === 503) {
+        setState((prev) => ({ ...prev, loading: false, configError: true }));
       } else {
         setState((prev) => ({ ...prev, loading: false }));
       }

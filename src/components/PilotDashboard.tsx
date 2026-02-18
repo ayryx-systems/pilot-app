@@ -47,13 +47,16 @@ import { TrendingUp, Plane as PlaneIcon, Sliders } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
 import { WeatherScenarioToggle } from './WeatherScenarioToggle';
 import { SettingsButton } from './SettingsButton';
+import { ConfigUnavailableScreen } from './ConfigUnavailableScreen';
 import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 import { useAirline } from '@/contexts/AirlineContext';
 
 export function PilotDashboard() {
   const { isUTC } = useTimezonePreference();
-  const { logo: airlineLogo } = useAirline();
+  const { logo: airlineLogo, configError } = useAirline();
   const [mounted, setMounted] = useState(false);
+
+  if (configError) return <ConfigUnavailableScreen />;
   const [selectedTime, setSelectedTime] = useState<Date>(() => new Date());
 
   // Ensure component is only fully rendered after hydration
