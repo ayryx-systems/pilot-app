@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { verifySessionCookie, createMagicLinkToken } from '@/lib/auth';
 import { getAirlineConfig } from '@/lib/airlineConfig';
 import { getWhitelist, addToWhitelist, removeFromWhitelist, approvePending, denyPending, isEmailWhitelisted } from '@/lib/whitelistService';
-import { getAirline, getBaseUrl } from '@/lib/getAirline';
+import { getAirline, resolveBaseUrl } from '@/lib/getAirline';
 
 async function requireAdmin(request: NextRequest): Promise<{ email: string; airline: string } | NextResponse> {
   const airline = getAirline(request);
@@ -36,8 +36,9 @@ export async function POST(request: NextRequest) {
   if (admin instanceof NextResponse) return admin;
 
   const { airline } = admin;
-  const baseUrl = getBaseUrl(request);
   const body = await request.json();
+  const bodyBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : undefined;
+  const baseUrl = resolveBaseUrl(request, bodyBaseUrl);
   const action = body.action as string;
   const email = typeof body.email === 'string' ? body.email.trim() : '';
 
@@ -68,7 +69,7 @@ export async function POST(request: NextRequest) {
     const apiKey = process.env.RESEND_API_KEY;
     if (apiKey) {
       const token = createMagicLinkToken(email);
-      const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
+      const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
       const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
       const resend = new Resend(apiKey);
       await resend.emails.send({
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email not configured' }, { status: 503 });
     }
     const token = createMagicLinkToken(email);
-    const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
+    const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
     const resend = new Resend(apiKey);
     const { error } = await resend.emails.send({

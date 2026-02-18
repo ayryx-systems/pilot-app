@@ -45,10 +45,11 @@ function AdminContent() {
     if (!email) return;
     setAdding(true);
     try {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
       let res = await fetch('/api/admin/whitelist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add', email }),
+        body: JSON.stringify({ action: 'add', email, baseUrl }),
       });
       if (!res.ok) throw new Error('Failed to add');
       setError('');
@@ -57,7 +58,7 @@ function AdminContent() {
         res = await fetch('/api/admin/whitelist', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'send_link', email }),
+          body: JSON.stringify({ action: 'send_link', email, baseUrl }),
         });
         if (!res.ok) setError('Added but failed to send link');
         else { updated = await res.json(); setError(''); }
@@ -77,7 +78,7 @@ function AdminContent() {
       const res = await fetch('/api/admin/whitelist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action, email }),
+        body: JSON.stringify({ action, email, baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined }),
       });
       if (!res.ok) throw new Error('Failed');
       setData(await res.json());

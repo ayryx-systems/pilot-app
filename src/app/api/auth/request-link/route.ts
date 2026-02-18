@@ -3,7 +3,7 @@ import { Resend } from 'resend';
 import { createMagicLinkToken, createApproveToken } from '@/lib/auth';
 import { isEmailWhitelisted, addPendingRequest } from '@/lib/whitelistService';
 import { getAirlineConfig } from '@/lib/airlineConfig';
-import { getAirline, getBaseUrl } from '@/lib/getAirline';
+import { getAirline, resolveBaseUrl } from '@/lib/getAirline';
 import { checkRateLimit } from '@/lib/rateLimit';
 
 function getClientIp(request: NextRequest): string {
@@ -12,31 +12,6 @@ function getClientIp(request: NextRequest): string {
     request.headers.get('x-real-ip') ||
     'unknown'
   );
-}
-
-function isValidBaseUrl(url: string): boolean {
-  try {
-    const u = new URL(url);
-    if (u.hostname === 'localhost' || u.hostname === '127.0.0.1') return true;
-    if (u.hostname.endsWith('.ayryx.com')) return true;
-    return false;
-  } catch {
-    return false;
-  }
-}
-
-function resolveBaseUrl(request: NextRequest, bodyBaseUrl?: string): string {
-  const candidates = [
-    bodyBaseUrl,
-    request.headers.get('origin'),
-    request.headers.get('referer')?.replace(/\/[^/]*$/, ''),
-    getBaseUrl(request),
-  ].filter(Boolean) as string[];
-  for (const url of candidates) {
-    const u = url.replace(/\/$/, '');
-    if (isValidBaseUrl(u)) return u;
-  }
-  return process.env.PILOT_APP_BASE_URL || 'https://pilot.ayryx.com';
 }
 
 export async function POST(request: NextRequest) {
@@ -82,7 +57,7 @@ export async function POST(request: NextRequest) {
 
     if (whitelisted || isAdmin) {
       const token = createMagicLinkToken(email);
-      const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
+      const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
       const { error } = await resend.emails.send({
         from: `AYRYX <noreply@${fromDomain}>`,
         to: email,
