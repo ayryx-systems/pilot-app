@@ -28,7 +28,7 @@ RESEND_API_KEY=re_xxx
 SESSION_SECRET=<32+ chars>
 ADMIN_EMAILS=admin@example.com
 APPROVER_EMAILS=admin@example.com
-WHITELIST_S3_BUCKET=ayryx-pilot
+WHITELIST_S3_BUCKET=ayryx-pilot-config
 ```
 
 3. Start the development server:
@@ -61,18 +61,29 @@ Magic link with S3-backed whitelist:
 - `APPROVER_EMAILS` - Emails notified when someone requests access
 - `WHITELIST_S3_BUCKET` - S3 bucket for whitelist JSON
 
-### AWS (for S3)
-- `AWS_REGION` - Default us-east-1
-- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` - Or use IAM role on EC2
+### AWS (for S3) — required for multi-airline (logos, admins, whitelist)
 
-**IAM policy** for whitelist S3 access (EC2 role or credentials):
+The app reads `config/airlines.json` and `config/{airline}/whitelist.json` from S3. **Without AWS credentials, airline config (logo, admins) will not load** — you'll see the default instance even on ein.ayryx.com.
+
+**Option A: Environment variables** (add to `.env` or process env)
+```
+AWS_ACCESS_KEY_ID=AKIA...
+AWS_SECRET_ACCESS_KEY=...
+AWS_REGION=us-west-1
+WHITELIST_S3_BUCKET=ayryx-pilot-config
+```
+
+**Option B: IAM instance profile** (if running on EC2)  
+Attach an IAM role to the EC2 with the policy below. The app will use it automatically — no env vars needed.
+
+**IAM policy** for S3 access:
 ```json
 {
   "Version": "2012-10-17",
   "Statement": [{
     "Effect": "Allow",
     "Action": ["s3:GetObject", "s3:PutObject"],
-    "Resource": ["arn:aws:s3:::ayryx-pilot/*"]
+    "Resource": ["arn:aws:s3:::ayryx-pilot-config/*"]
   }]
 }
 ```

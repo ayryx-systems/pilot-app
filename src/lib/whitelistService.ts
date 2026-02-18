@@ -1,6 +1,6 @@
 import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
 
-const BUCKET = process.env.WHITELIST_S3_BUCKET || process.env.S3_BUCKET_NAME || 'ayryx-pilot';
+const BUCKET = process.env.WHITELIST_S3_BUCKET || process.env.S3_BUCKET_NAME || 'ayryx-pilot-config';
 const CACHE_TTL_MS = 30 * 1000;
 
 interface WhitelistData {
@@ -13,7 +13,7 @@ let s3Client: S3Client | null = null;
 
 function getClient(): S3Client | null {
   if (s3Client) return s3Client;
-  const region = process.env.AWS_REGION || 'us-east-1';
+  const region = process.env.AWS_REGION || 'us-west-1';
   const config: { region: string; credentials?: object } = { region };
   if (process.env.AWS_ACCESS_KEY_ID && process.env.AWS_SECRET_ACCESS_KEY) {
     config.credentials = {

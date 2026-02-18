@@ -21,3 +21,14 @@ The app derives airline from the request Host (e.g. ein.ayryx.com → ein). If e
 - By default Cloudflare forwards the client’s Host; verify no rules override it
 
 **nginx:** The config uses `proxy_set_header Host $host` and `X-Forwarded-Host $host`, so nginx passes through whatever it receives. The fix is upstream (Cloudflare/origin config).
+
+## S3 access (airlines.json, whitelist)
+
+The pilot app reads `config/airlines.json` and `config/{airline}/whitelist.json` from S3. **Without AWS credentials, airline logos and admin lists will not load.** Verify with `https://ein.ayryx.com/api/debug-s3`.
+
+Add to the Pilot App EC2 environment:
+- `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` (or attach an IAM role with `s3:GetObject` on `ayryx-pilot-config`)
+- `AWS_REGION=us-west-1` (optional, default)
+- `WHITELIST_S3_BUCKET=ayryx-pilot-config` (optional, default)
+
+See `pilot-app/README.md` for the IAM policy.

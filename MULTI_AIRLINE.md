@@ -9,7 +9,7 @@ Subdomain-based multi-tenancy allows one email to be admin for multiple airlines
 
 ## S3 Structure
 
-Bucket: `ayryx-pilot` (or `WHITELIST_S3_BUCKET` / `S3_BUCKET_NAME`)
+Bucket: `ayryx-pilot-config` (or `WHITELIST_S3_BUCKET` / `S3_BUCKET_NAME`) in **us-west-1** (matches EC2 and other buckets)
 
 ```
 config/
@@ -41,15 +41,15 @@ Templates: `config/airlines.json.example`, `config/ein/whitelist.json.example`
 ### Manual upload (AWS CLI)
 
 ```bash
-aws s3 cp config/airlines.json.example s3://ayryx-pilot/config/airlines.json
-aws s3 cp config/ein/whitelist.json.example s3://ayryx-pilot/config/ein/whitelist.json
+aws s3 cp config/airlines.json.example s3://ayryx-pilot-config/config/airlines.json --region us-west-1
+aws s3 cp config/ein/whitelist.json.example s3://ayryx-pilot-config/config/ein/whitelist.json --region us-west-1
 ```
 
 ### Migrating from config/pilot-whitelist.json
 
 ```bash
-aws s3 cp s3://ayryx-pilot/config/pilot-whitelist.json s3://ayryx-pilot/config/ein/whitelist.json
-# Optional: aws s3 rm s3://ayryx-pilot/config/pilot-whitelist.json
+aws s3 cp s3://ayryx-pilot-config/config/pilot-whitelist.json s3://ayryx-pilot-config/config/ein/whitelist.json
+# Optional: aws s3 rm s3://ayryx-pilot-config/config/pilot-whitelist.json
 ```
 
 ## Env Fallbacks
