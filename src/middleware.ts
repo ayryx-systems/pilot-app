@@ -15,11 +15,37 @@ function getAirlineFromHost(hostname: string, searchParams: URLSearchParams): st
   return process.env.DEFAULT_AIRLINE || 'ein';
 }
 
+function getHostnameFromHeader(value: string): string {
+  const first = value.split(',')[0].trim();
+  const hostname = first.split(':')[0];
+  return hostname;
+}
+
+function getHostnameFromUrl(urlStr: string): string | null {
+  try {
+    const u = new URL(urlStr);
+    return u.hostname || null;
+  } catch {
+    return null;
+  }
+}
+
 function getHostname(request: NextRequest): string {
   const forwarded = request.headers.get('x-forwarded-host');
   const host = request.headers.get('host');
-  if (forwarded) return forwarded.split(',')[0].trim().split(':')[0];
-  if (host) return host.split(',')[0].trim().split(':')[0];
+  const origin = request.headers.get('origin');
+  const referer = request.headers.get('referer');
+
+  if (forwarded) return getHostnameFromHeader(forwarded);
+  if (host) return getHostnameFromHeader(host);
+  if (origin) {
+    const h = getHostnameFromUrl(origin);
+    if (h && h.endsWith('.ayryx.com')) return h;
+  }
+  if (referer) {
+    const h = getHostnameFromUrl(referer);
+    if (h && h.endsWith('.ayryx.com')) return h;
+  }
   return request.nextUrl.hostname;
 }
 
