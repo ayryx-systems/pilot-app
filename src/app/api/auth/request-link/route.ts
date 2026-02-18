@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
     const bodyBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : undefined;
-    const baseUrl = resolveBaseUrl(request, bodyBaseUrl);
+    const baseUrl = resolveBaseUrl(request, bodyBaseUrl, airline);
     const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
     if (isLocal) {
       return NextResponse.json(

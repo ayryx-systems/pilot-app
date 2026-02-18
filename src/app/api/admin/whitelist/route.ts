@@ -58,7 +58,7 @@ export async function POST(request: NextRequest) {
   const { airline } = admin;
   const body = await request.json();
   const bodyBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : undefined;
-  const baseUrl = resolveBaseUrl(request, bodyBaseUrl);
+  const baseUrl = resolveBaseUrl(request, bodyBaseUrl, airline);
   const action = body.action as string;
   const email = typeof body.email === 'string' ? body.email.trim() : '';
 

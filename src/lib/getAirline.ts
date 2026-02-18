@@ -31,16 +31,30 @@ export function isValidRedirectUrl(url: string): boolean {
   }
 }
 
-export function resolveBaseUrl(request: NextRequest, bodyBaseUrl?: string): string {
+function isLocalhostUrl(url: string): boolean {
+  try {
+    const u = new URL(url.replace(/\/$/, ''));
+    return u.hostname === 'localhost' || u.hostname === '127.0.0.1';
+  } catch {
+    return false;
+  }
+}
+
+export function resolveBaseUrl(request: NextRequest, bodyBaseUrl?: string, airlineHint?: string): string {
   const candidates = [
     bodyBaseUrl,
     request.headers.get('origin'),
     request.headers.get('referer')?.replace(/\/[^/]*$/, ''),
     getBaseUrl(request),
   ].filter(Boolean) as string[];
+  const isProd = process.env.NODE_ENV === 'production';
   for (const url of candidates) {
     const u = url.replace(/\/$/, '');
+    if (isProd && isLocalhostUrl(u)) continue;
     if (isValidRedirectUrl(u)) return u;
   }
-  return process.env.PILOT_APP_BASE_URL || 'https://pilot.ayryx.com';
+  if (airlineHint && /^[a-z0-9]+$/.test(airlineHint)) {
+    return `https://${airlineHint}.ayryx.com`;
+  }
+  return (process.env.PILOT_APP_BASE_URL || 'https://pilot.ayryx.com').replace(/\/$/, '');
 }
