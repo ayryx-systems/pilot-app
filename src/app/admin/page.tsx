@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { UserPlus, Trash2, Check, X, ArrowLeft, Mail } from 'lucide-react';
+import { getAirlineHeaders } from '@/lib/clientAirline';
 
 interface WhitelistData {
   emails: string[];
@@ -23,7 +24,7 @@ function AdminContent() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await fetch('/api/admin/whitelist');
+      const res = await fetch('/api/admin/whitelist', { headers: getAirlineHeaders() });
       if (!res.ok) throw new Error(res.status === 403 ? 'Access denied' : 'Failed to load');
       setData(await res.json());
       setError('');
@@ -46,9 +47,10 @@ function AdminContent() {
     setAdding(true);
     try {
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : undefined;
+      const headers = { ...getAirlineHeaders(), 'Content-Type': 'application/json' };
       let res = await fetch('/api/admin/whitelist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ action: 'add', email, baseUrl }),
       });
       if (!res.ok) throw new Error('Failed to add');
@@ -57,7 +59,7 @@ function AdminContent() {
       if (sendLinkOnAdd) {
         res = await fetch('/api/admin/whitelist', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ action: 'send_link', email, baseUrl }),
         });
         if (!res.ok) setError('Added but failed to send link');
@@ -75,9 +77,10 @@ function AdminContent() {
   const handleAction = async (action: 'remove' | 'approve' | 'approve_send' | 'deny' | 'send_link', email: string) => {
     setActioning(email);
     try {
+      const headers = { ...getAirlineHeaders(), 'Content-Type': 'application/json' };
       const res = await fetch('/api/admin/whitelist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify({ action, email, baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined }),
       });
       if (!res.ok) throw new Error('Failed');

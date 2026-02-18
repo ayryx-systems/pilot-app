@@ -1,6 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { getAirlineHeaders } from '@/lib/clientAirline';
 
 export interface AirlineConfig {
   airline: string;
@@ -33,7 +34,7 @@ export function AirlineProvider({ children }: { children: React.ReactNode }) {
 
   const refresh = useCallback(async () => {
     try {
-      const res = await fetch('/api/auth/me');
+      const res = await fetch('/api/auth/me', { headers: getAirlineHeaders() });
       if (res.ok) {
         const data = await res.json();
         setState({

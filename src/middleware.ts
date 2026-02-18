@@ -51,8 +51,11 @@ function getHostname(request: NextRequest): string {
 
 export async function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
+  const clientAirline = request.headers.get('x-airline');
+  const fromClient = clientAirline && /^[a-z0-9]+$/.test(clientAirline);
   const hostname = getHostname(request);
-  const airline = getAirlineFromHost(hostname, request.nextUrl.searchParams);
+  const fromHost = getAirlineFromHost(hostname, request.nextUrl.searchParams);
+  const airline = fromClient ? clientAirline : fromHost;
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set('x-airline', airline);
 

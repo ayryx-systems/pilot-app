@@ -25,3 +25,9 @@ export function getRequestUrl(path: string): string {
   }
   return path;
 }
+
+export function getAirlineHeaders(): Record<string, string> {
+  if (typeof window === 'undefined') return {};
+  const airline = getAirlineFromLocation();
+  return { 'X-Airline': airline };
+}

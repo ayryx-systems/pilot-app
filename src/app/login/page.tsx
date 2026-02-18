@@ -2,7 +2,7 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRequestUrl } from '@/lib/clientAirline';
+import { getRequestUrl, getAirlineHeaders } from '@/lib/clientAirline';
 
 function LoginForm() {
   const isEinSubdomain = typeof window !== 'undefined' && window.location.hostname === 'ein.ayryx.com';
@@ -32,7 +32,7 @@ function LoginForm() {
       const url = getRequestUrl('/api/auth/request-link');
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...getAirlineHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           email: trimmed,
           baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
