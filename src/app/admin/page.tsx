@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { UserPlus, Trash2, Check, X, ArrowLeft } from 'lucide-react';
+import { UserPlus, Trash2, Check, X, ArrowLeft, Mail } from 'lucide-react';
 
 interface WhitelistData {
   emails: string[];
@@ -16,6 +16,7 @@ function AdminContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [newEmail, setNewEmail] = useState('');
+  const [sendLinkOnAdd, setSendLinkOnAdd] = useState(true);
   const [adding, setAdding] = useState(false);
   const [actioning, setActioning] = useState<string | null>(null);
   const approved = searchParams.get('approved');
@@ -44,13 +45,23 @@ function AdminContent() {
     if (!email) return;
     setAdding(true);
     try {
-      const res = await fetch('/api/admin/whitelist', {
+      let res = await fetch('/api/admin/whitelist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'add', email }),
       });
       if (!res.ok) throw new Error('Failed to add');
-      const updated = await res.json();
+      setError('');
+      let updated = await res.json();
+      if (sendLinkOnAdd) {
+        res = await fetch('/api/admin/whitelist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'send_link', email }),
+        });
+        if (!res.ok) setError('Added but failed to send link');
+        else { updated = await res.json(); setError(''); }
+      } else setError('');
       setData(updated);
       setNewEmail('');
     } catch {
@@ -60,7 +71,7 @@ function AdminContent() {
     }
   };
 
-  const handleAction = async (action: 'remove' | 'approve' | 'deny', email: string) => {
+  const handleAction = async (action: 'remove' | 'approve' | 'approve_send' | 'deny' | 'send_link', email: string) => {
     setActioning(email);
     try {
       const res = await fetch('/api/admin/whitelist', {
@@ -116,16 +127,17 @@ function AdminContent() {
 
         <section>
           <h2 className="text-sm font-medium text-slate-400 uppercase tracking-wider mb-3">Add</h2>
-          <form onSubmit={handleAdd} className="flex gap-2">
-            <input
-              type="email"
-              value={newEmail}
-              onChange={(e) => setNewEmail(e.target.value)}
-              placeholder="email@example.com"
-              disabled={adding}
-              className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent disabled:opacity-50"
-            />
-            <button
+          <form onSubmit={handleAdd} className="space-y-2">
+            <div className="flex gap-2">
+              <input
+                type="email"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                placeholder="email@example.com"
+                disabled={adding}
+                className="flex-1 px-4 py-2.5 rounded-lg bg-slate-800 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent disabled:opacity-50"
+              />
+              <button
               type="submit"
               disabled={adding}
               className="px-4 py-2.5 rounded-lg bg-slate-600 hover:bg-slate-500 text-slate-100 font-medium disabled:opacity-50 flex items-center gap-2"
@@ -133,6 +145,16 @@ function AdminContent() {
               <UserPlus size={18} />
               {adding ? 'Adding...' : 'Add'}
             </button>
+            </div>
+            <label className="flex items-center gap-2 text-slate-400 text-sm cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sendLinkOnAdd}
+                onChange={(e) => setSendLinkOnAdd(e.target.checked)}
+                className="rounded border-slate-600 bg-slate-800"
+              />
+              Send sign-in link after adding
+            </label>
           </form>
         </section>
 
@@ -144,16 +166,26 @@ function AdminContent() {
             {data?.emails.length ? (
               <ul className="divide-y divide-slate-700/50">
                 {data.emails.map((email) => (
-                  <li key={email} className="flex items-center justify-between px-4 py-3">
-                    <span className="text-slate-200 text-sm font-mono">{email}</span>
-                    <button
-                      onClick={() => handleAction('remove', email)}
-                      disabled={actioning === email}
-                      className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50"
-                      title="Remove"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                  <li key={email} className="flex items-center justify-between px-4 py-3 gap-2">
+                    <span className="text-slate-200 text-sm font-mono truncate min-w-0 flex-1">{email}</span>
+                    <div className="flex items-center gap-0.5 shrink-0">
+                      <button
+                        onClick={() => handleAction('send_link', email)}
+                        disabled={actioning === email}
+                        className="p-1.5 rounded text-slate-400 hover:text-blue-400 hover:bg-blue-900/20 transition-colors disabled:opacity-50"
+                        title="Send sign-in link"
+                      >
+                        <Mail size={16} />
+                      </button>
+                      <button
+                        onClick={() => handleAction('remove', email)}
+                        disabled={actioning === email}
+                        className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition-colors disabled:opacity-50"
+                        title="Remove"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
@@ -178,7 +210,7 @@ function AdminContent() {
                         {new Date(requestedAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <div className="flex items-center gap-1 shrink-0">
+                    <div className="flex items-center gap-0.5 shrink-0">
                       <button
                         onClick={() => handleAction('approve', email)}
                         disabled={actioning === email}
@@ -186,6 +218,14 @@ function AdminContent() {
                         title="Approve"
                       >
                         <Check size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleAction('approve_send', email)}
+                        disabled={actioning === email}
+                        className="p-1.5 rounded text-emerald-400 hover:bg-emerald-900/30 transition-colors disabled:opacity-50"
+                        title="Approve and send sign-in link"
+                      >
+                        <Mail size={16} />
                       </button>
                       <button
                         onClick={() => handleAction('deny', email)}

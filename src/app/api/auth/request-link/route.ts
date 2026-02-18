@@ -56,6 +56,7 @@ export async function POST(request: NextRequest) {
           <p>Click the link below to sign in to AYRYX:</p>
           <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
           <p>This link expires in 1 hour.</p>
+          <p>If you don't see this email, check your spam folder.</p>
           <p>If you didn't request this, you can ignore this email.</p>
         `,
       });
@@ -72,9 +73,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { added, alreadyPending } = await addPendingRequest(email);
+    const pendingMessage = 'This email address is not yet approved for AYRYX. A request for approval has been sent. You will receive a sign-in link once an approver adds you.';
     if (alreadyPending) {
       return NextResponse.json(
-        { success: true, kind: 'pending', message: 'Request already pending.' }
+        { success: true, kind: 'pending', message: 'This email address is not yet approved. Your prior request is still pending. You will receive a sign-in link once an approver adds you.' }
       );
     }
 
@@ -88,7 +90,7 @@ export async function POST(request: NextRequest) {
     const approverEmails = process.env.APPROVER_EMAILS?.split(',').map((e) => e.trim()).filter(Boolean) ?? [];
     if (approverEmails.length === 0) {
       return NextResponse.json(
-        { success: true, kind: 'pending', message: 'Request submitted. An approver will review it.' }
+        { success: true, kind: 'pending', message: pendingMessage }
       );
     }
 
@@ -103,6 +105,7 @@ export async function POST(request: NextRequest) {
         <p><strong>${email}</strong> has requested access to AYRYX.</p>
         <p><a href="${approveUrl}">Approve</a> — one click adds them to the whitelist.</p>
         <p>Or manage requests at <a href="${baseUrl}/admin">${baseUrl}/admin</a></p>
+        <p>If you don't see this email, check your spam folder.</p>
       `,
     });
 
@@ -110,7 +113,7 @@ export async function POST(request: NextRequest) {
       console.error('[auth] Resend approver email error:', error);
     }
 
-    return NextResponse.json({ success: true, kind: 'pending', message: 'Request submitted. An approver will review it.' });
+    return NextResponse.json({ success: true, kind: 'pending', message: pendingMessage });
   } catch (err) {
     console.error('[auth] request-link error:', err);
     return NextResponse.json(

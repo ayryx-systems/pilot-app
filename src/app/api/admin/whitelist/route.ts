@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { verifySessionCookie } from '@/lib/auth';
-import { getWhitelist, addToWhitelist, removeFromWhitelist, approvePending, denyPending } from '@/lib/whitelistService';
+import { Resend } from 'resend';
+import { verifySessionCookie, createMagicLinkToken } from '@/lib/auth';
+import { getWhitelist, addToWhitelist, removeFromWhitelist, approvePending, denyPending, isEmailWhitelisted } from '@/lib/whitelistService';
 
 function getAdminEmails(): string[] {
   return process.env.ADMIN_EMAILS?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? [];
@@ -60,8 +61,69 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data);
   }
 
+  if (action === 'approve_send') {
+    await approvePending(email);
+    const apiKey = process.env.RESEND_API_KEY;
+    if (apiKey) {
+      const baseUrl = process.env.NEXT_PUBLIC_PILOT_APP_URL?.replace(/\/$/, '');
+      if (baseUrl) {
+        const token = createMagicLinkToken(email);
+        const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
+        const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
+        const resend = new Resend(apiKey);
+        await resend.emails.send({
+          from: `AYRYX <noreply@${fromDomain}>`,
+          to: email,
+          subject: 'Sign in to AYRYX',
+          html: `
+            <p>You've been approved for AYRYX. Click the link below to sign in:</p>
+            <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
+            <p>This link expires in 1 hour.</p>
+            <p>If you don't see this email, check your spam folder.</p>
+          `,
+        });
+      }
+    }
+    const data = await getWhitelist();
+    return NextResponse.json(data);
+  }
+
   if (action === 'deny') {
     await denyPending(email);
+    const data = await getWhitelist();
+    return NextResponse.json(data);
+  }
+
+  if (action === 'send_link') {
+    if (!(await isEmailWhitelisted(email))) {
+      return NextResponse.json({ error: 'Email must be on whitelist' }, { status: 400 });
+    }
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Email not configured' }, { status: 503 });
+    }
+    const baseUrl = process.env.NEXT_PUBLIC_PILOT_APP_URL?.replace(/\/$/, '');
+    if (!baseUrl) {
+      return NextResponse.json({ error: 'NEXT_PUBLIC_PILOT_APP_URL not configured' }, { status: 503 });
+    }
+    const token = createMagicLinkToken(email);
+    const verifyUrl = `${baseUrl}/api/auth/verify?token=${token}`;
+    const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
+    const resend = new Resend(apiKey);
+    const { error } = await resend.emails.send({
+      from: `AYRYX <noreply@${fromDomain}>`,
+      to: email,
+      subject: 'Sign in to AYRYX',
+      html: `
+        <p>You've been approved for AYRYX. Click the link below to sign in:</p>
+        <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
+        <p>This link expires in 1 hour.</p>
+        <p>If you don't see this email, check your spam folder.</p>
+      `,
+    });
+    if (error) {
+      return NextResponse.json({ error: 'Failed to send email' }, { status: 500 });
+    }
     const data = await getWhitelist();
     return NextResponse.json(data);
   }

@@ -68,7 +68,7 @@ function LoginForm() {
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-200 text-sm">
               {successKind === 'magic_link'
-                ? 'Check your email. Click the link to sign in. It expires in 1 hour.'
+                ? 'Check your email. Click the link to sign in. It expires in 1 hour. If you don\'t see it, check your spam folder.'
                 : successMessage || 'Request submitted. An approver will review it.'}
             </div>
             <button
@@ -115,7 +115,7 @@ function LoginForm() {
         )}
 
         <p className="mt-8 text-center text-slate-500 text-xs">
-          Having trouble? Contact your flight operations or support.
+          Having trouble? Contact your flight operations or <a href="mailto:support@ayryx.com" className="text-slate-400 hover:text-slate-300 underline">AYRYX support at support@ayryx.com</a>.
         </p>
       </div>
     </div>
