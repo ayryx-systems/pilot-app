@@ -30,12 +30,11 @@ function getClient(): S3Client | null {
   return s3Client;
 }
 
-function envFallback(airline: string): AirlineConfig {
-  const adminKey = `ADMIN_EMAILS_${airline.toUpperCase()}`;
-  const approverKey = `APPROVER_EMAILS_${airline.toUpperCase()}`;
-  const admins = process.env[adminKey]?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? process.env.ADMIN_EMAILS?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? [];
-  const approvers = process.env[approverKey]?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? process.env.APPROVER_EMAILS?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean) ?? [];
-  return { adminEmails: admins, approverEmails: approvers };
+export class S3ConfigError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'S3ConfigError';
+  }
 }
 
 export async function getAirlineConfig(airline: string): Promise<AirlineConfig> {
@@ -45,7 +44,9 @@ export async function getAirlineConfig(airline: string): Promise<AirlineConfig> 
   }
 
   const client = getClient();
-  if (!client) return envFallback(airline);
+  if (!client) {
+    throw new S3ConfigError('S3 not configured: missing AWS credentials');
+  }
 
   try {
     const res = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: AIRLINES_KEY }));
@@ -64,18 +65,17 @@ export async function getAirlineConfig(airline: string): Promise<AirlineConfig> 
         };
       }
     }
+    throw new S3ConfigError(`Airline "${airline}" not found in config`);
   } catch (err: unknown) {
-    if ((err as { name?: string })?.name !== 'NoSuchKey') {
-      console.error('[airlineConfig] S3 read error:', err);
-    }
+    if (err instanceof S3ConfigError) throw err;
+    console.error('[airlineConfig] S3 read error:', err);
+    throw new S3ConfigError('Failed to load airline config from S3', err);
   }
-
-  return envFallback(airline);
 }
 
 export async function getValidAirlines(): Promise<string[]> {
   const client = getClient();
-  if (!client) return [process.env.DEFAULT_AIRLINE ?? 'ein'].filter(Boolean);
+  if (!client) throw new S3ConfigError('S3 not configured: missing AWS credentials');
 
   try {
     const res = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: AIRLINES_KEY }));
@@ -84,9 +84,10 @@ export async function getValidAirlines(): Promise<string[]> {
       const data = JSON.parse(body) as Record<string, unknown>;
       return Object.keys(data);
     }
-  } catch {
-    // ignore
+    return [];
+  } catch (err: unknown) {
+    if (err instanceof S3ConfigError) throw err;
+    console.error('[airlineConfig] S3 read error:', err);
+    throw new S3ConfigError('Failed to load airlines list from S3', err);
   }
-
-  return [process.env.DEFAULT_AIRLINE ?? 'ein'].filter(Boolean);
 }

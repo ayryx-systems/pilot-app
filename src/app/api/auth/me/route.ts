@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { verifySessionCookie } from '@/lib/auth';
-import { getAirlineConfig } from '@/lib/airlineConfig';
+import { getAirlineConfig, S3ConfigError } from '@/lib/airlineConfig';
 import { getAirline } from '@/lib/getAirline';
 
 export async function GET(request: NextRequest) {
@@ -10,7 +10,15 @@ export async function GET(request: NextRequest) {
   if (!email) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
-  const config = await getAirlineConfig(airline);
+  let config;
+  try {
+    config = await getAirlineConfig(airline);
+  } catch (err) {
+    if (err instanceof S3ConfigError) {
+      return NextResponse.json({ error: 'Configuration unavailable. Please try again later.' }, { status: 503 });
+    }
+    throw err;
+  }
   const admins = (config.adminEmails ?? [])
     .map((e) => (typeof e === 'string' ? e : String(e)).toLowerCase().trim())
     .filter(Boolean);

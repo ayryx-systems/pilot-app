@@ -18,7 +18,9 @@ function LoginForm() {
     ? 'Your sign-in link expired. Please request a new one.'
     : errorParam === 'invalid'
       ? 'Invalid or expired link. Please request a new sign-in link.'
-      : '';
+      : errorParam === 'unavailable'
+        ? 'Service temporarily unavailable. Please try again later.'
+        : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

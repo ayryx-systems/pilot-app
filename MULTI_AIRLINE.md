@@ -52,12 +52,9 @@ aws s3 cp s3://ayryx-pilot-config/config/pilot-whitelist.json s3://ayryx-pilot-c
 # Optional: aws s3 rm s3://ayryx-pilot-config/config/pilot-whitelist.json
 ```
 
-## Env Fallbacks
+## S3 Required
 
-When S3 is not configured or keys are missing, env vars are used:
-
-- `ADMIN_EMAILS_EIN`, `APPROVER_EMAILS_EIN`, `EMAIL_WHITELIST_EIN`
-- `DEFAULT_AIRLINE` (default: `ein`)
+S3 must be available with valid credentials. When S3 is unreachable (missing creds, AccessDenied, etc.), requests fail with 503 instead of falling back to env — this avoids serving wrong airline config across tenants.
 
 ## Local Development
 

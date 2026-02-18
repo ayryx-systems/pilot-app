@@ -34,12 +34,11 @@ function normalize(email: string): string {
   return email.toLowerCase().trim();
 }
 
-function defaultData(airline: string): WhitelistData {
-  const envKey = `EMAIL_WHITELIST_${airline.toUpperCase()}`;
-  const envList = process.env[envKey]?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
-    ?? process.env.EMAIL_WHITELIST?.toLowerCase().split(',').map((e) => e.trim()).filter(Boolean)
-    ?? [];
-  return { emails: [...new Set(envList)], pending: [] };
+export class S3WhitelistError extends Error {
+  constructor(message: string, public readonly cause?: unknown) {
+    super(message);
+    this.name = 'S3WhitelistError';
+  }
 }
 
 export async function getWhitelist(airline: string): Promise<WhitelistData> {
@@ -48,7 +47,7 @@ export async function getWhitelist(airline: string): Promise<WhitelistData> {
   if (cached && now - cached.at < CACHE_TTL_MS) return cached.data;
 
   const client = getClient();
-  if (!client) return defaultData(airline);
+  if (!client) throw new S3WhitelistError('S3 not configured: missing AWS credentials');
 
   try {
     const res = await client.send(new GetObjectCommand({ Bucket: BUCKET, Key: getKey(airline) }));
@@ -65,17 +64,18 @@ export async function getWhitelist(airline: string): Promise<WhitelistData> {
       return parsed;
     }
   } catch (err: unknown) {
-    if ((err as { name?: string })?.name !== 'NoSuchKey') {
-      console.error('[whitelist] S3 read error:', err);
+    if ((err as { name?: string })?.name === 'NoSuchKey') {
+      const empty: WhitelistData = { emails: [], pending: [] };
+      cache.set(airline, { data: empty, at: now });
+      return empty;
     }
+    console.error('[whitelist] S3 read error:', err);
+    throw new S3WhitelistError('Failed to load whitelist from S3', err);
   }
 
-  const data = defaultData(airline);
-  cache.set(airline, { data, at: now });
-  if (data.emails.length > 0) {
-    saveWhitelist(airline, data).catch(() => {});
-  }
-  return data;
+  const empty: WhitelistData = { emails: [], pending: [] };
+  cache.set(airline, { data: empty, at: now });
+  return empty;
 }
 
 export async function saveWhitelist(airline: string, data: WhitelistData): Promise<void> {

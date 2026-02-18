@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { createMagicLinkToken, createApproveToken } from '@/lib/auth';
-import { isEmailWhitelisted, addPendingRequest } from '@/lib/whitelistService';
-import { getAirlineConfig } from '@/lib/airlineConfig';
+import { isEmailWhitelisted, addPendingRequest, S3WhitelistError } from '@/lib/whitelistService';
+import { getAirlineConfig, S3ConfigError } from '@/lib/airlineConfig';
 import { getAirline, resolveBaseUrl } from '@/lib/getAirline';
 import { checkRateLimit } from '@/lib/rateLimit';
 
@@ -126,6 +126,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, kind: 'pending', message: pendingMessage });
   } catch (err) {
     console.error('[auth] request-link error:', err);
+    if (err instanceof S3ConfigError || err instanceof S3WhitelistError) {
+      return NextResponse.json(
+        { error: 'Service temporarily unavailable. Please try again later.' },
+        { status: 503 }
+      );
+    }
     return NextResponse.json(
       { error: 'An error occurred. Please try again.' },
       { status: 500 }
