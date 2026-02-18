@@ -58,11 +58,13 @@ export async function POST(request: NextRequest) {
     if (whitelisted || isAdmin) {
       const token = createMagicLinkToken(email);
       const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
+      const airlineMention = airline === 'ein' ? '<p><em>This link is for Aer Lingus.</em></p>' : '';
       const { error } = await resend.emails.send({
         from: `AYRYX <noreply@${fromDomain}>`,
         to: email,
-        subject: 'Sign in to AYRYX',
+        subject: airline === 'ein' ? 'Sign in to AYRYX (Aer Lingus)' : 'Sign in to AYRYX',
         html: `
+          ${airlineMention}
           <p>Click the link below to sign in to AYRYX:</p>
           <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
           <p>This link is valid for 30 days. Need a new one? Just enter your email at the app and we'll send another.</p>

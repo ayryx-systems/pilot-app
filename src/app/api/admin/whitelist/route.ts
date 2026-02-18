@@ -72,11 +72,13 @@ export async function POST(request: NextRequest) {
       const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
       const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
       const resend = new Resend(apiKey);
+      const airlineMention = airline === 'ein' ? '<p><em>This is for Aer Lingus.</em></p>' : '';
       await resend.emails.send({
         from: `AYRYX <noreply@${fromDomain}>`,
         to: email,
-        subject: "You're approved for AYRYX",
+        subject: airline === 'ein' ? "You're approved for AYRYX (Aer Lingus)" : "You're approved for AYRYX",
         html: `
+            ${airlineMention}
             <p>You've been approved for AYRYX. Click the link below to sign in:</p>
             <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
             <p>Once approved, you can always sign in by going to the app and entering your email — we'll send you a new link whenever you need one.</p>
@@ -105,11 +107,13 @@ export async function POST(request: NextRequest) {
     const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
     const resend = new Resend(apiKey);
+    const airlineMention = airline === 'ein' ? '<p><em>This link is for Aer Lingus.</em></p>' : '';
     const { error } = await resend.emails.send({
       from: `AYRYX <noreply@${fromDomain}>`,
       to: email,
-      subject: 'Sign in to AYRYX',
+      subject: airline === 'ein' ? 'Sign in to AYRYX (Aer Lingus)' : 'Sign in to AYRYX',
       html: `
+        ${airlineMention}
         <p>Click the link below to sign in to AYRYX:</p>
         <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
         <p>This link is valid for 30 days. Need a new one? Just enter your email at the app and we'll send another.</p>
