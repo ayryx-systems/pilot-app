@@ -3,7 +3,7 @@
     "adminEmails": ["admin@example.com"],
     "approverEmails": ["approver@example.com"],
     "features": {},
-    "logo": "/logos/ein.svg",
+    "logo": "/logos/ein.png",
     "name": "Aer Lingus"
   }
 }
