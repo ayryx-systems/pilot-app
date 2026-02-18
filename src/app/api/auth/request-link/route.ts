@@ -25,9 +25,22 @@ function isValidBaseUrl(url: string): boolean {
   }
 }
 
+function resolveBaseUrl(request: NextRequest, bodyBaseUrl?: string): string {
+  const candidates = [
+    bodyBaseUrl,
+    request.headers.get('origin'),
+    request.headers.get('referer')?.replace(/\/[^/]*$/, ''),
+    getBaseUrl(request),
+  ].filter(Boolean) as string[];
+  for (const url of candidates) {
+    const u = url.replace(/\/$/, '');
+    if (isValidBaseUrl(u)) return u;
+  }
+  return process.env.PILOT_APP_BASE_URL || 'https://pilot.ayryx.com';
+}
+
 export async function POST(request: NextRequest) {
   const airline = getAirline(request);
-  let baseUrl = getBaseUrl(request);
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
@@ -49,9 +62,14 @@ export async function POST(request: NextRequest) {
     if (!email) {
       return NextResponse.json({ error: 'Email is required' }, { status: 400 });
     }
-    const clientBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : '';
-    if (clientBaseUrl && isValidBaseUrl(clientBaseUrl)) {
-      baseUrl = clientBaseUrl.replace(/\/$/, '');
+    const bodyBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : undefined;
+    const baseUrl = resolveBaseUrl(request, bodyBaseUrl);
+    const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
+    if (isLocal) {
+      return NextResponse.json(
+        { error: 'Sign-in is disabled for local development. Use the deployed app (e.g. ein.ayryx.com) to sign in.' },
+        { status: 400 }
+      );
     }
 
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
