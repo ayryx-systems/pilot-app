@@ -42,7 +42,12 @@ export async function POST(request: NextRequest) {
     const fromDomain = process.env.RESEND_FROM_DOMAIN ?? 'mail.ayryx.com';
     const resend = new Resend(apiKey);
 
-    if (await isEmailWhitelisted(airline, email)) {
+    const config = await getAirlineConfig(airline);
+    const admins = config.adminEmails.map((e) => e.toLowerCase().trim());
+    const isAdmin = admins.includes(email.toLowerCase());
+    const whitelisted = await isEmailWhitelisted(airline, email);
+
+    if (whitelisted || isAdmin) {
       const token = createMagicLinkToken(email);
       const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}`;
       const { error } = await resend.emails.send({
@@ -83,7 +88,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const config = await getAirlineConfig(airline);
     const approverEmails = config.approverEmails;
     if (approverEmails.length === 0) {
       return NextResponse.json(
