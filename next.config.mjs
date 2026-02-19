@@ -20,9 +20,6 @@ const nextConfig = {
 
 
 
-  // Optimize build output
-  output: 'standalone',
-
   // Configure images
   images: {
     formats: ['image/webp', 'image/avif'],
