@@ -5,6 +5,7 @@ import { MapDisplayOptions } from '@/types';
 import { Eye, EyeOff, Layers, RefreshCw } from 'lucide-react';
 import { HelpButton } from './HelpButton';
 import { pilotOSMService } from '@/services/osmService';
+import { useAirline } from '@/contexts/AirlineContext';
 
 interface MapControlsProps {
   displayOptions: MapDisplayOptions;
@@ -14,6 +15,7 @@ interface MapControlsProps {
 }
 
 export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedAirport }: MapControlsProps) {
+  const { airline } = useAirline();
   const [isExpanded, setIsExpanded] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -36,6 +38,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
   }, [isExpanded]);
 
   const handleToggle = (key: keyof MapDisplayOptions) => {
+    if (key === 'showWeatherRadar' && airline === 'ein') return;
     onOptionsChange({
       ...displayOptions,
       [key]: !displayOptions[key],
@@ -130,27 +133,35 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
             />
           </div>
           <div className="space-y-1">
-            {controls.map(({ key, label, icon }) => (
-              <button
-                key={key}
-                onClick={() => handleToggle(key)}
-                className={`w-full flex items-center justify-between py-1 px-2 rounded text-xs
-                  transition-colors ${displayOptions[key]
-                    ? 'text-white bg-slate-700/30'
-                    : 'text-gray-400'
-                  }`}
-              >
-                <div className="flex items-center space-x-1">
-                  <span className="text-xs">{icon}</span>
-                  <span className="text-xs">{label}</span>
-                </div>
-                {displayOptions[key] ? (
-                  <Eye className="w-3 h-3" />
-                ) : (
-                  <EyeOff className="w-3 h-3" />
-                )}
-              </button>
-            ))}
+            {controls.map(({ key, label, icon }) => {
+              const isWeatherRadarDisabled = key === 'showWeatherRadar' && airline === 'ein';
+              return (
+                <button
+                  key={key}
+                  onClick={() => handleToggle(key)}
+                  disabled={isWeatherRadarDisabled}
+                  className={`w-full flex items-center justify-between py-1 px-2 rounded text-xs
+                    transition-colors ${isWeatherRadarDisabled
+                      ? 'text-gray-500 cursor-not-allowed opacity-60'
+                      : displayOptions[key]
+                        ? 'text-white bg-slate-700/30'
+                        : 'text-gray-400'
+                    }`}
+                >
+                  <div className="flex items-center space-x-1">
+                    <span className="text-xs">{icon}</span>
+                    <span className="text-xs">{label}</span>
+                  </div>
+                  {isWeatherRadarDisabled ? (
+                    <span className="text-xs text-gray-500">Disabled</span>
+                  ) : displayOptions[key] ? (
+                    <Eye className="w-3 h-3" />
+                  ) : (
+                    <EyeOff className="w-3 h-3" />
+                  )}
+                </button>
+              );
+            })}
           </div>
 
           {/* Refresh Map Data Button */}

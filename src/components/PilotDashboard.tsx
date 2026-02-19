@@ -53,7 +53,7 @@ import { useAirline } from '@/contexts/AirlineContext';
 
 export function PilotDashboard() {
   const { isUTC } = useTimezonePreference();
-  const { logo: airlineLogo, configError } = useAirline();
+  const { logo: airlineLogo, configError, airline } = useAirline();
   const [mounted, setMounted] = useState(false);
 
   if (configError) return <ConfigUnavailableScreen />;
@@ -113,15 +113,15 @@ export function PilotDashboard() {
       showWaypoints: true,
       showExtendedCenterlines: true,
       showPireps: true,
-      showWeatherPireps: false, // Default to off - separate from ATC PIREPs
-      showMetars: false, // Default to off - METAR stations
+      showWeatherPireps: true, // Default to off - separate from ATC PIREPs
+      showMetars: true, // Default to off - METAR stations
       showGroundTracks: true,
       showOSMFeatures: true, // This includes runways from OSM
       showWeatherRadar: true,
       showWeatherAlerts: false,
       showVisibility: false,
       showSigmetAirmet: false,
-      showWindsAloft: false,
+      showWindsAloft: true,
       showIcing: false,
       showTurbulence: false,
     };
@@ -139,6 +139,19 @@ export function PilotDashboard() {
     window.addEventListener('resize', checkDesktop);
     return () => window.removeEventListener('resize', checkDesktop);
   }, []);
+
+  useEffect(() => {
+    if (airline === 'ein' && mapDisplayOptions.showWeatherRadar) {
+      setMapDisplayOptions(prev => ({ ...prev, showWeatherRadar: false }));
+    }
+  }, [airline, mapDisplayOptions.showWeatherRadar]);
+
+  const handleMapOptionsChange = useCallback((options: MapDisplayOptions) => {
+    if (airline === 'ein' && options.showWeatherRadar) {
+      options = { ...options, showWeatherRadar: false };
+    }
+    setMapDisplayOptions(options);
+  }, [airline]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const [_arrivalSituation, setArrivalSituation] = useState<ArrivalSituationResponse | null>(null);
@@ -681,7 +694,7 @@ export function PilotDashboard() {
             <div className="absolute top-2 right-2" style={{ zIndex: 1001 }}>
               <MapControls
                 displayOptions={mapDisplayOptions}
-                onOptionsChange={setMapDisplayOptions}
+                onOptionsChange={handleMapOptionsChange}
                 isDemo={selectedAirport === 'KDEN'}
                 selectedAirport={selectedAirport}
               />
