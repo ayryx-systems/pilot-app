@@ -173,8 +173,8 @@ function AdminContent() {
             {data?.emails.length ? (
               <ul className="divide-y divide-slate-700/50">
                 {data.emails.map((email) => (
-                  <li key={email} className="flex items-center justify-between px-4 py-3 gap-2">
-                    <span className="text-slate-200 text-sm font-mono truncate min-w-0 flex-1">{email}</span>
+                  <li key={email} className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-2">
+                    <span className="text-slate-200 text-sm font-mono min-w-0 flex-1 break-all sm:truncate">{email}</span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       <button
                         onClick={() => handleAction('send_link', email)}
@@ -214,7 +214,7 @@ function AdminContent() {
                 {data.pending.map(({ email, requestedAt }) => (
                   <li key={email} className="flex flex-col sm:flex-row sm:items-center justify-between px-4 py-3 gap-3">
                     <div className="min-w-0 flex-1">
-                      <span className="text-slate-200 text-sm font-mono block truncate">{email}</span>
+                      <span className="text-slate-200 text-sm font-mono block break-all sm:truncate">{email}</span>
                       <span className="text-slate-500 text-xs">
                         {new Date(requestedAt).toLocaleDateString()}
                       </span>
