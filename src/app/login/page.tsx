@@ -3,9 +3,11 @@
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRequestUrl, getAirlineHeaders, getAirlineFromLocation } from '@/lib/clientAirline';
+import { useAirline } from '@/contexts/AirlineContext';
 
 function LoginForm() {
   const isEin = typeof window !== 'undefined' && getAirlineFromLocation() === 'ein';
+  const { logo: airlineLogo } = useAirline();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -62,10 +64,12 @@ function LoginForm() {
     <div className="min-h-dvh bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 shadow-xl p-8">
         <div className="text-center mb-8">
-          <h1 className="text-xl font-semibold text-slate-100 mb-1">AYRYX</h1>
-          {isEin && (
-            <p className="text-slate-500 text-sm mb-2">Aer Lingus</p>
-          )}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={airlineLogo || '/ayryx_with_star_white.png'}
+            alt="Logo"
+            className="h-8 sm:h-10 w-auto mx-auto mb-4"
+          />
           <p className="text-slate-400 text-sm">Enter your email to sign in or request access</p>
         </div>
 
