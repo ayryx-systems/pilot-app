@@ -556,7 +556,7 @@ export function PilotDashboard() {
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1" style={{ overflow: 'visible' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={airlineLogo || '/ayryx_with_star_white.png'}
+            src={airlineLogo || '/icons/icon-192x192.png'}
             alt="Logo"
             className="h-5 sm:h-6 w-auto flex-shrink-0"
           />

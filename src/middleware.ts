@@ -69,6 +69,7 @@ export async function middleware(request: NextRequest) {
     path === '/favicon.ico' ||
     path === '/manifest.json' ||
     path.startsWith('/icons/') ||
+    path.startsWith('/logos/') ||
     path === '/login'
   ) {
     return NextResponse.next({ request: { headers: requestHeaders } });

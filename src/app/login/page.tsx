@@ -66,7 +66,7 @@ function LoginForm() {
         <div className="text-center mb-8">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src={airlineLogo || '/ayryx_with_star_white.png'}
+            src={airlineLogo || '/icons/icon-192x192.png'}
             alt="Logo"
             className="h-8 sm:h-10 w-auto mx-auto mb-4"
           />
