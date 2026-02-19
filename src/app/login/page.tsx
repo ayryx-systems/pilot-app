@@ -2,10 +2,10 @@
 
 import { useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { getRequestUrl, getAirlineHeaders } from '@/lib/clientAirline';
+import { getRequestUrl, getAirlineHeaders, getAirlineFromLocation } from '@/lib/clientAirline';
 
 function LoginForm() {
-  const isEinSubdomain = typeof window !== 'undefined' && window.location.hostname === 'ein.ayryx.com';
+  const isEin = typeof window !== 'undefined' && getAirlineFromLocation() === 'ein';
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
@@ -63,7 +63,7 @@ function LoginForm() {
       <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 shadow-xl p-8">
         <div className="text-center mb-8">
           <h1 className="text-xl font-semibold text-slate-100 mb-1">AYRYX</h1>
-          {isEinSubdomain && (
+          {isEin && (
             <p className="text-slate-500 text-sm mb-2">Aer Lingus</p>
           )}
           <p className="text-slate-400 text-sm">Enter your email to sign in or request access</p>
@@ -101,7 +101,7 @@ function LoginForm() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder={isEinSubdomain ? 'you@aerlingus.com' : 'you@airline.com'}
+                placeholder={isEin ? 'you@aerlingus.com' : 'you@airline.com'}
                 required
                 autoComplete="email"
                 disabled={status === 'loading'}

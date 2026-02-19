@@ -58,8 +58,17 @@ S3 must be available with valid credentials. When S3 is unreachable (missing cre
 
 ## Local Development
 
-- `http://localhost:3006?airline=ein` — use ein config
-- `http://localhost:3006` — uses `DEFAULT_AIRLINE`
+On localhost, airline is determined by (in order):
+1. `?airline=` query param (e.g. `?airline=ein` or `?airline=pilot`)
+2. `DEFAULT_AIRLINE` or `NEXT_PUBLIC_DEFAULT_AIRLINE` env var
+3. Fallback: `ein`
+
+**Why you see Aer Lingus by default:** The hardcoded fallback is `ein` so that `localhost` and `pilot.ayryx.com` behave consistently (both default to Aer Lingus today).
+
+**Accessing the vanilla app locally:**
+- Add `NEXT_PUBLIC_DEFAULT_AIRLINE=pilot` to `.env.local` — then `http://localhost:3006` uses the generic AYRYX config (no Aer Lingus branding)
+- Or use `?airline=pilot` in the URL — e.g. `http://localhost:3006?airline=pilot`
+- Ensure `pilot` exists in `config/airlines.json` in S3. Add a `pilot` entry (see `config/airlines.json.example`) with generic AYRYX branding — no logo, name: "AYRYX".
 
 ## One Email, Multiple Airlines
 

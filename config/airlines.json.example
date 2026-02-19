@@ -1,4 +1,10 @@
 {
+  "pilot": {
+    "adminEmails": ["admin@example.com"],
+    "approverEmails": ["approver@example.com"],
+    "features": {},
+    "name": "AYRYX"
+  },
   "ein": {
     "adminEmails": ["admin@example.com"],
     "approverEmails": ["approver@example.com"],

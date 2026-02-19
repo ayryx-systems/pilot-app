@@ -2,17 +2,19 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { verifySessionCookie } from '@/lib/auth-edge';
 
+const DEFAULT_FALLBACK = 'ein';
+
 function getAirlineFromHost(hostname: string, searchParams: URLSearchParams): string {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
-    return searchParams.get('airline') || process.env.DEFAULT_AIRLINE || 'ein';
+    return searchParams.get('airline') || process.env.DEFAULT_AIRLINE || process.env.NEXT_PUBLIC_DEFAULT_AIRLINE || DEFAULT_FALLBACK;
   }
   if (hostname === 'pilot.ayryx.com') {
-    return process.env.DEFAULT_AIRLINE || 'ein';
+    return process.env.DEFAULT_AIRLINE || process.env.NEXT_PUBLIC_DEFAULT_AIRLINE || DEFAULT_FALLBACK;
   }
   if (hostname.endsWith('.ayryx.com')) {
-    return hostname.split('.')[0] || process.env.DEFAULT_AIRLINE || 'ein';
+    return hostname.split('.')[0] || process.env.DEFAULT_AIRLINE || process.env.NEXT_PUBLIC_DEFAULT_AIRLINE || DEFAULT_FALLBACK;
   }
-  return process.env.DEFAULT_AIRLINE || 'ein';
+  return process.env.DEFAULT_AIRLINE || process.env.NEXT_PUBLIC_DEFAULT_AIRLINE || DEFAULT_FALLBACK;
 }
 
 function getHostnameFromHeader(value: string): string {
