@@ -13,6 +13,7 @@ const AIRPORT_TIMEZONES: Record<string, string> = {
   KLGA: 'America/New_York',
   KJFK: 'America/New_York',
   KEWR: 'America/New_York',
+  KBOS: 'America/New_York',
   KLAX: 'America/Los_Angeles',
   KSFO: 'America/Los_Angeles',
   KDEN: 'America/Denver',
