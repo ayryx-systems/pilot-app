@@ -10,6 +10,7 @@
  */
 const AIRPORT_TIMEZONES: Record<string, string> = {
   KORD: 'America/Chicago',
+  KBNA: 'America/Chicago',
   KLGA: 'America/New_York',
   KJFK: 'America/New_York',
   KEWR: 'America/New_York',
