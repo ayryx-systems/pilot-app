@@ -103,6 +103,7 @@ export function ArrivalTimeline({
   const { isUTC } = useTimezonePreference();
   const chartRef = useRef<ChartJS<'scatter'>>(null);
   const [hiddenQuadrants, setHiddenQuadrants] = useState<Set<string>>(() => new Set());
+  const [selectedPoint, setSelectedPoint] = useState<{ arrival: Arrival } | null>(null);
   
   const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
   const hoursAhead = (selectedTime.getTime() - Date.now()) / (1000 * 60 * 60);
@@ -455,14 +456,17 @@ export function ArrivalTimeline({
         },
       },
       onClick: (event, elements) => {
-        if (elements.length > 0 && onPointClick) {
+        if (elements.length > 0) {
           const element = elements[0];
           const dataset = chartData?.datasets[element.datasetIndex];
           const point = (dataset?.data as Array<{ arrival?: Arrival }>)?.[element.index];
           
           if (point?.arrival) {
-            onPointClick(point.arrival);
+            setSelectedPoint({ arrival: point.arrival });
+            onPointClick?.(point.arrival);
           }
+        } else {
+          setSelectedPoint(null);
         }
       },
     };
@@ -478,6 +482,7 @@ export function ArrivalTimeline({
 
   return (
     <div className="w-full">
+      <style>{`@keyframes fadeTooltip { 0%, 70% { opacity: 1 } 100% { opacity: 0 } }`}</style>
       <div className="flex items-center justify-between mb-2">
         <h4 className="text-xs font-semibold text-slate-400 uppercase">Arrival Durations from 50nm</h4>
         <HelpButton
@@ -533,7 +538,7 @@ export function ArrivalTimeline({
       {/* Compact legend row - Arriving from quadrants are clickable */}
       <div className="flex items-center justify-between mb-1.5 text-[10px]">
         <div className="flex items-center gap-3 text-gray-400">
-          <span className="text-gray-500">Arriving from:</span>
+          <span className="text-gray-500">Arrived from:</span>
           {QUADRANT_ORDER.map((q) => {
             const isHidden = hiddenQuadrants.has(q);
             return (
@@ -582,12 +587,31 @@ export function ArrivalTimeline({
         )}
       </div>
       
-      <div style={{ height: '200px' }}>
-        <Scatter 
-          ref={chartRef} 
-          data={{ datasets: chartData.datasets }} 
-          options={options} 
-        />
+      <div className="relative">
+        <div style={{ height: '200px' }}>
+          <Scatter 
+            ref={chartRef} 
+            data={{ datasets: chartData.datasets }} 
+            options={options} 
+          />
+        </div>
+        {selectedPoint && (
+          <div 
+            key={`${selectedPoint.arrival.callsign}-${selectedPoint.arrival.timestampLanding}`}
+            className="absolute bottom-0 left-0 right-0 mt-1 px-2 py-1.5 rounded bg-slate-800/95 border border-slate-600 text-xs text-slate-200 shadow-lg"
+            style={{ animation: 'fadeTooltip 4s ease-in-out forwards' }}
+            role="tooltip"
+            onAnimationEnd={() => setSelectedPoint(null)}
+          >
+            <span className="font-medium">{selectedPoint.arrival.callsign}</span>
+            {' · '}
+            {selectedPoint.arrival.aircraftType ?? 'Unknown'}
+            {' · '}
+            Arrived from {quadrantLabels[getQuadrantForArrival(selectedPoint.arrival)] || getQuadrantForArrival(selectedPoint.arrival)}
+            {' · '}
+            {selectedPoint.arrival.durationMinutes?.toFixed(0) ?? '-'}m from 50nm
+          </div>
+        )}
       </div>
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (

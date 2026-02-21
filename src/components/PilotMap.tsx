@@ -3093,7 +3093,7 @@ export function PilotMap({
       {/* Track legend - compact, above airport overlay */}
       {displayOptions.showGroundTracks && tracks && tracks.length > 0 && (
         <div className="absolute bottom-10 left-2 bg-black/60 text-white py-1 px-2 text-[10px] rounded flex items-center gap-1.5 pointer-events-none" style={{ zIndex: 4000 }}>
-          <span className="text-gray-400 shrink-0">Dir@50nm</span>
+          <span className="text-gray-400 shrink-0">Arrived from</span>
           {(['NE', 'NW', 'SE', 'SW'] as const).map((q) => (
             <span key={q} className="flex items-center gap-0.5">
               <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: quadrantColors[q] }} />
