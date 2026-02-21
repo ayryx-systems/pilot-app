@@ -9,6 +9,22 @@ export const categoryColors: Record<string, string> = {
   widebody: 'rgba(75, 192, 192, 1)',
 };
 
+export const quadrantColors: Record<string, string> = {
+  NE: 'rgba(59, 130, 246, 1)',
+  NW: 'rgba(168, 85, 247, 1)',
+  SE: 'rgba(34, 197, 94, 1)',
+  SW: 'rgba(249, 115, 22, 1)',
+  unknown: 'rgba(148, 163, 184, 1)',
+};
+
+export const quadrantLabels: Record<string, string> = {
+  NE: 'Northeast',
+  NW: 'Northwest',
+  SE: 'Southeast',
+  SW: 'Southwest',
+  unknown: 'Unknown',
+};
+
 export function getAircraftCategoryFromType(aircraftType: string | undefined | null): string {
   if (!aircraftType) return 'other';
   

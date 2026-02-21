@@ -19,7 +19,7 @@ import annotationPlugin from 'chartjs-plugin-annotation';
 import { Scatter } from 'react-chartjs-2';
 import { Arrival, BaselineData, HistoricalArrival, FlightCategory, MatchedDaysResponse } from '@/types';
 import { utcToAirportLocal, getSeason, formatUTCTime, getCurrentUTCTime } from '@/utils/airportTime';
-import { getAircraftCategoryFromType, categoryColors } from '@/utils/aircraftColors';
+import { quadrantColors, quadrantLabels } from '@/utils/aircraftColors';
 import { ChevronDown, ChevronUp, History } from 'lucide-react';
 import { ExampleDayCard } from './ExampleDayCard';
 import { HelpButton } from './HelpButton';
@@ -67,23 +67,11 @@ const WEATHER_BORDER_COLORS: Record<FlightCategory, string> = {
   unknown: 'rgba(156, 163, 175, 0.8)',
 };
 
-const categoryNames: Record<string, string> = {
-  light: 'Light',
-  small: 'Small',
-  large: 'Large',
-  heavy: 'Heavy',
-  other: 'Other',
-  regional: 'Regional',
-  narrowbody: 'Narrow-body',
-  widebody: 'Wide-body',
-};
-
-const getAircraftCategory = (arrival: Arrival): string => {
-  if (arrival.aircraftCategory) {
-    return arrival.aircraftCategory;
-  }
-  return getAircraftCategoryFromType(arrival.aircraftType);
-};
+function getQuadrantForArrival(arrival: Arrival): string {
+  const q = arrival.quadrantAt50nm;
+  if (q === 'NE' || q === 'NW' || q === 'SE' || q === 'SW') return q;
+  return 'unknown';
+}
 
 function getSeasonalBaseline(baseline: BaselineData | null | undefined) {
   if (!baseline) return null;
@@ -123,21 +111,21 @@ export function ArrivalTimeline({
     const chartMax = isAtNow ? 0.5 : Math.max(hoursAhead + 0.5, 1);
     
     if (arrivals && arrivals.length > 0) {
-      const categoryData: Record<string, Arrival[]> = {};
+      const quadrantData: Record<string, Arrival[]> = {};
       arrivals.forEach(arrival => {
-        const category = getAircraftCategory(arrival);
-        if (!categoryData[category]) {
-          categoryData[category] = [];
+        const quadrant = getQuadrantForArrival(arrival);
+        if (!quadrantData[quadrant]) {
+          quadrantData[quadrant] = [];
         }
-        categoryData[category].push(arrival);
+        quadrantData[quadrant].push(arrival);
       });
 
-      const categoryOrder = ['widebody', 'narrowbody', 'regional', 'small', 'light', 'heavy', 'large', 'other'];
+      const quadrantOrder = ['NE', 'NW', 'SE', 'SW', 'unknown'];
 
-      categoryOrder.forEach(category => {
-        const categoryArrivals = categoryData[category];
-        if (categoryArrivals && categoryArrivals.length > 0) {
-          const scatterData = categoryArrivals.map(arrival => {
+      quadrantOrder.forEach(quadrant => {
+        const quadrantArrivals = quadrantData[quadrant];
+        if (quadrantArrivals && quadrantArrivals.length > 0) {
+          const scatterData = quadrantArrivals.map(arrival => {
             const landingTime = new Date(arrival.timestampLanding);
             const hoursAgo = (landingTime.getTime() - now) / (1000 * 60 * 60);
 
@@ -148,11 +136,12 @@ export function ArrivalTimeline({
             };
           });
 
+          const label = quadrantLabels[quadrant] || quadrant;
           datasets.push({
-            label: `${categoryNames[category]} (${categoryArrivals.length})`,
+            label: `${label} (${quadrantArrivals.length})`,
             data: scatterData,
-            backgroundColor: categoryColors[category]?.replace('1)', '0.7)') || 'rgba(156, 163, 175, 0.7)',
-            borderColor: categoryColors[category] || 'rgba(156, 163, 175, 1)',
+            backgroundColor: quadrantColors[quadrant]?.replace('1)', '0.7)') || 'rgba(148, 163, 184, 0.7)',
+            borderColor: quadrantColors[quadrant] || 'rgba(148, 163, 184, 1)',
             pointRadius: 5,
           } as ChartData<'scatter'>['datasets'][0]);
         }
@@ -495,16 +484,21 @@ export function ArrivalTimeline({
           content={
             <div className="space-y-3">
               <p>
-                Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on historical data.
+                Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on real-time data.
               </p>
 
               <div>
                 <p className="font-semibold text-slate-200 mb-1">Chart</p>
                 <p><strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown</p>
                 <p><strong>Horizontal Axis:</strong> Time of landing (local time)</p>
-                <p><strong>Colored Dots:</strong> Aircraft by type (light, regional, narrowbody, widebody)</p>
+                <p><strong>Colored Dots:</strong> Each color shows which <strong>direction</strong> the aircraft approached from (NE, NW, SE, SW). This is the compass quadrant where the aircraft was when it crossed the 50nm boundary—useful for seeing if arrivals from one approach path take longer.</p>
                 <p><strong className="text-white/70">White Dashed Line:</strong> Seasonal median baseline</p>
                 <p><strong className="text-gray-400">Gray Shaded Areas:</strong> P10–P90 range from similar historical days</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-200 mb-1">What are Quadrants?</p>
+                <p>Imagine the airport at the center of a compass. When an aircraft crosses the 50nm ring, we note whether it was <strong>Northeast</strong>, <strong>Northwest</strong>, <strong>Southeast</strong>, or <strong>Southwest</strong> of the airport. Aircraft from the same quadrant often share similar approach paths and sequencing.</p>
               </div>
 
               <div>
@@ -538,16 +532,20 @@ export function ArrivalTimeline({
       <div className="flex items-center justify-between mb-1.5 text-[10px]">
         <div className="flex items-center gap-3 text-gray-400">
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.narrowbody }}></span>
-            <span>Narrow-body</span>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.NE }}></span>
+            <span>NE</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.regional }}></span>
-            <span>Regional</span>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.NW }}></span>
+            <span>NW</span>
           </div>
           <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: categoryColors.widebody }}></span>
-            <span>Wide-body</span>
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.SE }}></span>
+            <span>SE</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.SW }}></span>
+            <span>SW</span>
           </div>
           <div className="flex items-center gap-1">
             <span className="inline-block w-3 border-t-2 border-dashed border-white/50"></span>

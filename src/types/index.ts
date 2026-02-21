@@ -149,13 +149,14 @@ export interface Arrival {
   icao: string;
   callsign: string;
   aircraftType: string | null;
-  aircraftCategory: 'light' | 'small' | 'large' | 'heavy' | 'other' | null; // OpenSky category-based classification
+  aircraftCategory?: 'light' | 'small' | 'large' | 'heavy' | 'other' | null; // OpenSky category-based classification
   timestamp50nm: string;
   timestampLanding: string;
   durationSeconds: number;
   durationMinutes: number;
   runway: string | null;
   airportId: string;
+  quadrantAt50nm?: 'NE' | 'NW' | 'SE' | 'SW' | null; // Compass quadrant of origin at 50nm crossing
 }
 
 export interface TimeSegment {
