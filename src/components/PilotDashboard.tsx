@@ -746,10 +746,13 @@ export function PilotDashboard() {
               {/* Mode-aware content layout */}
               {(() => {
                 const isNowMode = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
-                
+                const cutoff = Date.now() - 60 * 60 * 1000;
+                const arrivalsLast60Min = (arrivals || []).filter(
+                  a => new Date(a.timestampLanding).getTime() >= cutoff
+                );
                 const arrivalTimelineContent = (
                   <ArrivalTimeline
-                    arrivals={arrivals || []}
+                    arrivals={arrivalsLast60Min}
                     airportCode={selectedAirport || ''}
                     baseline={baseline}
                     matchedDaysData={matchedDaysData}
@@ -765,7 +768,12 @@ export function PilotDashboard() {
                       });
                       
                       if (matchingTrack) {
-                        setSelectedTrackId(matchingTrack.id);
+                        if (selectedTrackId === matchingTrack.id) {
+                          setSelectedTrackId(null);
+                          requestAnimationFrame(() => requestAnimationFrame(() => setSelectedTrackId(matchingTrack.id)));
+                        } else {
+                          setSelectedTrackId(matchingTrack.id);
+                        }
                         setTimeout(() => {
                           const mapElement = document.querySelector('[data-map-container]');
                           if (mapElement) {

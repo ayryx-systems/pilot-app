@@ -167,9 +167,11 @@ export function PilotMap({
 
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
   const onTrackSelectRef = useRef(onTrackSelect);
-  const trackPolylinesRef = useRef<Map<string, { polyline: L.Polyline; baseColor: string; opacity: number }>>(new Map());
+  const selectedTrackIdRef = useRef(selectedTrackId);
+  const trackPolylinesRef = useRef<Map<string, { polyline: L.Polyline; baseColor: string; createdAt: number | null }>>(new Map());
 
   useEffect(() => { onTrackSelectRef.current = onTrackSelect; }, [onTrackSelect]);
+  useEffect(() => { selectedTrackIdRef.current = selectedTrackId; }, [selectedTrackId]);
 
   // Track current airport code to prevent unnecessary map recreation
   const currentAirportCodeRef = useRef<string | null>(null);
@@ -920,7 +922,7 @@ export function PilotMap({
         const quadrant = match?.quadrantAt50nm;
         const qk = (quadrant === 'NE' || quadrant === 'NW' || quadrant === 'SE' || quadrant === 'SW') ? quadrant : 'unknown';
         const baseColor = track.status === 'EMERGENCY' ? '#ef4444' : rgbaToHex(quadrantColors[qk] || quadrantColors.unknown);
-        const opacity = 1 - 0.95 * Math.min(age / MAX_AGE, 1);
+        const opacity = Math.max(0, 1 - age / MAX_AGE);
 
         const isSel = selectedTrackId === track.id;
         const line = L.polyline(latLngs, {
@@ -942,30 +944,59 @@ export function PilotMap({
           </div>`;
 
         line.bindPopup(popupContent(), { className: 'track-popup', autoClose: true, closeOnClick: true, autoPan: false });
-        line.on('click', () => onTrackSelectRef.current?.(track));
+        line.on('click', () => {
+          const cb = onTrackSelectRef.current;
+          if (!cb) return;
+          if (selectedTrackIdRef.current === track.id) {
+            cb(null);
+            requestAnimationFrame(() => requestAnimationFrame(() => cb(track)));
+          } else {
+            cb(track);
+          }
+        });
 
         group.addLayer(line);
-        trackPolylinesRef.current.set(track.id, { polyline: line, baseColor, opacity });
+        trackPolylinesRef.current.set(track.id, { polyline: line, baseColor, createdAt: ts ? new Date(ts).getTime() : null });
       });
     };
 
     run();
   }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks]);
 
+  const getAgeOpacity = (createdAt: number | null) => {
+    if (!createdAt) return 1;
+    const ageMin = (Date.now() - createdAt) / 60000;
+    return Math.max(0, 1 - ageMin / 60);
+  };
+
   useEffect(() => {
     const selected = selectedTrackId ?? null;
-    trackPolylinesRef.current.forEach(({ polyline, baseColor, opacity }, id) => {
+    trackPolylinesRef.current.forEach(({ polyline, baseColor, createdAt }, id) => {
       const sel = id === selected;
+      const opacity = getAgeOpacity(createdAt);
       polyline.setStyle({ color: sel ? '#fbbf24' : baseColor, weight: sel ? 4 : 2, opacity });
       if (sel) polyline.bringToFront();
     });
   }, [selectedTrackId]);
 
   useEffect(() => {
+    const iv = setInterval(() => {
+      const selected = selectedTrackId ?? null;
+      trackPolylinesRef.current.forEach(({ polyline, baseColor, createdAt }, id) => {
+        const sel = id === selected;
+        const opacity = getAgeOpacity(createdAt);
+        polyline.setStyle({ color: sel ? '#fbbf24' : baseColor, weight: sel ? 4 : 2, opacity });
+      });
+    }, 30000);
+    return () => clearInterval(iv);
+  }, [selectedTrackId]);
+
+  useEffect(() => {
     if (!selectedTrackId) return;
     const entry = trackPolylinesRef.current.get(selectedTrackId);
     if (!entry) return;
-    const { polyline, baseColor, opacity: baseOpacity } = entry;
+    const { polyline, baseColor, createdAt } = entry;
+    const baseOpacity = getAgeOpacity(createdAt);
     const FADE_MS = 15000;
     const start = performance.now();
     const hexToRgb = (hex: string) => {
