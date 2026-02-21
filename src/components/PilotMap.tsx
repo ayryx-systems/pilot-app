@@ -912,8 +912,9 @@ export function PilotMap({
             ? (now.getTime() - new Date(trackTimestamp).getTime()) / (1000 * 60) // Age in minutes
             : 0;
 
-          // Hide tracks over 30 minutes old
-          if (trackAge > 30) {
+          // Hide tracks over 1 hour old
+          const TRACK_MAX_AGE_MINUTES = 60;
+          if (trackAge > TRACK_MAX_AGE_MINUTES) {
             return;
           }
 
@@ -946,14 +947,14 @@ export function PilotMap({
             color = rgbaToHex(rgbaColor);
           }
 
-          // Calculate opacity based on track age (fade from 100% to 5% over 30 minutes)
+          // Calculate opacity based on track age (fade from 100% to 5% over 1 hour)
           // Selected tracks always have full opacity
           let opacity: number;
           if (isSelected) {
             opacity = 1.0; // Selected tracks always at full opacity
           } else {
-            // Linear gradient: 100% opacity at 0 minutes, 5% opacity at 30 minutes
-            const maxAge = 30; // minutes
+            // Linear gradient: 100% opacity at 0 minutes, 5% opacity at 60 minutes
+            const maxAge = TRACK_MAX_AGE_MINUTES;
             const minOpacity = 0.05; // 5% minimum opacity
             const maxOpacity = 1.0; // 100% maximum opacity
             const ageRatio = Math.min(trackAge / maxAge, 1.0); // Clamp to 0-1
