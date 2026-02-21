@@ -10,7 +10,7 @@ import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
 import { Z_INDEX_LAYERS } from '@/types/zIndexLayers';
-import { getAircraftCategoryFromType, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
+import { quadrantColors, rgbaToHex } from '@/utils/aircraftColors';
 import { useWeatherRadarAnimation } from './useWeatherRadarAnimation';
 
 // Helper function to calculate bearing between two points
@@ -924,19 +924,26 @@ export function PilotMap({
           // Check if this track is selected
           const isSelected = selectedTrackId === track.id;
 
-          // Determine track color based on status and aircraft category
+          // Get landing time for matching (used for both color and popup)
+          const landingTime = track.createdAt || track.startTime;
+          const matchingArrival = arrivals?.find(arrival => {
+            if (arrival.callsign !== track.callsign) return false;
+            const arrivalLandingTime = new Date(arrival.timestampLanding);
+            const trackLandingTime = landingTime ? new Date(landingTime) : null;
+            if (!trackLandingTime) return false;
+            return Math.abs(arrivalLandingTime.getTime() - trackLandingTime.getTime()) < 60000;
+          });
+
+          // Determine track color: quadrant at 50nm (matches scatter plot), or fallback
           let color: string;
           if (isSelected) {
             color = '#fbbf24'; // Bright yellow/amber for selected track
-          } else if (track.status === 'COMPLETED') {
-            color = '#64748b'; // Muted slate for completed flights
           } else if (track.status === 'EMERGENCY') {
             color = '#ef4444'; // Red for emergency
           } else {
-            // Use aircraft category color (matches arrival times graph)
-            const category = getAircraftCategoryFromType(track.aircraft);
-            const rgbaColor = getAircraftColor(category);
-            color = rgbaToHex(rgbaColor);
+            const quadrant = matchingArrival?.quadrantAt50nm;
+            const quadrantKey = (quadrant === 'NE' || quadrant === 'NW' || quadrant === 'SE' || quadrant === 'SW') ? quadrant : 'unknown';
+            color = rgbaToHex(quadrantColors[quadrantKey] || quadrantColors.unknown);
           }
 
           // Calculate opacity based on track age (fade from 100% to 5% over 1 hour)
@@ -1004,17 +1011,6 @@ export function PilotMap({
             return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
           };
 
-          // Get landing time (prefer createdAt, fallback to startTime)
-          const landingTime = track.createdAt || track.startTime;
-          
-          // Find matching arrival to get duration from 50nm
-          const matchingArrival = arrivals?.find(arrival => {
-            if (arrival.callsign !== track.callsign) return false;
-            const arrivalLandingTime = new Date(arrival.timestampLanding);
-            const trackLandingTime = landingTime ? new Date(landingTime) : null;
-            if (!trackLandingTime) return false;
-            return Math.abs(arrivalLandingTime.getTime() - trackLandingTime.getTime()) < 60000; // Within 1 minute
-          });
           
           // Format duration from 50nm to landing
           const formatDuration = (minutes: number): string => {
@@ -3170,8 +3166,21 @@ export function PilotMap({
         </button>
       </div>
 
-      {/* Airport info overlay */}
-      <div className="absolute z-10 bottom-2 left-2 bg-black/60 text-white p-1 px-2 text-xs rounded">
+      {/* Track legend - compact, above map layers (popupPane ~3500) */}
+      {displayOptions.showGroundTracks && tracks && tracks.length > 0 && (
+        <div className="absolute bottom-10 left-2 bg-black/60 text-white py-1 px-2 text-[10px] rounded flex items-center gap-1.5 pointer-events-none" style={{ zIndex: 4000 }}>
+          <span className="text-gray-400 shrink-0">Dir@50nm</span>
+          {(['NE', 'NW', 'SE', 'SW'] as const).map((q) => (
+            <span key={q} className="flex items-center gap-0.5">
+              <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: quadrantColors[q] }} />
+              <span>{q}</span>
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Airport info overlay - above map layers */}
+      <div className="absolute bottom-2 left-2 bg-black/60 text-white p-1 px-2 text-xs rounded pointer-events-none" style={{ zIndex: 4000 }}>
         {airport.name} ({airport.code})
       </div>
 
