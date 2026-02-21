@@ -89,6 +89,8 @@ function getSeasonalBaseline(baseline: BaselineData | null | undefined) {
   return { season, byTimeSlot: byTimeSlot as Record<string, { medianTimeFrom50nm?: number }> };
 }
 
+const QUADRANT_ORDER = ['NE', 'NW', 'SE', 'SW', 'unknown'] as const;
+
 export function ArrivalTimeline({ 
   arrivals, 
   airportCode, 
@@ -100,6 +102,7 @@ export function ArrivalTimeline({
 }: ArrivalTimelineProps) {
   const { isUTC } = useTimezonePreference();
   const chartRef = useRef<ChartJS<'scatter'>>(null);
+  const [hiddenQuadrants, setHiddenQuadrants] = useState<Set<string>>(() => new Set());
   
   const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
   const hoursAhead = (selectedTime.getTime() - Date.now()) / (1000 * 60 * 60);
@@ -120,9 +123,8 @@ export function ArrivalTimeline({
         quadrantData[quadrant].push(arrival);
       });
 
-      const quadrantOrder = ['NE', 'NW', 'SE', 'SW', 'unknown'];
-
-      quadrantOrder.forEach(quadrant => {
+      QUADRANT_ORDER.forEach(quadrant => {
+        if (hiddenQuadrants.has(quadrant)) return;
         const quadrantArrivals = quadrantData[quadrant];
         if (quadrantArrivals && quadrantArrivals.length > 0) {
           const scatterData = quadrantArrivals.map(arrival => {
@@ -168,7 +170,7 @@ export function ArrivalTimeline({
         if (hoursFromNow < -12) hoursFromNow += 24;
         if (hoursFromNow > 24) hoursFromNow -= 24;
         
-        if (hoursFromNow >= -2 && hoursFromNow <= chartMax) {
+        if (hoursFromNow >= -1 && hoursFromNow <= chartMax) {
           baselinePoints.push({
             x: hoursFromNow,
             y: slotData.medianTimeFrom50nm / 60,
@@ -177,7 +179,7 @@ export function ArrivalTimeline({
         
         if (!isAtNow && chartMax > 12) {
           const hoursFromNowNextDay = hoursFromNow + 24;
-          if (hoursFromNowNextDay >= -2 && hoursFromNowNextDay <= chartMax) {
+          if (hoursFromNowNextDay >= -1 && hoursFromNowNextDay <= chartMax) {
             baselinePoints.push({
               x: hoursFromNowNextDay,
               y: slotData.medianTimeFrom50nm / 60,
@@ -208,11 +210,11 @@ export function ArrivalTimeline({
     return { 
       datasets, 
       timeRange: { 
-        min: -2, 
+        min: -1, 
         max: chartMax 
       } 
     };
-  }, [arrivals, baseline, isAtNow, hoursAhead, airportCode]);
+  }, [arrivals, baseline, isAtNow, hoursAhead, airportCode, hiddenQuadrants]);
 
   const options = useMemo((): ChartOptions<'scatter'> => {
     const annotations: Record<string, unknown> = {};
@@ -386,7 +388,7 @@ export function ArrivalTimeline({
       scales: {
         x: {
           type: 'linear',
-          min: chartData?.timeRange.min ?? -2,
+          min: chartData?.timeRange.min ?? -1,
           max: chartData?.timeRange.max ?? 1,
           title: {
             display: true,
@@ -528,25 +530,31 @@ export function ArrivalTimeline({
         />
       </div>
 
-      {/* Compact legend row */}
+      {/* Compact legend row - Arriving from quadrants are clickable */}
       <div className="flex items-center justify-between mb-1.5 text-[10px]">
         <div className="flex items-center gap-3 text-gray-400">
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.NE }}></span>
-            <span>NE</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.NW }}></span>
-            <span>NW</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.SE }}></span>
-            <span>SE</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: quadrantColors.SW }}></span>
-            <span>SW</span>
-          </div>
+          <span className="text-gray-500">Arriving from:</span>
+          {QUADRANT_ORDER.map((q) => {
+            const isHidden = hiddenQuadrants.has(q);
+            return (
+              <button
+                key={q}
+                type="button"
+                onClick={() => setHiddenQuadrants(prev => {
+                  const next = new Set(prev);
+                  if (next.has(q)) next.delete(q);
+                  else next.add(q);
+                  return next;
+                })}
+                className={`flex items-center gap-1 rounded px-1 -mx-1 transition-opacity hover:opacity-100 ${isHidden ? 'opacity-40' : 'opacity-100'}`}
+                title={`Click to ${isHidden ? 'show' : 'hide'} arrivals from ${quadrantLabels[q] || q}`}
+              >
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: quadrantColors[q] || quadrantColors.unknown }}></span>
+                <span>{q}</span>
+              </button>
+            );
+          })}
+          <span className="text-gray-500 mx-1">|</span>
           <div className="flex items-center gap-1">
             <span className="inline-block w-3 border-t-2 border-dashed border-white/50"></span>
             <span>{currentSeason === 'summer' ? 'Summer' : 'Winter'} median</span>
