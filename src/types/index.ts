@@ -627,12 +627,22 @@ export interface HistoricalDayData {
   timestamp: string;
 }
 
+export interface ExceedancePcts {
+  pctAbove15?: number;
+  pctAbove20?: number;
+  pctAbove25?: number;
+  pctAbove30?: number;
+  pctAbove45?: number;
+  pctAbove60?: number;
+}
+
 export interface MatchedDaysResponse {
   airportId: string;
   airport: string;
   eta: string;
   timeSlot: string;
   category: FlightCategory;
+  season?: 'summer' | 'winter';
   matchCount: number;
   totalArrivals: number;
   baselineMinutes: number;
@@ -644,9 +654,17 @@ export interface MatchedDaysResponse {
     p75: number | null;
     p90: number | null;
     p95: number | null;
-    min: number | null;
-    max: number | null;
+    p99?: number | null;
+    min?: number | null;
+    max?: number | null;
+    pctAbove15?: number;
+    pctAbove20?: number;
+    pctAbove25?: number;
+    pctAbove30?: number;
+    pctAbove45?: number;
+    pctAbove60?: number;
   } | null;
+  exceedancePcts?: ExceedancePcts | null;
   matchedDays: MatchedDay[];
   arrivals: HistoricalArrival[];
   exampleDays?: ExampleDay[];

@@ -554,6 +554,9 @@ export function ArrivalTimeline({
             </span>
             <span className="text-gray-500">
               {matchedDaysData.matchCount} similar days
+              {matchedDaysData.season && (
+                <span className="text-gray-600"> ({matchedDaysData.season})</span>
+              )}
             </span>
           </div>
         )}
@@ -568,12 +571,36 @@ export function ArrivalTimeline({
       </div>
       
       {!isAtNow && matchedDaysData?.aggregatedStats && (
-        <div className="mt-1.5 flex items-center justify-center gap-4 text-[13px]">
-          <span className="text-gray-300">Best <span className="font-bold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-300">Typical <span className="font-bold text-white">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
-          <span className="text-gray-300">Extended <span className="font-bold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(10% flights)</span></span>
-          <span className="text-gray-300">Extreme <span className="font-bold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(5% flights)</span></span>
-          <span className="text-gray-300">Baseline <span className="font-bold text-gray-300">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
+        <div className="mt-1.5 space-y-1">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-[13px]">
+            <span className="text-gray-300">Best <span className="font-bold text-green-400">{matchedDaysData.aggregatedStats.p10?.toFixed(0) ?? '-'}m</span></span>
+            <span className="text-gray-300">Typical <span className="font-bold text-white">{matchedDaysData.aggregatedStats.p50?.toFixed(0) ?? '-'}m</span></span>
+            <span className="text-gray-300">Extended <span className="font-bold text-orange-400">{matchedDaysData.aggregatedStats.p90?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(10% flights)</span></span>
+            <span className="text-gray-300">Extreme <span className="font-bold text-red-400">{matchedDaysData.aggregatedStats.p95?.toFixed(0) ?? '-'}m</span> <span className="text-gray-300">(5% flights)</span></span>
+            <span className="text-gray-300">Baseline <span className="font-bold text-gray-300">{matchedDaysData.baselineMinutes?.toFixed(0) ?? '-'}m</span></span>
+          </div>
+          {matchedDaysData.exceedancePcts && (
+            <div className="flex flex-wrap items-center justify-center gap-3 text-[11px] text-gray-400">
+              {matchedDaysData.exceedancePcts.pctAbove15 != null && (
+                <span>&gt;15m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove15}%</span></span>
+              )}
+              {matchedDaysData.exceedancePcts.pctAbove20 != null && (
+                <span>&gt;20m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove20}%</span></span>
+              )}
+              {matchedDaysData.exceedancePcts.pctAbove25 != null && (
+                <span>&gt;25m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove25}%</span></span>
+              )}
+              {matchedDaysData.exceedancePcts.pctAbove30 != null && (
+                <span>&gt;30m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove30}%</span></span>
+              )}
+              {matchedDaysData.exceedancePcts.pctAbove45 != null && (
+                <span>&gt;45m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove45}%</span></span>
+              )}
+              {matchedDaysData.exceedancePcts.pctAbove60 != null && (
+                <span>&gt;60m: <span className="text-gray-300 font-medium">{matchedDaysData.exceedancePcts.pctAbove60}%</span></span>
+              )}
+            </div>
+          )}
         </div>
       )}
       
