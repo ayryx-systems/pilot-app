@@ -493,25 +493,39 @@ export function ArrivalTimeline({
           title="Arrival Durations"
           size="sm"
           content={
-            <div className="space-y-2">
+            <div className="space-y-3">
               <p>
                 Shows how long arrivals take from <strong>50 nautical miles out</strong> to landing, based on historical data.
               </p>
-              <p>
-                <strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown
-              </p>
-              <p>
-                <strong>Horizontal Axis:</strong> Time of landing (local time)
-              </p>
-              <p>
-                <strong>Colored Dots:</strong> Each aircraft color-coded by type (light, regional, narrowbody, widebody, etc.) - both current and historical arrivals
-              </p>
-              <p>
-                <strong className="text-white/70">White Dashed Line:</strong> Historical seasonal median - typical duration for this time
-              </p>
-              <p>
-                <strong className="text-gray-400">Gray Shaded Areas:</strong> Risk zones (P10-P90 range) showing best-case to extended arrival times from similar weather days
-              </p>
+
+              <div>
+                <p className="font-semibold text-slate-200 mb-1">Chart</p>
+                <p><strong>Vertical Axis:</strong> Duration in minutes from 50nm to touchdown</p>
+                <p><strong>Horizontal Axis:</strong> Time of landing (local time)</p>
+                <p><strong>Colored Dots:</strong> Aircraft by type (light, regional, narrowbody, widebody)</p>
+                <p><strong className="text-white/70">White Dashed Line:</strong> Seasonal median baseline</p>
+                <p><strong className="text-gray-400">Gray Shaded Areas:</strong> P10–P90 range from similar historical days</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-200 mb-1">Statistics (Historical Percentiles)</p>
+                <p><strong>Best:</strong> P10 — 10% of arrivals were faster than this</p>
+                <p><strong>Typical:</strong> P50 — median; half faster, half slower</p>
+                <p><strong>Extended:</strong> P90 — 10% of arrivals took longer</p>
+                <p><strong>Extreme:</strong> P95 — 5% of arrivals took longer</p>
+                <p><strong>Baseline:</strong> Seasonal average median from traffic patterns</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-200 mb-1">Exceedance Percentages</p>
+                <p>e.g. &quot;&gt;15m: 45%&quot; means <strong>45% of historical arrivals</strong> at this time and weather took <strong>more than 15 minutes</strong> from 50nm. Use these for fuel and time planning.</p>
+              </div>
+
+              <div>
+                <p className="font-semibold text-slate-200 mb-1">How It&apos;s Calculated</p>
+                <p>Data comes from past days with the same local time slot and weather (VFR/MVFR/IFR/LIFR), split by summer vs winter (DST). Small/light aircraft are excluded. The more similar days, the more reliable the stats.</p>
+              </div>
+
               <p className="text-blue-300">
                 💡 Click on dots to see the aircraft&apos;s ground track on the map.
               </p>
