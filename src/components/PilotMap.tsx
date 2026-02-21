@@ -10,7 +10,7 @@ import { pilotOSMService } from '@/services/osmService';
 import { Loader2, Maximize2, Minimize2 } from 'lucide-react';
 import { FAAWaypointLayer } from './FAAWaypointLayer';
 import { Z_INDEX_LAYERS } from '@/types/zIndexLayers';
-import { getAircraftCategoryFromType, getAircraftColor, rgbaToHex, brightenColor } from '@/utils/aircraftColors';
+import { getAircraftCategoryFromType, getAircraftColor, rgbaToHex } from '@/utils/aircraftColors';
 import { useWeatherRadarAnimation } from './useWeatherRadarAnimation';
 
 // Helper function to calculate bearing between two points
@@ -119,6 +119,7 @@ interface PilotMapProps {
   arrivals?: Arrival[];
   displayOptions: MapDisplayOptions;
   onFullscreenChange?: (isFullscreen: boolean) => void;
+  onTrackSelect?: (track: GroundTrack) => void;
   isDemo?: boolean;
   loading?: boolean;
   selectedAirport?: string | null;
@@ -134,6 +135,7 @@ export function PilotMap({
   arrivals,
   displayOptions,
   onFullscreenChange,
+  onTrackSelect,
   isDemo: _isDemo,
   loading,
   selectedAirport,
@@ -186,8 +188,6 @@ export function PilotMap({
     mapReady
   });
   
-  // Track highlight overlay references for cleanup
-  const highlightOverlaysRef = useRef<Map<string, L.Polyline>>(new Map());
 
   // Fullscreen state
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -884,14 +884,6 @@ export function PilotMap({
         return;
       }
       
-      // Clean up all highlight overlays
-      highlightOverlaysRef.current.forEach((highlight) => {
-        if (layerGroupsRef.current.tracks) {
-          layerGroupsRef.current.tracks.removeLayer(highlight);
-        }
-      });
-      highlightOverlaysRef.current.clear();
-      
       layerGroupsRef.current.tracks.clearLayers();
 
       if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
@@ -975,7 +967,7 @@ export function PilotMap({
           // Selected tracks are thicker
           const visibleLine = L.polyline(latLngs, {
             color: color,
-            weight: isSelected ? 3.5 : 2, // Thicker for selected track, slightly thicker for all tracks
+            weight: isSelected ? 5 : 2, // Thicker for selected track (single polyline for both display and highlight)
             opacity: opacity, // Keep the existing fade-out logic intact
             dashArray: undefined, // Continuous line for all tracks
             interactive: false, // Not clickable, just visual
@@ -1079,90 +1071,22 @@ export function PilotMap({
             autoPan: false
           });
 
-          // Create temporary highlight overlay for track visibility
-          const createHighlightOverlay = () => {
-            // Clean up any existing highlight for this track
-            const existingHighlight = highlightOverlaysRef.current.get(track.id);
-            if (existingHighlight && layerGroupsRef.current.tracks) {
-              layerGroupsRef.current.tracks.removeLayer(existingHighlight);
-              highlightOverlaysRef.current.delete(track.id);
-            }
-
-            // Use brighter version of the track color for highlight
-            const highlightColor = brightenColor(color, 40); // Brighten by 40%
-
-            const highlightLine = L.polyline(latLngs, {
-              color: highlightColor,
-              weight: 4, // Thicker than the base track weight of 2
-              opacity: 1.0, // Full opacity
-              dashArray: undefined, // Continuous line (no dashes)
-              interactive: false,
-              pane: 'markerPane', // Use markerPane to stay consistent
-              zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS + 200 // Above regular tracks
-            });
-
-            // Store reference for cleanup
-            highlightOverlaysRef.current.set(track.id, highlightLine);
-
-            // Add highlight overlay to tracks layer
-            if (layerGroupsRef.current.tracks) {
-              layerGroupsRef.current.tracks.addLayer(highlightLine);
-            }
-
-            // Fade out the highlight overlay over 12 seconds
-            let fadeOpacity = 1.0;
-            const fadeInterval = setInterval(() => {
-              fadeOpacity -= 0.00833; // Fade by ~0.83% every 50ms (12 seconds total)
-              if (fadeOpacity <= 0) {
-                clearInterval(fadeInterval);
-                if (layerGroupsRef.current.tracks) {
-                  layerGroupsRef.current.tracks.removeLayer(highlightLine);
-                }
-                highlightOverlaysRef.current.delete(track.id);
-              } else {
-                highlightLine.setStyle({ opacity: fadeOpacity });
-              }
-            }, 50); // Update every 50ms for smooth fade
-          };
-
-          // Trigger highlight when track is selected (via selectedTrackId)
-          if (isSelected) {
-            // Small delay to ensure the track is rendered first
-            setTimeout(() => {
-              createHighlightOverlay();
-            }, 50);
-          }
-
-          // Auto-dismiss popup and create highlight overlay after 3 seconds
           clickableLine.on('popupopen', () => {
+            onTrackSelect?.(track);
             const popup = clickableLine.getPopup();
             if (popup && landingTime) {
-              // Update popup content to refresh relative time
               popup.setContent(createTrackPopupContent());
-              
-              // Set up interval to update relative time every 30 seconds while popup is open
               const updateInterval = setInterval(() => {
                 if (popup && popup.isOpen() && landingTime) {
                   popup.setContent(createTrackPopupContent());
                 } else {
                   clearInterval(updateInterval);
                 }
-              }, 30000); // Update every 30 seconds
-              
-              // Clean up interval when popup closes
+              }, 30000);
               clickableLine.once('popupclose', () => {
                 clearInterval(updateInterval);
               });
             }
-            
-            // Create the highlight overlay immediately when popup opens
-            createHighlightOverlay();
-            
-            setTimeout(() => {
-              if (clickableLine.isPopupOpen()) {
-                clickableLine.closePopup();
-              }
-            }, 3000);
           });
 
           if (layerGroupsRef.current.tracks) {
@@ -1181,7 +1105,7 @@ export function PilotMap({
     };
 
     updateTracks();
-  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, selectedTrackId]);
+  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, selectedTrackId, onTrackSelect]);
 
   // Update weather radar display with animation
   useEffect(() => {

@@ -682,6 +682,7 @@ export function PilotDashboard() {
             arrivals={arrivals}
             displayOptions={mapDisplayOptions}
             onFullscreenChange={setMapFullscreen}
+            onTrackSelect={(track) => setSelectedTrackId(track.id)}
             isDemo={selectedAirport === 'KDEN'}
             loading={loading}
             selectedAirport={selectedAirport}
