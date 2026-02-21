@@ -132,7 +132,7 @@ export function PilotDashboard() {
   const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [mobileActiveTab, setMobileActiveTab] = useState<'map' | 'planning'>('map');
   const [isDesktop, setIsDesktop] = useState(false);
-  
+
   useEffect(() => {
     const checkDesktop = () => setIsDesktop(window.innerWidth >= 768);
     checkDesktop();
@@ -682,7 +682,7 @@ export function PilotDashboard() {
             arrivals={arrivals}
             displayOptions={mapDisplayOptions}
             onFullscreenChange={setMapFullscreen}
-            onTrackSelect={(track) => setSelectedTrackId(track.id)}
+            onTrackSelect={(track) => setSelectedTrackId(track?.id ?? null)}
             isDemo={selectedAirport === 'KDEN'}
             loading={loading}
             selectedAirport={selectedAirport}

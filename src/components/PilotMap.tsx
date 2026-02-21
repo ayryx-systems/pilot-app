@@ -119,7 +119,7 @@ interface PilotMapProps {
   arrivals?: Arrival[];
   displayOptions: MapDisplayOptions;
   onFullscreenChange?: (isFullscreen: boolean) => void;
-  onTrackSelect?: (track: GroundTrack) => void;
+  onTrackSelect?: (track: GroundTrack | null) => void;
   isDemo?: boolean;
   loading?: boolean;
   selectedAirport?: string | null;
@@ -165,9 +165,12 @@ export function PilotMap({
 
 
 
-  // Layer group references for easy cleanup
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
-  
+  const onTrackSelectRef = useRef(onTrackSelect);
+  const trackPolylinesRef = useRef<Map<string, { polyline: L.Polyline; baseColor: string; opacity: number }>>(new Map());
+
+  useEffect(() => { onTrackSelectRef.current = onTrackSelect; }, [onTrackSelect]);
+
   // Track current airport code to prevent unnecessary map recreation
   const currentAirportCodeRef = useRef<string | null>(null);
   
@@ -468,14 +471,12 @@ export function PilotMap({
         popupPane.style.zIndex = '3500';
       }
 
-      // Initialize layer groups
       const weatherGroup = L.layerGroup().addTo(map);
       const tracksGroup = L.layerGroup().addTo(map);
       const pirepsGroup = L.layerGroup().addTo(map);
       const waypointsGroup = L.layerGroup().addTo(map);
 
       layerGroupsRef.current = {
-        // runways: DISABLED - now using OSM data
         dmeRings: L.layerGroup().addTo(map),
         waypoints: waypointsGroup,
         extendedCenterlines: L.layerGroup().addTo(map),
@@ -485,9 +486,6 @@ export function PilotMap({
         weather: weatherGroup,
       };
 
-      // Set layer group z-indexes to ensure proper layering
-      // Using pane zIndex style for layer groups
-      // Values match Z_INDEX_LAYERS constants (which get added to markerPane base of 600)
       const tracksPane = tracksGroup.getPane?.();
       const waypointsPane = waypointsGroup.getPane?.();
       const weatherPane = weatherGroup.getPane?.();
@@ -870,238 +868,133 @@ export function PilotMap({
     updatePireps();
   }, [mapInstance, pireps, displayOptions.showPireps]);
 
-  // Update ground tracks
   useEffect(() => {
     if (!mapInstance || !layerGroupsRef.current.tracks) return;
 
-    const updateTracks = async () => {
-      const leafletModule = await import('leaflet');
-      const L = leafletModule.default;
+    const run = async () => {
+      const L = (await import('leaflet')).default;
+      const group = layerGroupsRef.current.tracks;
+      if (!group) return;
 
-      // Clear existing tracks - add defensive check
-      if (!layerGroupsRef.current.tracks) {
-        console.warn('[PilotMap] Tracks layer group not available');
-        return;
-      }
-      
-      layerGroupsRef.current.tracks.clearLayers();
+      group.clearLayers();
+      trackPolylinesRef.current.clear();
 
-      if (displayOptions.showGroundTracks && tracks && Array.isArray(tracks)) {
-        tracks.forEach(track => {
+      if (!displayOptions.showGroundTracks || !tracks?.length) return;
 
-          // Defensive checks for track data integrity
-          if (!track || !track.coordinates || !Array.isArray(track.coordinates)) {
-            console.warn('[PilotMap] Invalid track data:', track);
-            return;
-          }
+      const formatZulu = (s: string) => {
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return 'Unknown time';
+        return `${d.getUTCFullYear()}-${(d.getUTCMonth()+1).toString().padStart(2,'0')}-${d.getUTCDate().toString().padStart(2,'0')} ${d.getUTCHours().toString().padStart(2,'0')}${d.getUTCMinutes().toString().padStart(2,'0')}Z`;
+      };
+      const formatRelative = (s: string) => {
+        const d = new Date(s);
+        if (isNaN(d.getTime())) return 'Unknown';
+        const m = Math.floor((Date.now() - d.getTime()) / 60000);
+        if (m < 0) return 'Future';
+        if (m < 60) return `${m} min ago`;
+        const h = Math.floor(m / 60);
+        const mm = m % 60;
+        return mm === 0 ? `${h} ${h === 1 ? 'hour' : 'hours'} ago` : `${h} ${h === 1 ? 'hour' : 'hours'} ${mm} min ago`;
+      };
+      const formatDuration = (min: number) => {
+        const h = Math.floor(min / 60);
+        const m = Math.round(min % 60);
+        return h > 0 ? `${h}h ${m}m` : `${m}m`;
+      };
 
-          if (track.coordinates.length < 2) return; // Need at least 2 points for a line
+      const MAX_AGE = 60;
+      tracks.forEach(track => {
+        if (!track?.coordinates?.length || track.coordinates.length < 2) return;
+        const ts = track.createdAt || track.startTime;
+        const age = ts ? (Date.now() - new Date(ts).getTime()) / 60000 : 0;
+        if (age > MAX_AGE) return;
 
-          // Calculate track age based on track-level timestamp (createdAt or startTime)
-          const now = new Date();
-          const trackTimestamp = track.createdAt || track.startTime;
-          const trackAge = trackTimestamp
-            ? (now.getTime() - new Date(trackTimestamp).getTime()) / (1000 * 60) // Age in minutes
-            : 0;
+        const latLngs: [number, number][] = track.coordinates
+          .filter((c): c is { lat: number; lon: number } => !!c && typeof c.lat === 'number' && typeof c.lon === 'number')
+          .map(c => [c.lat, c.lon]);
+        if (latLngs.length < 2) return;
 
-          // Hide tracks over 1 hour old
-          const TRACK_MAX_AGE_MINUTES = 60;
-          if (trackAge > TRACK_MAX_AGE_MINUTES) {
-            return;
-          }
+        const landingTime = track.createdAt || track.startTime;
+        const match = arrivals?.find(a => a.callsign === track.callsign && landingTime &&
+          Math.abs(new Date(a.timestampLanding).getTime() - new Date(landingTime).getTime()) < 60000);
+        const quadrant = match?.quadrantAt50nm;
+        const qk = (quadrant === 'NE' || quadrant === 'NW' || quadrant === 'SE' || quadrant === 'SW') ? quadrant : 'unknown';
+        const baseColor = track.status === 'EMERGENCY' ? '#ef4444' : rgbaToHex(quadrantColors[qk] || quadrantColors.unknown);
+        const opacity = 1 - 0.95 * Math.min(age / MAX_AGE, 1);
 
-          // Convert coordinates to Leaflet LatLng format with additional safety checks
-          const latLngs: [number, number][] = track.coordinates
-            .filter(coord => coord && typeof coord.lat === 'number' && typeof coord.lon === 'number')
-            .map(coord => [coord.lat, coord.lon]);
-
-          // Skip if we don't have enough valid coordinates after filtering
-          if (latLngs.length < 2) {
-            console.warn('[PilotMap] Track has insufficient valid coordinates:', track.id || track.callsign);
-            return;
-          }
-
-          // Check if this track is selected
-          const isSelected = selectedTrackId === track.id;
-
-          // Get landing time for matching (used for both color and popup)
-          const landingTime = track.createdAt || track.startTime;
-          const matchingArrival = arrivals?.find(arrival => {
-            if (arrival.callsign !== track.callsign) return false;
-            const arrivalLandingTime = new Date(arrival.timestampLanding);
-            const trackLandingTime = landingTime ? new Date(landingTime) : null;
-            if (!trackLandingTime) return false;
-            return Math.abs(arrivalLandingTime.getTime() - trackLandingTime.getTime()) < 60000;
-          });
-
-          // Determine track color: quadrant at 50nm (matches scatter plot), or fallback
-          let color: string;
-          if (isSelected) {
-            color = '#fbbf24'; // Bright yellow/amber for selected track
-          } else if (track.status === 'EMERGENCY') {
-            color = '#ef4444'; // Red for emergency
-          } else {
-            const quadrant = matchingArrival?.quadrantAt50nm;
-            const quadrantKey = (quadrant === 'NE' || quadrant === 'NW' || quadrant === 'SE' || quadrant === 'SW') ? quadrant : 'unknown';
-            color = rgbaToHex(quadrantColors[quadrantKey] || quadrantColors.unknown);
-          }
-
-          // Calculate opacity based on track age (fade from 100% to 5% over 1 hour)
-          // Selected tracks always have full opacity
-          let opacity: number;
-          if (isSelected) {
-            opacity = 1.0; // Selected tracks always at full opacity
-          } else {
-            // Linear gradient: 100% opacity at 0 minutes, 5% opacity at 60 minutes
-            const maxAge = TRACK_MAX_AGE_MINUTES;
-            const minOpacity = 0.05; // 5% minimum opacity
-            const maxOpacity = 1.0; // 100% maximum opacity
-            const ageRatio = Math.min(trackAge / maxAge, 1.0); // Clamp to 0-1
-            opacity = maxOpacity - (maxOpacity - minOpacity) * ageRatio;
-          }
-
-          // Create invisible thick line for easier clicking
-          const clickableLine = L.polyline(latLngs, {
-            color: 'transparent',
-            weight: 8, // Thick invisible line for easy clicking
-            opacity: 0,
-            interactive: true,
-            pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
-            zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS
-          });
-
-          // Create visible continuous line for display
-          // Selected tracks are thicker
-          const visibleLine = L.polyline(latLngs, {
-            color: color,
-            weight: isSelected ? 5 : 2, // Thicker for selected track (single polyline for both display and highlight)
-            opacity: opacity, // Keep the existing fade-out logic intact
-            dashArray: undefined, // Continuous line for all tracks
-            interactive: false, // Not clickable, just visual
-            pane: 'markerPane', // Use markerPane so zIndexOffset works correctly
-            zIndexOffset: isSelected ? Z_INDEX_LAYERS.GROUND_TRACKS + 100 : Z_INDEX_LAYERS.GROUND_TRACKS // Selected tracks on top
-          });
-
-          // Helper functions to format landing time
-          const formatZulu = (dateString: string) => {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'Unknown time';
-            const hours = date.getUTCHours().toString().padStart(2, '0');
-            const minutes = date.getUTCMinutes().toString().padStart(2, '0');
-            const day = date.getUTCDate().toString().padStart(2, '0');
-            const month = (date.getUTCMonth() + 1).toString().padStart(2, '0');
-            const year = date.getUTCFullYear();
-            return `${year}-${month}-${day} ${hours}${minutes}Z`;
-          };
-
-          const formatRelativeTime = (dateString: string) => {
-            const date = new Date(dateString);
-            if (isNaN(date.getTime())) return 'Unknown';
-            
-            const now = new Date();
-            const diffMs = now.getTime() - date.getTime();
-            const diffMinutes = Math.floor(diffMs / 60000);
-            
-            if (diffMinutes < 0) return 'Future';
-            if (diffMinutes < 60) return `${diffMinutes} min ago`;
-            
-            const hours = Math.floor(diffMinutes / 60);
-            const minutes = diffMinutes % 60;
-            if (minutes === 0) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
-            return `${hours} ${hours === 1 ? 'hour' : 'hours'} ${minutes} min ago`;
-          };
-
-          
-          // Format duration from 50nm to landing
-          const formatDuration = (minutes: number): string => {
-            const hours = Math.floor(minutes / 60);
-            const mins = Math.round(minutes % 60);
-            if (hours > 0) {
-              return `${hours}h ${mins}m`;
-            }
-            return `${mins}m`;
-          };
-          
-          // Create a function to generate popup content with current relative time
-          const createTrackPopupContent = () => {
-            const zuluTimeStr = landingTime ? formatZulu(landingTime) : 'Unknown time';
-            const currentRelativeTime = landingTime ? formatRelativeTime(landingTime) : 'Unknown';
-            
-            const durationFrom50nm = matchingArrival?.durationMinutes ? formatDuration(matchingArrival.durationMinutes) : null;
-            
-            return `
-              <div style="
-                background: linear-gradient(135deg, rgba(0,0,0,0.9), rgba(20,20,20,0.95));
-                border: 1px solid ${color};
-                border-radius: 8px;
-                padding: 8px 12px;
-                box-shadow: 0 4px 12px rgba(0,0,0,0.6), 0 0 0 1px rgba(255,255,255,0.1);
-                backdrop-filter: blur(4px);
-                color: #ffffff;
-                font-size: 13px;
-                font-weight: 500;
-                text-align: center;
-                min-width: 150px;
-              ">
-                <div style="color: ${color}; font-weight: 600; margin-bottom: 4px;">AIRCRAFT</div>
-                <div style="color: #e5e7eb; font-size: 12px; margin-bottom: 4px;">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
-                ${durationFrom50nm ? `
-                  <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
-                    <div style="color: #e5e7eb; font-weight: 500;">Time from 50nm: ${durationFrom50nm}</div>
-                  </div>
-                ` : ''}
-                ${landingTime ? `
-                  <div style="color: #9ca3af; font-size: 11px; margin-top: 6px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 6px;">
-                    <div style="color: #e5e7eb; font-weight: 500;">Landed: ${zuluTimeStr}</div>
-                    <div style="color: #9ca3af; font-size: 10px;">${currentRelativeTime}</div>
-                  </div>
-                ` : ''}
-              </div>
-            `;
-          };
-          
-          clickableLine.bindPopup(createTrackPopupContent(), {
-            className: 'track-popup',
-            autoClose: true,
-            closeOnClick: true,
-            autoPan: false
-          });
-
-          clickableLine.on('popupopen', () => {
-            onTrackSelect?.(track);
-            const popup = clickableLine.getPopup();
-            if (popup && landingTime) {
-              popup.setContent(createTrackPopupContent());
-              const updateInterval = setInterval(() => {
-                if (popup && popup.isOpen() && landingTime) {
-                  popup.setContent(createTrackPopupContent());
-                } else {
-                  clearInterval(updateInterval);
-                }
-              }, 30000);
-              clickableLine.once('popupclose', () => {
-                clearInterval(updateInterval);
-              });
-            }
-          });
-
-          if (layerGroupsRef.current.tracks) {
-            layerGroupsRef.current.tracks.addLayer(clickableLine);
-            layerGroupsRef.current.tracks.addLayer(visibleLine);
-            // Ensure tracks appear above runways by bringing them to front
-            visibleLine.bringToFront();
-            clickableLine.bringToFront();
-          }
-
-          // Start markers removed - track line will be clickable instead
-
-          // End markers removed to prevent accumulation on runways
+        const isSel = selectedTrackId === track.id;
+        const line = L.polyline(latLngs, {
+          color: isSel ? '#fbbf24' : baseColor,
+          weight: isSel ? 4 : 2,
+          opacity,
+          interactive: true,
+          pane: 'markerPane',
+          zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS + (isSel ? 100 : 0)
         });
-      }
+
+        const popupContent = () => `
+          <div style="background:linear-gradient(135deg,rgba(0,0,0,0.9),rgba(20,20,20,0.95));border:1px solid ${baseColor};border-radius:8px;padding:8px 12px;box-shadow:0 4px 12px rgba(0,0,0,0.6);color:#fff;font-size:13px;text-align:center;min-width:150px">
+            <div style="color:${baseColor};font-weight:600;margin-bottom:4px">AIRCRAFT</div>
+            <div style="color:#e5e7eb;font-size:12px">${track.aircraft !== 'Unknown' ? track.aircraft : 'Unknown Type'}</div>
+            ${quadrant ? `<div style="color:#9ca3af;font-size:11px;margin-top:4px">Approach: ${quadrant}</div>` : ''}
+            ${match?.durationMinutes ? `<div style="color:#9ca3af;font-size:11px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px">Time from 50nm: ${formatDuration(match.durationMinutes)}</div>` : ''}
+            ${landingTime ? `<div style="color:#9ca3af;font-size:11px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px">Landed: ${formatZulu(landingTime)}<br><span style="font-size:10px">${formatRelative(landingTime)}</span></div>` : ''}
+          </div>`;
+
+        line.bindPopup(popupContent(), { className: 'track-popup', autoClose: true, closeOnClick: true, autoPan: false });
+        line.on('click', () => onTrackSelectRef.current?.(track));
+
+        group.addLayer(line);
+        trackPolylinesRef.current.set(track.id, { polyline: line, baseColor, opacity });
+      });
     };
 
-    updateTracks();
-  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, selectedTrackId, onTrackSelect]);
+    run();
+  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks]);
+
+  useEffect(() => {
+    const selected = selectedTrackId ?? null;
+    trackPolylinesRef.current.forEach(({ polyline, baseColor, opacity }, id) => {
+      const sel = id === selected;
+      polyline.setStyle({ color: sel ? '#fbbf24' : baseColor, weight: sel ? 4 : 2, opacity });
+      if (sel) polyline.bringToFront();
+    });
+  }, [selectedTrackId]);
+
+  useEffect(() => {
+    if (!selectedTrackId) return;
+    const entry = trackPolylinesRef.current.get(selectedTrackId);
+    if (!entry) return;
+    const { polyline, baseColor, opacity: baseOpacity } = entry;
+    const FADE_MS = 15000;
+    const start = performance.now();
+    const hexToRgb = (hex: string) => {
+      const n = parseInt(hex.slice(1), 16);
+      return { r: (n >> 16) & 0xff, g: (n >> 8) & 0xff, b: n & 0xff };
+    };
+    const rgbToHex = (r: number, g: number, b: number) =>
+      '#' + [r, g, b].map(x => Math.round(x).toString(16).padStart(2, '0')).join('');
+    const from = hexToRgb('#fbbf24');
+    const to = hexToRgb(baseColor);
+    let rafId: number;
+    const tick = () => {
+      const elapsed = performance.now() - start;
+      const t = Math.min(elapsed / FADE_MS, 1);
+      const inv = 1 - t;
+      const r = from.r * inv + to.r * t;
+      const g = from.g * inv + to.g * t;
+      const b = from.b * inv + to.b * t;
+      const currentOpacity = baseOpacity + (1 - baseOpacity) * inv;
+      polyline.setStyle({ color: rgbToHex(r, g, b), weight: 2 + 2 * inv, opacity: currentOpacity });
+      if (t < 1) {
+        rafId = requestAnimationFrame(tick);
+      } else {
+        onTrackSelectRef.current?.(null);
+      }
+    };
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [selectedTrackId]);
 
   // Update weather radar display with animation
   useEffect(() => {
