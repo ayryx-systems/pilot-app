@@ -1286,11 +1286,11 @@ export function PilotDashboard() {
         </div>
       </div>
 
-      {/* PIREP Panel Toggle Button (when panel is closed) - Bottom left position */}
+      {/* PIREP Panel Toggle Button (when panel is closed) - Bottom left, above track legend */}
       {!showPirepPanel && mobileActiveTab === 'map' && (
         <button
           onClick={() => setShowPirepPanel(true)}
-          className={`absolute left-2 bottom-16 md:bottom-4 px-3 py-2 rounded-lg 
+          className={`absolute left-2 bottom-20 md:bottom-16 px-3 py-2 rounded-lg 
                    transition-colors flex items-center space-x-2 backdrop-blur-sm border
                    ${pireps && pireps.length > 0
               ? 'bg-yellow-900/80 border-yellow-500/60 text-yellow-200'
@@ -1310,10 +1310,10 @@ export function PilotDashboard() {
         </button>
       )}
 
-      {/* Storm Demo Button - Bottom left position, to the right of PIREP button */}
+      {/* Storm Demo Button - Bottom left, to the right of PIREP button */}
       {selectedAirport === 'KDEN' && !showPirepPanel && mobileActiveTab === 'map' && (
         <button
-          className="absolute left-2 bottom-16 md:bottom-4 ml-32 px-3 py-2 rounded-lg 
+          className="absolute left-2 bottom-20 md:bottom-16 ml-32 px-3 py-2 rounded-lg 
                    bg-orange-600/90 transition-colors flex items-center space-x-2 
                    backdrop-blur-sm border border-orange-500/60 text-white"
           style={{ zIndex: 1000 }}

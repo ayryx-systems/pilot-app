@@ -3166,7 +3166,7 @@ export function PilotMap({
         </button>
       </div>
 
-      {/* Track legend - compact, above map layers (popupPane ~3500) */}
+      {/* Track legend - compact, above airport overlay */}
       {displayOptions.showGroundTracks && tracks && tracks.length > 0 && (
         <div className="absolute bottom-10 left-2 bg-black/60 text-white py-1 px-2 text-[10px] rounded flex items-center gap-1.5 pointer-events-none" style={{ zIndex: 4000 }}>
           <span className="text-gray-400 shrink-0">Dir@50nm</span>
