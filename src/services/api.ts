@@ -473,7 +473,8 @@ class PilotApiService {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
           }
-        }
+        },
+        45000
       );
       return await this.handleResponse<ArrivalSituationResponse>(response);
     } catch (error) {
@@ -535,7 +536,8 @@ class PilotApiService {
             'Cache-Control': 'no-cache, no-store, must-revalidate',
             'Pragma': 'no-cache'
           }
-        }
+        },
+        45000
       );
       return await this.handleResponse<MatchedDaysResponse>(response);
     } catch (error) {

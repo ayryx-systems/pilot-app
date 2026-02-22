@@ -161,6 +161,7 @@ export function PilotDashboard() {
   const situationAbortControllerRef = useRef<AbortController | null>(null);
   
   const [matchedDaysData, setMatchedDaysData] = useState<MatchedDaysResponse | null>(null);
+  const [matchedDaysError, setMatchedDaysError] = useState<string | null>(null);
   const [matchedDaysLoading, setMatchedDaysLoading] = useState(false);
   const [weatherCategory, setWeatherCategory] = useState<FlightCategory>('VFR');
   const [isManualWeather, setIsManualWeather] = useState(false);
@@ -267,11 +268,13 @@ export function PilotDashboard() {
     }
     
     setMatchedDaysLoading(true);
+    setMatchedDaysError(null);
     
     try {
       const data = await pilotApi.getMatchedDaysArrivals(airportId, eta, category, { maxDays: 10 }, signal);
       if (!signal?.aborted) {
         setMatchedDaysData(data);
+        setMatchedDaysError(null);
         lastMatchedDaysFetchRef.current = { airport: airportId, time: eta.getTime(), category };
       }
     } catch (err) {
@@ -280,6 +283,7 @@ export function PilotDashboard() {
       }
       console.error('Failed to fetch matched days:', err);
       setMatchedDaysData(null);
+      setMatchedDaysError(err instanceof Error ? err.message : 'Unable to load historical data');
     } finally {
       if (!signal?.aborted) {
         setMatchedDaysLoading(false);
@@ -306,6 +310,7 @@ export function PilotDashboard() {
     
     if (timeChanged || categoryChanged) {
       setMatchedDaysData(null);
+      setMatchedDaysError(null);
       prevSelectedTimeRef.current = selectedTime.getTime();
       prevWeatherCategoryRef.current = activeWeatherCategory;
     }
@@ -314,6 +319,7 @@ export function PilotDashboard() {
     if (isNow) {
       setArrivalSituation(null);
       setMatchedDaysData(null);
+      setMatchedDaysError(null);
       lastSituationFetchRef.current = null;
       lastMatchedDaysFetchRef.current = null;
       return;
@@ -1129,8 +1135,14 @@ export function PilotDashboard() {
                           
                           return `Median arrival time: ${Math.round(median)}min from 50nm (${recentArrivals.length} recent)`;
                         } else {
-                          if (!matchedDaysData?.aggregatedStats) {
+                          if (matchedDaysLoading) {
                             return 'Loading historical data...';
+                          }
+                          if (matchedDaysError) {
+                            return matchedDaysError;
+                          }
+                          if (matchedDaysData?.insufficientData || !matchedDaysData?.aggregatedStats) {
+                            return matchedDaysData?.message || 'No historical data for this time slot';
                           }
                           
                           const stats = matchedDaysData.aggregatedStats;
@@ -1181,6 +1193,11 @@ export function PilotDashboard() {
                           {matchedDaysLoading && (
                             <div className="mt-2 text-center text-sm text-gray-400">
                               Loading historical data...
+                            </div>
+                          )}
+                          {matchedDaysError && !matchedDaysLoading && (
+                            <div className="mt-2 text-center text-sm text-amber-400">
+                              {matchedDaysError}
                             </div>
                           )}
                         </CollapsibleCard>
