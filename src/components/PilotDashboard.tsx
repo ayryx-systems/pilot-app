@@ -944,33 +944,23 @@ export function PilotDashboard() {
                           0,
                           0
                         );
-                        const oneHourFromReference = new Date(referenceLocalTime.getTime() + 60 * 60 * 1000);
-                        
+                        const halfHourBefore = new Date(referenceLocalTime.getTime() - 30 * 60 * 1000);
+                        const halfHourAfter = new Date(referenceLocalTime.getTime() + 30 * 60 * 1000);
+
                         let nextHourCount = 0;
                         let hasForecastData = false;
-                        
-                        // Sum up FAA forecast data for next hour (filtered by date)
+
                         arrivalForecast.timeSlots.forEach((slot, idx) => {
-                          // Require slotDates to properly match slots
                           if (!arrivalForecast.slotDates || !arrivalForecast.slotDates[idx]) {
                             return;
                           }
-                          
-                          // Check if this slot matches the selected date
                           const slotDateStr = arrivalForecast.slotDates[idx];
-                          if (slotDateStr !== selectedDateStr) {
-                            return;
-                          }
-                          
                           const [hours, minutes] = slot.split(':').map(Number);
-                          
-                          // Construct slot date using the actual date from slotDates
                           const [year, month, day] = slotDateStr.split('-').map(Number);
                           const slotDate = new Date(year, month - 1, day, hours, minutes, 0, 0);
-                          
-                          // Check if slot is within the next hour window
-                          if (slotDate.getTime() >= referenceLocalTime.getTime() && 
-                              slotDate.getTime() < oneHourFromReference.getTime()) {
+
+                          if (slotDate.getTime() >= halfHourBefore.getTime() &&
+                              slotDate.getTime() < halfHourAfter.getTime()) {
                             const count = arrivalForecast.arrivalCounts[idx];
                             if (count !== null && count !== undefined) {
                               nextHourCount += count;
@@ -980,7 +970,8 @@ export function PilotDashboard() {
                         });
                         
                         // If no FAA forecast data for this time, fall back to baseline day-of-week average
-                        if (!hasForecastData && baseline) {
+                        let baselineSumForHour = 0;
+                        if (baseline) {
                           const dateStr = getAirportLocalDateString(referenceTime);
                           const dayOfWeek = getDayOfWeek(dateStr);
                           const season = getSeason(referenceTime);
@@ -988,29 +979,27 @@ export function PilotDashboard() {
                           const dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
                           
                           if (dayData) {
-                            // Sum up baseline averages for the next hour
-                            const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
-                            const localTime = new Date(referenceTime.getTime() + offset * 60 * 60 * 1000);
-                            const localHours = localTime.getUTCHours();
-                            const localMinutes = localTime.getUTCMinutes();
-                            
-                            // Look at all 15-minute slots in the next hour
+                            const windowStart = new Date(referenceLocalTime.getTime() - 30 * 60 * 1000);
+                            const flooredMin = Math.floor(windowStart.getMinutes() / 15) * 15;
+                            let slotHours = windowStart.getHours();
+                            let slotMinutes = flooredMin;
+                            if (slotHours >= 24) slotHours -= 24;
+                            if (slotHours < 0) slotHours += 24;
+
                             for (let i = 0; i < 4; i++) {
-                              const slotMinutes = Math.floor(localMinutes / 15) * 15 + (i * 15);
-                              let slotHours = localHours;
-                              let finalMinutes = slotMinutes;
-                              
-                              if (slotMinutes >= 60) {
-                                slotHours++;
-                                finalMinutes = slotMinutes - 60;
-                              }
-                              if (slotHours >= 24) slotHours -= 24;
-                              
-                              const timeSlot = `${String(slotHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`;
+                              const m = slotMinutes + i * 15;
+                              const h = slotHours + Math.floor(m / 60);
+                              const finM = m % 60;
+                              const finH = h >= 24 ? h - 24 : h < 0 ? h + 24 : h;
+                              const timeSlot = `${String(finH).padStart(2, '0')}:${String(finM).padStart(2, '0')}`;
                               const slotData = dayData[timeSlot];
-                              
+
                               if (slotData && (slotData.averageCount || slotData.averageArrivals)) {
-                                nextHourCount += (slotData.averageCount || slotData.averageArrivals);
+                                const avg = slotData.averageCount || slotData.averageArrivals;
+                                baselineSumForHour += avg;
+                                if (!hasForecastData) {
+                                  nextHourCount += avg;
+                                }
                               }
                             }
                           }
@@ -1024,7 +1013,7 @@ export function PilotDashboard() {
                         if (nextHourCount >= thresholds.heavy) trafficLevel = 'Heavy';
                         else if (nextHourCount < thresholds.light) trafficLevel = 'Light';
                         
-                        const timePhrase = isNowMode ? 'next hour' : 'following hour';
+                        const timePhrase = isNowMode ? 'in the hour around now' : 'in the hour around your arrival';
                         const dataSource = hasForecastData ? ' (flight plans)' : ' (baseline avg)';
                         
                         // Calculate expected arrivals for the specific 15-minute timeslot
@@ -1062,14 +1051,58 @@ export function PilotDashboard() {
                         const summaryLine2 = timeslotArrivals !== null 
                           ? `${Math.round(timeslotArrivals)} arrivals during the ${getTimeSlotRange(timeslot, referenceTime)} timeslot.`
                           : null;
-                        
-                        if (summaryLine2) {
-                          return (
-                            <>
-                              <div>{summaryLine1}</div>
-                              <div>{summaryLine2}</div>
-                            </>
-                          );
+
+                        const discrepancyMessages: string[] = [];
+
+                        if (hasForecastData && baseline && baselineSumForHour > 0) {
+                          const plannedSum = nextHourCount;
+                          const baselineRounded = Math.round(baselineSumForHour);
+                          const MIN_BASELINE_FOR_ZERO_ALERT = 15;
+                          const MIN_ABSOLUTE_DIFFERENCE = 10;
+
+                          if (plannedSum === 0 && baselineRounded >= MIN_BASELINE_FOR_ZERO_ALERT) {
+                            discrepancyMessages.push(`No planned arrivals despite typically ${baselineRounded} at this time—airport may not be accepting traffic.`);
+                          } else if (plannedSum >= 1.5 * baselineSumForHour && plannedSum - baselineSumForHour >= MIN_ABSOLUTE_DIFFERENCE) {
+                            discrepancyMessages.push('Exceptionally heavy traffic for this time.');
+                          } else if (plannedSum > 0 && plannedSum <= 0.5 * baselineSumForHour && baselineSumForHour - plannedSum >= MIN_ABSOLUTE_DIFFERENCE) {
+                            discrepancyMessages.push('Exceptionally light—possible cancellations.');
+                          }
+                        }
+
+                        if (isNowMode && arrivalForecast?.actualCounts && arrivalForecast?.isCompleted) {
+                          const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
+                          const nowMs = Date.now();
+                          const oneHourAgoMs = nowMs - 60 * 60 * 1000;
+                          let plannedInLastHour = 0;
+                          let actualInLastHour = 0;
+
+                          arrivalForecast.timeSlots.forEach((slot, idx) => {
+                            if (!arrivalForecast.slotDates?.[idx] || !arrivalForecast.isCompleted?.[idx]) return;
+                            const [y, m, d] = arrivalForecast.slotDates![idx].split('-').map(Number);
+                            const [hr, min] = slot.split(':').map(Number);
+                            const slotStartMs = Date.UTC(y, m - 1, d, hr, min) - offset * 60 * 60 * 1000;
+                            const slotEndMs = slotStartMs + 15 * 60 * 1000;
+                            if (slotEndMs <= nowMs && slotEndMs > oneHourAgoMs) {
+                              const planned = arrivalForecast.arrivalCounts[idx] ?? 0;
+                              const actual = arrivalForecast.actualCounts![idx] ?? 0;
+                              plannedInLastHour += planned;
+                              actualInLastHour += actual;
+                            }
+                          });
+
+                          if (plannedInLastHour >= 4 && actualInLastHour < 0.5 * plannedInLastHour) {
+                            discrepancyMessages.push('Actual arrivals below forecast this hour.');
+                          }
+                        }
+
+                        const lines = [
+                          <div key="l1">{summaryLine1}</div>,
+                          ...(summaryLine2 ? [<div key="l2">{summaryLine2}</div>] : []),
+                          ...discrepancyMessages.map((msg, i) => <div key={`d${i}`} className="text-amber-400">{msg}</div>),
+                        ];
+
+                        if (lines.length > 1) {
+                          return <>{lines}</>;
                         }
                         return summaryLine1;
                       })();
