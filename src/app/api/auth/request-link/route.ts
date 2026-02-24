@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { createMagicLinkToken, createApproveToken } from '@/lib/auth';
+import { createMagicLinkToken, createMagicCode, createApproveToken } from '@/lib/auth';
 import { isEmailWhitelisted, addPendingRequest, S3WhitelistError } from '@/lib/whitelistService';
 import { getAirlineConfig, S3ConfigError } from '@/lib/airlineConfig';
 import { getAirline, resolveBaseUrl } from '@/lib/getAirline';
@@ -40,9 +40,10 @@ export async function POST(request: NextRequest) {
     const bodyBaseUrl = typeof body.baseUrl === 'string' ? body.baseUrl.trim() : undefined;
     const baseUrl = resolveBaseUrl(request, bodyBaseUrl, airline);
     const isLocal = baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1');
-    if (isLocal) {
+    const allowLocalSignin = process.env.ALLOW_LOCAL_SIGNIN === 'true';
+    if (isLocal && !allowLocalSignin) {
       return NextResponse.json(
-        { error: 'Sign-in is disabled for local development. Use the deployed app (e.g. ein.ayryx.com) to sign in.' },
+        { error: 'Sign-in is disabled for local development. Use the deployed app (e.g. ein.ayryx.com) to sign in, or set ALLOW_LOCAL_SIGNIN=true in .env.local to test locally.' },
         { status: 400 }
       );
     }
@@ -57,6 +58,7 @@ export async function POST(request: NextRequest) {
 
     if (whitelisted || isAdmin) {
       const token = createMagicLinkToken(email);
+      const code = createMagicCode(email);
       const verifyUrl = `${baseUrl.replace(/\/$/, '')}/api/auth/verify?token=${token}&redirect=${encodeURIComponent(baseUrl)}`;
       const airlineMention = airline === 'ein' ? '<p><em>This link is for Aer Lingus.</em></p>' : '';
       const { error } = await resend.emails.send({
@@ -65,10 +67,11 @@ export async function POST(request: NextRequest) {
         subject: airline === 'ein' ? 'Sign in to AYRYX (Aer Lingus)' : 'Sign in to AYRYX',
         html: `
           ${airlineMention}
-          <p>Click the link below to sign in to AYRYX:</p>
-          <p><a href="${verifyUrl}">Sign in to AYRYX</a></p>
-          <p>This link is valid for 30 days. Need a new one? Just enter your email at the app and we'll send another.</p>
-          <p>If you didn't request this, you can ignore this email.</p>
+          <p>Enter this code in the app to sign in:</p>
+          <p style="font-size:24px;font-weight:bold;letter-spacing:0.2em;margin:16px 0;">${code}</p>
+          <p style="font-size:12px;color:#666;">Or open it directly in a browser tab: <a href="${verifyUrl}">Sign in to AYRYX</a></p>
+          <p style="font-size:12px;color:#666;">The code expires in 15 minutes. The link is valid for 30 days. Need a new one? Just enter your email at the app.</p>
+          <p style="font-size:12px;color:#666;">If you didn't request this, you can ignore this email.</p>
         `,
       });
 

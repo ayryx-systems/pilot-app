@@ -1,7 +1,19 @@
 import { createHmac } from 'crypto';
+import { randomInt } from 'crypto';
 
 const MAGIC_LINK_EXPIRY_MS = 30 * 24 * 60 * 60 * 1000;
+const MAGIC_CODE_EXPIRY_MS = 15 * 60 * 1000;
 const SESSION_COOKIE_MAX_AGE = 60 * 60 * 24 * 30;
+
+type CodeEntry = { email: string; exp: number };
+const magicCodeStore = new Map<string, CodeEntry>();
+
+function pruneExpiredCodes(): void {
+  const now = Date.now();
+  for (const [code, entry] of magicCodeStore.entries()) {
+    if (now > entry.exp) magicCodeStore.delete(code);
+  }
+}
 
 function getSecret(): string {
   const secret = process.env.SESSION_SECRET;
@@ -32,6 +44,29 @@ export function consumeMagicLinkToken(token: string): string | null {
   } catch {
     return null;
   }
+}
+
+export function createMagicCode(email: string): string {
+  pruneExpiredCodes();
+  const normalized = email.toLowerCase().trim();
+  for (let i = 0; i < 10; i++) {
+    const code = randomInt(100000, 999999).toString();
+    if (magicCodeStore.has(code)) continue;
+    magicCodeStore.set(code, { email: normalized, exp: Date.now() + MAGIC_CODE_EXPIRY_MS });
+    return code;
+  }
+  const code = randomInt(100000, 999999).toString();
+  magicCodeStore.set(code, { email: normalized, exp: Date.now() + MAGIC_CODE_EXPIRY_MS });
+  return code;
+}
+
+export function consumeMagicCode(code: string): string | null {
+  const trimmed = code.replace(/\D/g, '');
+  if (trimmed.length !== 6) return null;
+  const entry = magicCodeStore.get(trimmed);
+  if (!entry || Date.now() > entry.exp) return null;
+  magicCodeStore.delete(trimmed);
+  return entry.email;
 }
 
 export function createApproveToken(email: string): string {

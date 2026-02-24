@@ -29,6 +29,7 @@ SESSION_SECRET=<32+ chars>
 ADMIN_EMAILS=admin@example.com
 APPROVER_EMAILS=admin@example.com
 WHITELIST_S3_BUCKET=ayryx-pilot-config
+ALLOW_LOCAL_SIGNIN=true
 ```
 
 3. Start the development server:
@@ -60,6 +61,9 @@ Magic link with S3-backed whitelist:
 - `ADMIN_EMAILS` - Comma-separated emails that can access `/admin`
 - `APPROVER_EMAILS` - Emails notified when someone requests access
 - `WHITELIST_S3_BUCKET` - S3 bucket for whitelist JSON
+
+### Optional
+- `ALLOW_LOCAL_SIGNIN=true` - Enable sign-in when running on localhost (for testing magic links/codes locally)
 
 ### AWS (for S3) — required for multi-airline (logos, admins, whitelist)
 

@@ -14,6 +14,9 @@ function LoginForm() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successKind, setSuccessKind] = useState<'magic_link' | 'pending'>('magic_link');
   const [successMessage, setSuccessMessage] = useState('');
+  const [code, setCode] = useState('');
+  const [codeStatus, setCodeStatus] = useState<'idle' | 'loading' | 'error'>('idle');
+  const [codeError, setCodeError] = useState('');
 
   const errorParam = searchParams.get('error');
   const initialError = errorParam === 'expired'
@@ -60,6 +63,37 @@ function LoginForm() {
     }
   };
 
+  const handleCodeSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = code.replace(/\D/g, '');
+    if (trimmed.length !== 6) {
+      setCodeError('Enter a 6-digit code');
+      setCodeStatus('error');
+      return;
+    }
+    setCodeStatus('loading');
+    setCodeError('');
+    try {
+      const url = getRequestUrl('/api/auth/verify-code');
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { ...getAirlineHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: trimmed }),
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setCodeStatus('error');
+        setCodeError(data.error || 'Invalid or expired code');
+        return;
+      }
+      window.location.href = '/';
+    } catch {
+      setCodeStatus('error');
+      setCodeError('Network error. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-dvh bg-slate-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md rounded-xl bg-slate-800 border border-slate-700 shadow-xl p-8">
@@ -83,7 +117,7 @@ function LoginForm() {
           <div className="space-y-4">
             <div className="p-4 rounded-lg bg-emerald-900/30 border border-emerald-700/50 text-emerald-200 text-sm">
               {successKind === 'magic_link'
-                ? 'Check your email. Click the link to sign in. It\'s valid for 30 days. Don\'t see it? Check your spam folder.'
+                ? 'Check your email. Enter the 6-digit code below to sign in. Don\'t see it? Check your spam folder.'
                 : successMessage || 'Request submitted. An approver will review it.'}
             </div>
             <button
@@ -91,7 +125,7 @@ function LoginForm() {
               onClick={() => { setStatus('idle'); setErrorMsg(''); setSuccessKind('magic_link'); setSuccessMessage(''); }}
               className="w-full py-2.5 text-slate-300 hover:text-slate-100 text-sm"
             >
-              {successKind === 'magic_link' ? 'Send another link' : 'Submit another request'}
+              {successKind === 'magic_link' ? 'Send another code' : 'Submit another request'}
             </button>
           </div>
         ) : (
@@ -124,10 +158,40 @@ function LoginForm() {
               disabled={status === 'loading'}
               className="w-full py-3 px-4 rounded-lg bg-slate-600 hover:bg-slate-500 text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              {status === 'loading' ? 'Sending...' : 'Send sign-in link'}
+              {status === 'loading' ? 'Sending...' : 'Send sign-in code'}
             </button>
           </form>
         )}
+
+        <div className="mt-8 pt-6 border-t border-slate-700">
+          <p className="text-slate-400 text-sm mb-2">Have a code? Enter it here</p>
+          <form onSubmit={handleCodeSubmit} className="flex gap-2">
+            <input
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              maxLength={6}
+              value={code}
+              onChange={(e) => {
+                setCode(e.target.value.replace(/\D/g, '').slice(0, 6));
+                setCodeError('');
+              }}
+              placeholder="000000"
+              disabled={codeStatus === 'loading'}
+              className="flex-1 px-4 py-3 rounded-lg bg-slate-700/50 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent disabled:opacity-50 text-center text-lg tracking-widest font-mono"
+            />
+            <button
+              type="submit"
+              disabled={codeStatus === 'loading' || code.length !== 6}
+              className="py-3 px-5 rounded-lg bg-slate-600 hover:bg-slate-500 text-slate-100 font-medium focus:outline-none focus:ring-2 focus:ring-slate-500 focus:ring-offset-2 focus:ring-offset-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {codeStatus === 'loading' ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+          {codeError && (
+            <p className="mt-2 text-red-400 text-sm">{codeError}</p>
+          )}
+        </div>
 
         <p className="mt-8 text-center text-slate-500 text-xs">
           Having trouble? Contact your flight operations or <a href="mailto:support@ayryx.com" className="text-slate-400 hover:text-slate-300 underline">AYRYX support at support@ayryx.com</a>.
