@@ -1,12 +1,15 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { getRequestUrl, getAirlineHeaders, getAirlineFromLocation } from '@/lib/clientAirline';
 import { useAirline } from '@/contexts/AirlineContext';
 
+const DEFAULT_EIN_DOMAINS = ['aerlingus.com', 'ayryx.com'];
+
 function LoginForm() {
-  const isEin = typeof window !== 'undefined' && getAirlineFromLocation() === 'ein';
+  const [mounted, setMounted] = useState(false);
+  const isEin = mounted && getAirlineFromLocation() === 'ein';
   const { logo: airlineLogo } = useAirline();
   const searchParams = useSearchParams();
   const [email, setEmail] = useState('');
@@ -17,6 +20,23 @@ function LoginForm() {
   const [code, setCode] = useState('');
   const [codeStatus, setCodeStatus] = useState<'idle' | 'loading' | 'error'>('idle');
   const [codeError, setCodeError] = useState('');
+  const [einDomains, setEinDomains] = useState<string[]>(DEFAULT_EIN_DOMAINS);
+  const [einDomain, setEinDomain] = useState(DEFAULT_EIN_DOMAINS[0]);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    if (!isEin) return;
+    const url = getRequestUrl('/api/auth/domains');
+    fetch(url, { headers: getAirlineHeaders() })
+      .then((res) => res.json())
+      .then((data: { domains?: string[] }) => {
+        const list = data.domains?.length ? data.domains : DEFAULT_EIN_DOMAINS;
+        setEinDomains(list);
+        setEinDomain((prev) => (list.includes(prev) ? prev : list[0]));
+      })
+      .catch(() => {});
+  }, [isEin]);
 
   const errorParam = searchParams.get('error');
   const initialError = errorParam === 'expired'
@@ -27,10 +47,19 @@ function LoginForm() {
         ? 'Service temporarily unavailable. Please try again later.'
         : '';
 
+  const normalizeEmail = (val: string): string => {
+    const trimmed = val.trim();
+    if (!trimmed) return '';
+    if (isEin && !trimmed.includes('@')) {
+      return `${trimmed}@${einDomain}`;
+    }
+    return trimmed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmed = email.trim();
-    if (!trimmed) return;
+    const fullEmail = normalizeEmail(email);
+    if (!fullEmail) return;
 
     setStatus('loading');
     setErrorMsg('');
@@ -41,7 +70,7 @@ function LoginForm() {
         method: 'POST',
         headers: { ...getAirlineHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          email: trimmed,
+          email: fullEmail,
           baseUrl: typeof window !== 'undefined' ? window.location.origin : undefined,
         }),
       });
@@ -134,17 +163,60 @@ function LoginForm() {
               <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-2">
                 Email
               </label>
-              <input
-                id="email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder={isEin ? 'you@aerlingus.com' : 'you@airline.com'}
-                required
-                autoComplete="email"
-                disabled={status === 'loading'}
-                className="w-full px-4 py-3 rounded-lg bg-slate-700/50 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent disabled:opacity-50"
-              />
+              {isEin ? (
+                <div className="flex rounded-lg bg-slate-700/50 border border-slate-600 overflow-hidden focus-within:ring-2 focus-within:ring-slate-500 focus-within:border-transparent">
+                  <input
+                    id="email"
+                    type="text"
+                    value={email}
+                    onChange={(e) => {
+                        const v = e.target.value;
+                        if (v.includes('@')) {
+                          const atIdx = v.indexOf('@');
+                          const local = v.slice(0, atIdx);
+                          const domain = v.slice(atIdx + 1).toLowerCase();
+                          if (einDomains.includes(domain)) {
+                            setEmail(local);
+                            setEinDomain(domain);
+                          } else {
+                            setEmail(v.replace(/@.*$/, ''));
+                          }
+                        } else {
+                          setEmail(v);
+                        }
+                      }}
+                    placeholder="firstname.lastname"
+                    required
+                    autoComplete="email"
+                    disabled={status === 'loading'}
+                    className="flex-1 min-w-0 px-4 py-3 bg-transparent text-slate-100 placeholder-slate-500 focus:outline-none disabled:opacity-50"
+                  />
+                  <select
+                    value={einDomain}
+                    onChange={(e) => setEinDomain(e.target.value)}
+                    disabled={status === 'loading'}
+                    className="px-4 py-3 pr-8 text-slate-300 bg-slate-700/80 border-l border-slate-600 text-sm cursor-pointer focus:outline-none focus:ring-2 focus:ring-inset focus:ring-slate-500 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                  >
+                    {einDomains.map((d) => (
+                      <option key={d} value={d}>
+                        @{d}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@airline.com"
+                  required
+                  autoComplete="email"
+                  disabled={status === 'loading'}
+                  className="w-full px-4 py-3 rounded-lg bg-slate-700/50 border border-slate-600 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-500 focus:border-transparent disabled:opacity-50"
+                />
+              )}
             </div>
 
             {errorMsg && (
