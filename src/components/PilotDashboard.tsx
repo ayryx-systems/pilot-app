@@ -562,8 +562,8 @@ export function PilotDashboard() {
 
   return (
     <div className="flex flex-col bg-slate-900 text-white overflow-hidden" style={{ height: '100dvh' }}>
-      {/* Compact Header Bar */}
-      <header className="flex items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0 gap-2" style={{ zIndex: 5000 }}>
+      {/* Compact Header Bar - extends into safe area so grey fills top */}
+      <header className="flex items-center justify-between px-2 sm:px-3 py-1.5 sm:py-2 bg-slate-800 border-b border-slate-700 flex-shrink-0 gap-2" style={{ zIndex: 5000, paddingTop: 'max(16px, env(safe-area-inset-top))' }}>
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1" style={{ overflow: 'visible' }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
