@@ -13,6 +13,56 @@ import { Z_INDEX_LAYERS } from '@/types/zIndexLayers';
 import { quadrantColors, rgbaToHex } from '@/utils/aircraftColors';
 import { useWeatherRadarAnimation } from './useWeatherRadarAnimation';
 
+function lightenHex(hex: string, amount: number): string {
+  const n = parseInt(hex.slice(1), 16);
+  const r = (n >> 16) & 0xff, g = (n >> 8) & 0xff, b = n & 0xff;
+  const nr = Math.round(r + (255 - r) * amount);
+  const ng = Math.round(g + (255 - g) * amount);
+  const nb = Math.round(b + (255 - b) * amount);
+  return '#' + [nr, ng, nb].map(x => Math.min(255, x).toString(16).padStart(2, '0')).join('');
+}
+
+function getPathLengthNm(latlngs: [number, number][]): number {
+  if (latlngs.length < 2) return 0;
+  const toRad = (d: number) => d * Math.PI / 180;
+  const R = 6371e3;
+  let d = 0;
+  for (let i = 1; i < latlngs.length; i++) {
+    const [lat1, lon1] = latlngs[i - 1], [lat2, lon2] = latlngs[i];
+    const φ1 = toRad(lat1), φ2 = toRad(lat2);
+    const Δφ = toRad(lat2 - lat1), Δλ = toRad(lon2 - lon1);
+    const x = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    d += 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+  }
+  return d / 1852;
+}
+
+function getPointAlongPath(latlngs: [number, number][], t: number): [number, number] {
+  if (latlngs.length < 2 || t <= 0) return latlngs[0];
+  if (t >= 1) return latlngs[latlngs.length - 1];
+  const toRad = (d: number) => d * Math.PI / 180;
+  const dist = (a: [number, number], b: [number, number]) => {
+    const R = 6371e3;
+    const φ1 = toRad(a[0]), φ2 = toRad(b[0]);
+    const Δφ = toRad(b[0] - a[0]), Δλ = toRad(b[1] - a[1]);
+    const x = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    return 2 * R * Math.atan2(Math.sqrt(x), Math.sqrt(1-x));
+  };
+  const segs: number[] = [0];
+  for (let i = 1; i < latlngs.length; i++) {
+    segs.push(segs[i-1] + dist(latlngs[i-1], latlngs[i]));
+  }
+  const total = segs[segs.length - 1];
+  const d = t * total;
+  let i = 0;
+  while (i < segs.length - 1 && segs[i + 1] < d) i++;
+  const segStart = segs[i], segEnd = segs[i + 1];
+  const frac = (d - segStart) / (segEnd - segStart || 1);
+  const [lat1, lon1] = latlngs[i];
+  const [lat2, lon2] = latlngs[i + 1];
+  return [lat1 + frac * (lat2 - lat1), lon1 + frac * (lon2 - lon1)];
+}
+
 // Helper function to calculate bearing between two points
 function calculateBearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
     const toRadians = (degrees: number) => degrees * (Math.PI / 180);
@@ -168,7 +218,15 @@ export function PilotMap({
   const layerGroupsRef = useRef<Record<string, L.LayerGroup>>({});
   const onTrackSelectRef = useRef(onTrackSelect);
   const selectedTrackIdRef = useRef(selectedTrackId);
-  const trackPolylinesRef = useRef<Map<string, { polyline: L.Polyline; baseColor: string; createdAt: number | null }>>(new Map());
+  const trackPolylinesRef = useRef<Map<string, {
+    polyline: L.Polyline;
+    hitTarget?: L.Polyline;
+    baseColor: string;
+    createdAt: number | null;
+    latlngs?: [number, number][];
+    strobeDot?: L.CircleMarker;
+    strobeStartTime?: number;
+  }>>(new Map());
 
   useEffect(() => { onTrackSelectRef.current = onTrackSelect; }, [onTrackSelect]);
   useEffect(() => { selectedTrackIdRef.current = selectedTrackId; }, [selectedTrackId]);
@@ -905,6 +963,35 @@ export function PilotMap({
       };
 
       const MAX_AGE = 60;
+      const ANIMATION_CUTOFF_MIN = 15;
+      const MAX_ANIMATED_TRACKS = 25;
+      const MIN_TRACK_LENGTH_NM = 30;
+
+      const now = Date.now();
+      const animatedTrackIds = new Set<string>();
+      if (displayOptions.animateApproachTracks !== false) {
+        const fresh = tracks
+          .filter(t => {
+            const ts = t.createdAt || t.startTime;
+            if (!ts) return false;
+            const ageMin = (now - new Date(ts).getTime()) / 60000;
+            if (ageMin >= ANIMATION_CUTOFF_MIN || ageMin < 0) return false;
+            const latlngs: [number, number][] = (t.coordinates || [])
+              .filter((c): c is { lat: number; lon: number } => !!c && typeof c.lat === 'number' && typeof c.lon === 'number')
+              .map(c => [c.lat, c.lon]);
+            if (latlngs.length < 2) return false;
+            return getPathLengthNm(latlngs) >= MIN_TRACK_LENGTH_NM;
+          })
+          .sort((a, b) => {
+            const ta = new Date(a.createdAt || a.startTime).getTime();
+            const tb = new Date(b.createdAt || b.startTime).getTime();
+            return tb - ta;
+          })
+          .slice(0, MAX_ANIMATED_TRACKS)
+          .map(t => t.id);
+        fresh.forEach(id => animatedTrackIds.add(id));
+      }
+
       tracks.forEach(track => {
         if (!track?.coordinates?.length || track.coordinates.length < 2) return;
         const ts = track.createdAt || track.startTime;
@@ -925,13 +1012,23 @@ export function PilotMap({
         const opacity = Math.max(0, 1 - age / MAX_AGE);
 
         const isSel = selectedTrackId === track.id;
+        const isAnimated = animatedTrackIds.has(track.id);
         const line = L.polyline(latLngs, {
           color: isSel ? '#fbbf24' : baseColor,
           weight: isSel ? 4 : 2,
           opacity,
-          interactive: true,
+          interactive: false,
           pane: 'markerPane',
           zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS + (isSel ? 100 : 0)
+        });
+
+        const hitTarget = L.polyline(latLngs, {
+          color: 'transparent',
+          weight: 14,
+          opacity: 0.001,
+          interactive: true,
+          pane: 'markerPane',
+          zIndexOffset: Z_INDEX_LAYERS.GROUND_TRACKS + (isSel ? 101 : 1)
         });
 
         const popupContent = () => `
@@ -943,8 +1040,15 @@ export function PilotMap({
             ${landingTime ? `<div style="color:#9ca3af;font-size:11px;margin-top:6px;border-top:1px solid rgba(255,255,255,0.1);padding-top:6px">Landed: ${formatZulu(landingTime)}<br><span style="font-size:10px">${formatRelative(landingTime)}</span></div>` : ''}
           </div>`;
 
-        line.bindPopup(popupContent(), { className: 'track-popup', autoClose: true, closeOnClick: true, autoPan: false });
-        line.on('click', () => {
+        const content = popupContent();
+        hitTarget.on('click', (e: L.LeafletMouseEvent) => {
+          const map = mapInstance ?? hitTarget.getMap();
+          if (map) {
+            L.popup({ className: 'track-popup', autoClose: true, closeOnClick: true, autoPan: false })
+              .setLatLng(e.latlng)
+              .setContent(content)
+              .openOn(map);
+          }
           const cb = onTrackSelectRef.current;
           if (!cb) return;
           if (selectedTrackIdRef.current === track.id) {
@@ -956,12 +1060,19 @@ export function PilotMap({
         });
 
         group.addLayer(line);
-        trackPolylinesRef.current.set(track.id, { polyline: line, baseColor, createdAt: ts ? new Date(ts).getTime() : null });
+        group.addLayer(hitTarget);
+        trackPolylinesRef.current.set(track.id, {
+          polyline: line,
+          hitTarget,
+          baseColor,
+          createdAt: ts ? new Date(ts).getTime() : null,
+          ...(isAnimated ? { latlngs: latLngs } : {})
+        });
       });
     };
 
     run();
-  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks]);
+  }, [mapInstance, tracks, arrivals, displayOptions.showGroundTracks, displayOptions.animateApproachTracks, selectedTrackId]);
 
   const getAgeOpacity = (createdAt: number | null) => {
     if (!createdAt) return 1;
@@ -971,11 +1082,17 @@ export function PilotMap({
 
   useEffect(() => {
     const selected = selectedTrackId ?? null;
-    trackPolylinesRef.current.forEach(({ polyline, baseColor, createdAt }, id) => {
+    trackPolylinesRef.current.forEach(({ polyline, hitTarget, baseColor, createdAt }, id) => {
       const sel = id === selected;
       const opacity = getAgeOpacity(createdAt);
       polyline.setStyle({ color: sel ? '#fbbf24' : baseColor, weight: sel ? 4 : 2, opacity });
-      if (sel) polyline.bringToFront();
+      if (hitTarget) {
+        hitTarget.setStyle({ weight: sel ? 16 : 14 });
+      }
+      if (sel) {
+        polyline.bringToFront();
+        hitTarget?.bringToFront();
+      }
     });
   }, [selectedTrackId]);
 
@@ -990,6 +1107,90 @@ export function PilotMap({
     }, 30000);
     return () => clearInterval(iv);
   }, [selectedTrackId]);
+
+  const strobeLastFireRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!mapInstance || !displayOptions.showGroundTracks || displayOptions.animateApproachTracks === false) return;
+
+    const group = layerGroupsRef.current.tracks;
+    if (!group) return;
+
+    const ANIMATION_CUTOFF_MS = 15 * 60 * 1000;
+    const MAX_ANIMATED = 25;
+    const STROBE_INTERVAL_MS = 3500;
+    const STROBE_TRAVEL_MS = 650;
+
+    let rafId: number;
+
+    const tick = () => {
+      if (document.hidden) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+
+      const now = Date.now();
+      const entries = Array.from(trackPolylinesRef.current.entries())
+        .filter(([, { createdAt, latlngs }]) => createdAt != null && latlngs && latlngs.length >= 2)
+        .map(([id, data]) => ({ id, ...data, age: now - data.createdAt! }))
+        .filter(({ age }) => age < ANIMATION_CUTOFF_MS && age >= 0)
+        .sort((a, b) => b.createdAt! - a.createdAt!)
+        .slice(0, MAX_ANIMATED);
+
+      const animatedIds = new Set(entries.map(e => e.id));
+      const fireAll = now - strobeLastFireRef.current >= STROBE_INTERVAL_MS;
+
+      trackPolylinesRef.current.forEach((entry, id) => {
+        if (!animatedIds.has(id) || !entry.latlngs || entry.createdAt == null) {
+          if (entry.strobeDot) {
+            group.removeLayer(entry.strobeDot);
+            entry.strobeDot = undefined;
+            entry.strobeStartTime = undefined;
+          }
+          return;
+        }
+
+        if (entry.strobeDot && entry.strobeStartTime != null) {
+          const elapsed = now - entry.strobeStartTime;
+          if (elapsed >= STROBE_TRAVEL_MS) {
+            group.removeLayer(entry.strobeDot);
+            entry.strobeDot = undefined;
+            entry.strobeStartTime = undefined;
+          } else {
+            const t = elapsed / STROBE_TRAVEL_MS;
+            const tEased = 1 - (1 - t) ** 2;
+            const pt = getPointAlongPath(entry.latlngs, tEased);
+            entry.strobeDot.setLatLng(pt);
+          }
+          return;
+        }
+
+        if (fireAll) {
+          strobeLastFireRef.current = now;
+          const strobeColor = lightenHex(entry.baseColor, 0.35);
+          const dot = L.circleMarker(entry.latlngs[0], {
+            radius: 1.5,
+            fillColor: strobeColor,
+            fillOpacity: 0.95,
+            color: strobeColor,
+            weight: 1,
+            interactive: false,
+            pane: 'markerPane',
+            zIndexOffset: 2000
+          });
+          group.addLayer(dot);
+          entry.strobeDot = dot;
+          entry.strobeStartTime = now;
+        }
+      });
+
+      rafId = requestAnimationFrame(tick);
+    };
+
+    strobeLastFireRef.current = 0;
+    rafId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafId);
+  }, [mapInstance, displayOptions.showGroundTracks, displayOptions.animateApproachTracks]);
 
   useEffect(() => {
     if (!selectedTrackId) return;

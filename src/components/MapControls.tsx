@@ -67,6 +67,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
     { key: 'showWeatherPireps' as const, label: 'PIREPs (Weather)', icon: '📢' },
     { key: 'showMetars' as const, label: 'METAR Stations', icon: '🌡️' },
     { key: 'showGroundTracks' as const, label: 'Approach Tracks', icon: '🛤️' },
+    { key: 'animateApproachTracks' as const, label: 'Track Animation', icon: '✨' },
     { key: 'showWeatherRadar' as const, label: 'Weather Radar', icon: '🌦️' },
     { key: 'showSigmetAirmet' as const, label: 'SIGMETs/AIRMETs', icon: '📋' },
     { key: 'showWindsAloft' as const, label: 'Winds Aloft', icon: '💨' },
@@ -123,6 +124,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
                     <p><strong>PIREPs (ATC):</strong> Pilot reports extracted from ATC communications</p>
                     <p><strong>PIREPs (Weather):</strong> Official weather pilot reports</p>
                     <p><strong>Approach Tracks:</strong> Arrival paths from 50nm for the last 30 minutes</p>
+                    <p><strong>Track Animation:</strong> Subtle strobe effect on recent approach tracks (last 15 min)</p>
                     <p><strong>Weather Radar:</strong> Live precipitation and storm data</p>
                   </div>
                   <p className="text-blue-300">
@@ -135,6 +137,9 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
           <div className="space-y-1">
             {controls.map(({ key, label, icon }) => {
               const isWeatherRadarDisabled = key === 'showWeatherRadar' && airline === 'ein';
+              const isActive = key === 'animateApproachTracks'
+                ? (displayOptions[key] ?? true)
+                : displayOptions[key];
               return (
                 <button
                   key={key}
@@ -143,7 +148,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
                   className={`w-full flex items-center justify-between py-1 px-2 rounded text-xs
                     transition-colors ${isWeatherRadarDisabled
                       ? 'text-gray-500 cursor-not-allowed opacity-60'
-                      : displayOptions[key]
+                      : isActive
                         ? 'text-white bg-slate-700/30'
                         : 'text-gray-400'
                     }`}
@@ -154,7 +159,7 @@ export function MapControls({ displayOptions, onOptionsChange, isDemo, selectedA
                   </div>
                   {isWeatherRadarDisabled ? (
                     <span className="text-xs text-gray-500">Disabled</span>
-                  ) : displayOptions[key] ? (
+                  ) : isActive ? (
                     <Eye className="w-3 h-3" />
                   ) : (
                     <EyeOff className="w-3 h-3" />

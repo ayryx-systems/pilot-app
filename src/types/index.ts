@@ -281,6 +281,7 @@ export interface MapDisplayOptions {
   showWeatherPireps: boolean;
   showMetars: boolean;
   showGroundTracks: boolean;
+  animateApproachTracks?: boolean;
   showWeatherRadar: boolean;
   showWeatherAlerts: boolean;
   showVisibility: boolean;

@@ -97,34 +97,39 @@ export function PilotDashboard() {
 
   // Load map display options from localStorage or use defaults
   const [mapDisplayOptions, setMapDisplayOptions] = useState<MapDisplayOptions>(() => {
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('pilotApp_mapDisplayOptions');
-      if (saved) {
-        try {
-          return JSON.parse(saved);
-        } catch (e) {
-          console.warn('Failed to parse saved map display options:', e);
-        }
-      }
-    }
-    return {
-      showRunways: false, // Disabled - now handled by OSM features
+    const defaults: MapDisplayOptions = {
+      showRunways: false,
       showDmeRings: true,
       showWaypoints: true,
       showExtendedCenterlines: true,
       showPireps: true,
-      showWeatherPireps: true, // Default to off - separate from ATC PIREPs
-      showMetars: true, // Default to off - METAR stations
+      showWeatherPireps: true,
+      showMetars: true,
       showGroundTracks: true,
-      showOSMFeatures: true, // This includes runways from OSM
+      animateApproachTracks: true,
       showWeatherRadar: true,
       showWeatherAlerts: false,
       showVisibility: false,
+      showOSMFeatures: true,
       showSigmetAirmet: false,
       showWindsAloft: true,
       showIcing: false,
       showTurbulence: false,
     };
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pilotApp_mapDisplayOptions');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved) as Record<string, unknown>;
+          const merged = { ...defaults, ...parsed } as MapDisplayOptions;
+          if (merged.animateApproachTracks === undefined) merged.animateApproachTracks = true;
+          return merged;
+        } catch (e) {
+          console.warn('Failed to parse saved map display options:', e);
+        }
+      }
+    }
+    return defaults;
   });
 
   const [showPirepPanel, setShowPirepPanel] = useState(false);
