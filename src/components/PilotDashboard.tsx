@@ -1054,7 +1054,24 @@ export function PilotDashboard() {
 
                         const discrepancyMessages: string[] = [];
 
-                        if (hasForecastData && baseline && baselineSumForHour > 0) {
+                        let lastForecastSlotEndMs: number | null = null;
+                        if (arrivalForecast?.timeSlots?.length && arrivalForecast?.slotDates) {
+                          for (let idx = 0; idx < arrivalForecast.timeSlots.length; idx++) {
+                            const slotDateStr = arrivalForecast.slotDates[idx];
+                            if (!slotDateStr) continue;
+                            const [hours, minutes] = arrivalForecast.timeSlots[idx].split(':').map(Number);
+                            const [year, month, day] = slotDateStr.split('-').map(Number);
+                            const slotEnd = new Date(year, month - 1, day, hours, minutes + 15, 0, 0);
+                            const ms = slotEnd.getTime();
+                            if (lastForecastSlotEndMs === null || ms > lastForecastSlotEndMs) {
+                              lastForecastSlotEndMs = ms;
+                            }
+                          }
+                        }
+                        const nearForecastTail = lastForecastSlotEndMs !== null &&
+                          referenceLocalTime.getTime() >= lastForecastSlotEndMs - 60 * 60 * 1000;
+
+                        if (hasForecastData && baseline && baselineSumForHour > 0 && !nearForecastTail) {
                           const plannedSum = nextHourCount;
                           const baselineRounded = Math.round(baselineSumForHour);
                           const MIN_BASELINE_FOR_ZERO_ALERT = 15;
