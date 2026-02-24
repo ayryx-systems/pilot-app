@@ -68,6 +68,7 @@ export async function middleware(request: NextRequest) {
     path.startsWith('/static/') ||
     path === '/favicon.ico' ||
     path === '/manifest.json' ||
+    path === '/manifest.webmanifest' ||
     path.startsWith('/icons/') ||
     path.startsWith('/logos/') ||
     path === '/login'

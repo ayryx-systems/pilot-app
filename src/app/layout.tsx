@@ -29,6 +29,12 @@ export const metadata: Metadata = {
   icons: {
     shortcut: "/x_favicon.svg",
     icon: "/x_favicon.svg",
+    apple: "/icons/apple-icon-180.png",
+  },
+  appleWebApp: {
+    capable: true,
+    title: "AYRYX",
+    statusBarStyle: "black-translucent",
   },
 };
 
