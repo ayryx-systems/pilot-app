@@ -451,9 +451,31 @@ export function usePilotData() {
 
   // Periodic connection test
   useEffect(() => {
-    const interval = setInterval(testConnection, 10000); // Test every 10 seconds
+    const interval = setInterval(testConnection, 10000);
     return () => clearInterval(interval);
   }, [testConnection]);
+
+  useEffect(() => {
+    const clientBuildId = process.env.NEXT_PUBLIC_APP_BUILD_ID;
+    if (!clientBuildId) return;
+
+    const checkBuildId = async () => {
+      try {
+        const res = await fetch(`/api/build-id?t=${Date.now()}`, { cache: 'no-store' });
+        if (!res.ok) return;
+        const { buildId } = await res.json();
+        if (buildId && buildId !== clientBuildId) {
+          window.location.reload();
+        }
+      } catch {
+        // Ignore; may be offline
+      }
+    };
+
+    checkBuildId();
+    const interval = setInterval(checkBuildId, 10000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Periodic weather refresh (every 3 minutes to keep METAR/TAF current)
   useEffect(() => {

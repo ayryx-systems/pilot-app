@@ -4,6 +4,7 @@ const nextConfig = {
   env: {
     // Default to localhost for development, but can be overridden
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
+    NEXT_PUBLIC_APP_BUILD_ID: Date.now().toString(),
   },
   // Enable React Strict Mode
   reactStrictMode: true,
