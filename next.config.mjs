@@ -1,10 +1,16 @@
+import { readFileSync, existsSync } from 'fs';
+import { join } from 'path';
+
+const buildIdPath = join(process.cwd(), '.build-id.json');
+const buildId = existsSync(buildIdPath)
+  ? JSON.parse(readFileSync(buildIdPath, 'utf8')).buildId
+  : Date.now().toString();
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Environment variables for runtime configuration
   env: {
-    // Default to localhost for development, but can be overridden
     NEXT_PUBLIC_API_BASE_URL: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001',
-    NEXT_PUBLIC_APP_BUILD_ID: Date.now().toString(),
+    NEXT_PUBLIC_APP_BUILD_ID: buildId,
   },
   // Enable React Strict Mode
   reactStrictMode: true,

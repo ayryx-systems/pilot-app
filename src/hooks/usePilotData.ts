@@ -459,14 +459,24 @@ export function usePilotData() {
     const clientBuildId = process.env.NEXT_PUBLIC_APP_BUILD_ID;
     if (!clientBuildId) return;
 
+    const RELOAD_COOLDOWN_MS = 60000;
+
     const checkBuildId = async () => {
       try {
+        const lastReload = sessionStorage.getItem('pilotApp_lastReload');
+        if (lastReload && Date.now() - parseInt(lastReload, 10) < RELOAD_COOLDOWN_MS) return;
+
         const res = await fetch(`/api/build-id?t=${Date.now()}`, { cache: 'no-store' });
         if (!res.ok) return;
         const { buildId } = await res.json();
-        if (buildId && buildId !== clientBuildId) {
-          window.location.reload();
-        }
+        if (!buildId || buildId === clientBuildId) return;
+
+        const clientNum = parseInt(clientBuildId, 10);
+        const serverNum = parseInt(buildId, 10);
+        if (Number.isNaN(serverNum) || serverNum <= clientNum) return;
+
+        sessionStorage.setItem('pilotApp_lastReload', Date.now().toString());
+        window.location.reload();
       } catch {
         // Ignore; may be offline
       }

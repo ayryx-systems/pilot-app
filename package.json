@@ -9,6 +9,7 @@
   "type": "module",
   "scripts": {
     "dev": "next dev --turbopack -p 3006",
+    "prebuild": "node scripts/write-build-id.cjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
