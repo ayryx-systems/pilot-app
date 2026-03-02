@@ -259,6 +259,7 @@ export function usePilotData() {
       if (arrivalsResponse.status === 'fulfilled') {
         updates.arrivals = arrivalsResponse.value.arrivals;
         updates.arrivalsMetadata = { active: arrivalsResponse.value.active ?? true, message: arrivalsResponse.value.message };
+        updates.actualCountsFromArrivals = arrivalsResponse.value.actualCounts ?? null;
       } else {
         console.error('Failed to load arrivals:', arrivalsResponse.reason);
         updates.arrivals = [];
@@ -268,6 +269,7 @@ export function usePilotData() {
             ? 'Arrivals unavailable - check internet connection'
             : 'Failed to load arrivals'
         };
+        updates.actualCountsFromArrivals = null;
       }
 
       if (summaryResponse.status === 'fulfilled') {
@@ -373,6 +375,7 @@ export function usePilotData() {
       // Only clear forecast if switching to a different airport
       arrivalForecast: airportId === prev.selectedAirport ? prev.arrivalForecast : null,
       arrivalForecastLoading: false,
+      actualCountsFromArrivals: null,
     }));
   }, []);
 
@@ -526,6 +529,7 @@ export function usePilotData() {
     baselineLoading: state.baselineLoading,
     arrivalForecast: state.arrivalForecast,
     arrivalForecastLoading: state.arrivalForecastLoading,
+    actualCountsFromArrivals: state.actualCountsFromArrivals,
     connectionStatus: state.connectionStatus,
     loading: state.loading,
     error: state.error,

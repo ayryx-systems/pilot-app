@@ -34,6 +34,7 @@ ChartJS.register(
 interface TimeBasedGraphsProps {
   baseline: BaselineData | null;
   arrivalForecast?: ArrivalForecast | null;
+  actualCountsFromArrivals?: { timeSlots: string[]; counts: number[] } | null;
   airportCode: string;
   selectedTime: Date;
   loading?: boolean;
@@ -262,6 +263,7 @@ function getAirportUTCOffset(airportCode: string, date: Date, baseline?: Baselin
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   baseline,
   arrivalForecast,
+  actualCountsFromArrivals,
   airportCode,
   selectedTime,
   loading,
@@ -287,6 +289,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     
     // Check if arrivalForecast reference changed (but data might be the same)
     const forecastChanged = prevChartDataRef.current?.arrivalForecastRef !== arrivalForecast;
+    const actualCountsChanged = prevChartDataRef.current?.actualCountsFromArrivalsRef !== actualCountsFromArrivals;
 
     // Don't clear chart data if we're just loading other data (not baseline)
     // Only clear if baseline is missing or we're actually loading baseline
@@ -307,7 +310,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     
     const timezoneChanged = prevChartDataRef.current?.isUTC !== isUTC;
     
-    if (!baselineChanged && !timeKeyChanged && !forecastChanged && !timezoneChanged && chartData) {
+    if (!baselineChanged && !timeKeyChanged && !forecastChanged && !actualCountsChanged && !timezoneChanged && chartData) {
       return; // No need to recalculate - data hasn't meaningfully changed
     }
 
@@ -499,9 +502,15 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     // Only include forecast slots for today (fixes bug where forecast appears on tomorrow)
     let alignedForecastCounts: (number | null)[] = [];
     let alignedRecentActuals: (number | null)[] = [];
+    const actualsMap = new Map<string, number>();
+
+    if (actualCountsFromArrivals?.timeSlots?.length) {
+      actualCountsFromArrivals.timeSlots.forEach((slot, idx) => {
+        actualsMap.set(`${todayDateStr}|${slot}`, actualCountsFromArrivals.counts[idx] ?? 0);
+      });
+    }
     
     if (arrivalForecast && arrivalForecast.timeSlots && arrivalForecast.arrivalCounts) {
-      // Validate data structure
       if (arrivalForecast.timeSlots.length !== arrivalForecast.arrivalCounts.length) {
         console.error('[TimeBasedGraphs] Forecast data mismatch:', {
           timeSlotsLength: arrivalForecast.timeSlots.length,
@@ -510,9 +519,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       }
       
       const hasSlotDates = arrivalForecast.slotDates && arrivalForecast.slotDates.length === arrivalForecast.timeSlots.length;
-      // Use date-aware keys to prevent cross-day contamination
-      const forecastMap = new Map<string, number>(); // key: "dateStr|timeSlot"
-      const actualsMap = new Map<string, number>(); // key: "dateStr|timeSlot"
+      const forecastMap = new Map<string, number>();
       
       arrivalForecast.timeSlots.forEach((slot, idx) => {
         const count = arrivalForecast.arrivalCounts[idx];
@@ -524,35 +531,25 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         
         if (hasSlotDates) {
           slotDateStr = arrivalForecast.slotDates![idx];
-          // Include forecast for today and selected date (for future ETAs)
           shouldIncludeForecast = slotDateStr === todayDateStr || slotDateStr === selectedDateStr;
-          // Actuals only for today (fixes bug)
           shouldIncludeActuals = slotDateStr === todayDateStr;
         } else {
-          // Legacy: check if slot is within window
           const hoursFromNow = getHoursFromNow(slot, nowLocal, airportCode, baseline);
           shouldIncludeForecast = hoursFromNow >= windowStartHours && hoursFromNow <= windowEndHours;
-          // For actuals, only include if it's in the past (today)
           shouldIncludeActuals = hoursFromNow < 0 && hoursFromNow >= windowStartHours;
-          // In legacy mode, assume slots are for today
           slotDateStr = todayDateStr;
         }
         
         if (shouldIncludeForecast && slotDateStr) {
-          // Use date-aware key to prevent cross-day contamination
           forecastMap.set(`${slotDateStr}|${slot}`, count);
         }
         
-        // Recent actuals only for today (fixes bug where they appear on tomorrow)
-        if (shouldIncludeActuals && slotDateStr && arrivalForecast.actualCounts && arrivalForecast.actualCounts[idx] !== null && arrivalForecast.actualCounts[idx] !== undefined) {
+        if (!actualCountsFromArrivals && shouldIncludeActuals && slotDateStr && arrivalForecast.actualCounts && arrivalForecast.actualCounts[idx] !== null && arrivalForecast.actualCounts[idx] !== undefined) {
           actualsMap.set(`${slotDateStr}|${slot}`, arrivalForecast.actualCounts[idx]!);
         }
       });
       
-      // Map forecast and actuals to relative time slots
-      // Match by both timeSlot AND date to avoid cross-day contamination
       alignedForecastCounts = relativeTimeSlots.map(rt => {
-        // For forecast, check if this slot matches today or selected date
         if (rt.dateStr === todayDateStr || rt.dateStr === selectedDateStr) {
           const key = `${rt.dateStr}|${rt.timeSlot}`;
           const count = forecastMap.get(key);
@@ -560,17 +557,16 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         }
         return null;
       });
-      
-      alignedRecentActuals = relativeTimeSlots.map(rt => {
-        // Actuals only for today's slots (fixes bug where they appear on tomorrow)
-        if (rt.dateStr === todayDateStr) {
-          const key = `${rt.dateStr}|${rt.timeSlot}`;
-          const count = actualsMap.get(key);
-          return count !== undefined ? count : null;
-        }
-        return null;
-      });
     }
+
+    alignedRecentActuals = relativeTimeSlots.map(rt => {
+      if (rt.dateStr === todayDateStr) {
+        const key = `${rt.dateStr}|${rt.timeSlot}`;
+        const count = actualsMap.get(key);
+        return count !== undefined ? count : null;
+      }
+      return null;
+    });
 
     // Calculate expected arrivals for NOW and ETA (FAA forecast or baseline)
     const getExpectedArrivals = (relativeIdx: number): number | null => {
@@ -645,9 +641,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       }
     ];
 
-    // Add FAA forecast dataset if available
     if (alignedForecastCounts.length > 0 && arrivalForecast) {
-      // Ensure we're using the aligned counts, not the raw data
       const forecastData = alignedForecastCounts.map(count => count !== null ? count : null);
       
       datasets.push({
@@ -659,7 +653,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         borderDash: [3, 3],
         fill: false,
         tension: 0.4,
-        order: 1, // Above baseline, below recent actuals
+        order: 1,
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         pointRadius: (ctx: any) => {
           const value = forecastData[ctx.dataIndex];
@@ -677,29 +671,27 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
         },
         spanGaps: true
       });
+    }
 
-      // Add recent actuals overlay (actual ADSB-detected arrivals)
-      // Only show for today's slots (already filtered above)
-      const hasRecentActuals = alignedRecentActuals.some(v => v !== null);
-      if (hasRecentActuals) {
-        datasets.push({
-          label: 'Actual Arrivals',
-          data: alignedRecentActuals,
-          borderColor: '#a855f7', // Purple (for legend)
-          backgroundColor: '#a855f7', // Purple (for legend)
-          borderWidth: 2,
-          fill: false,
-          showLine: false, // Only show points, no line
-          pointRadius: 5, // Slightly larger for visibility
-          pointBackgroundColor: '#a855f7', // Purple
-          pointBorderColor: '#ffffff', // White border for contrast
-          pointBorderWidth: 2,
-          pointStyle: 'circle',
-          pointHoverRadius: 7, // Larger on hover
-          order: 0, // Render on top (lower order = higher z-index)
-          spanGaps: false
-        });
-      }
+    const hasRecentActuals = alignedRecentActuals.some(v => v !== null);
+    if (hasRecentActuals) {
+      datasets.push({
+        label: 'Actual Arrivals',
+        data: alignedRecentActuals,
+        borderColor: '#a855f7',
+        backgroundColor: '#a855f7',
+        borderWidth: 2,
+        fill: false,
+        showLine: false,
+        pointRadius: 5,
+        pointBackgroundColor: '#a855f7',
+        pointBorderColor: '#ffffff',
+        pointBorderWidth: 2,
+        pointStyle: 'circle',
+        pointHoverRadius: 7,
+        order: 0,
+        spanGaps: false
+      });
     }
 
     const newChartData = {
@@ -711,8 +703,9 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       nowExpectedArrivals,
       etaExpectedArrivals,
       relativeTimeSlots,
-      arrivalForecastRef: arrivalForecast, // Store reference to detect changes
-      isUTC, // Store timezone preference to detect changes
+      arrivalForecastRef: arrivalForecast,
+      actualCountsFromArrivalsRef: actualCountsFromArrivals,
+      isUTC,
     };
 
     // Only update chartData if it's actually different to prevent unnecessary Chart.js updates
@@ -727,7 +720,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
       setChartData(newChartData);
       prevChartDataRef.current = newChartData;
     }
-  }, [baseline, airportCode, selectedTimeKey, arrivalForecast, selectedTime, isUTC]);
+  }, [baseline, airportCode, selectedTimeKey, arrivalForecast, actualCountsFromArrivals, selectedTime, isUTC]);
 
   // Show loading state only if we don't have chart data yet
   // If we have chart data, keep showing it even during refresh to prevent flashing
@@ -920,6 +913,8 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
   
   // Forecast reference changed - need to re-render
   if (prevProps.arrivalForecast !== nextProps.arrivalForecast) return false;
+  
+  if (prevProps.actualCountsFromArrivals !== nextProps.actualCountsFromArrivals) return false;
   
   // Airport changed - need to re-render
   if (prevProps.airportCode !== nextProps.airportCode) return false;

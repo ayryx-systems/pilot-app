@@ -269,6 +269,7 @@ export interface PilotAppState {
   baselineLoading?: boolean;
   arrivalForecast?: ArrivalForecast | null;
   arrivalForecastLoading?: boolean;
+  actualCountsFromArrivals?: { timeSlots: string[]; counts: number[] } | null;
 }
 
 // Map display options

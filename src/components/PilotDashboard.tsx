@@ -77,6 +77,7 @@ export function PilotDashboard() {
     baselineLoading,
     arrivalForecast,
     arrivalForecastLoading,
+    actualCountsFromArrivals,
     connectionStatus,
     loading,
     error,
@@ -1140,6 +1141,7 @@ export function PilotDashboard() {
                           <TimeBasedGraphs
                             baseline={baseline}
                             arrivalForecast={arrivalForecast}
+                            actualCountsFromArrivals={actualCountsFromArrivals}
                             airportCode={selectedAirport}
                             selectedTime={selectedTime}
                             loading={baselineLoading || arrivalForecastLoading || loading}
