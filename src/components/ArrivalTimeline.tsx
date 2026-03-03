@@ -398,42 +398,34 @@ export function ArrivalTimeline({
             color: '#94a3b8',
           },
           grid: {
-            color: 'rgba(148, 163, 184, 0.1)',
+            color: 'rgba(148, 163, 184, 0.2)',
           },
           ticks: {
             color: '#94a3b8',
-            font: { size: 9 },
-            stepSize: 1,
-            maxTicksLimit: 6,
+            font: { size: 10 },
+            stepSize: (() => {
+              const range = (chartData?.timeRange.max ?? 1) - (chartData?.timeRange.min ?? -1);
+              if (range <= 4) return 0.5;
+              if (range <= 8) return 1;
+              if (range <= 16) return 2;
+              return 4;
+            })(),
+            maxTicksLimit: 12,
             callback: (value) => {
               const v = Number(value);
               if (Math.abs(v) < 0.01) return 'Now';
-              
               if (isUTC) {
-                // Convert hours from now to UTC time
                 const now = getCurrentUTCTime();
                 const targetTime = new Date(now.getTime() + v * 60 * 60 * 1000);
-                const utcHours = targetTime.getUTCHours();
-                const utcMinutes = targetTime.getUTCMinutes();
-                return `${String(utcHours).padStart(2, '0')}:${String(utcMinutes).padStart(2, '0')}Z`;
-              } else {
-                // Convert hours from now to local time
-                const now = getCurrentUTCTime();
-                const nowLocal = utcToAirportLocal(now, airportCode, baseline);
-                const nowHours = nowLocal.getUTCHours();
-                const nowMinutes = nowLocal.getUTCMinutes();
-                
-                // Calculate target time
-                const targetHours = nowHours + v;
-                const targetMinutes = nowMinutes;
-                
-                // Handle day wrap-around
-                let displayHours = Math.floor(targetHours);
-                if (displayHours < 0) displayHours += 24;
-                if (displayHours >= 24) displayHours -= 24;
-                
-                return `${String(displayHours).padStart(2, '0')}:${String(Math.floor(targetMinutes)).padStart(2, '0')}`;
+                return `${String(targetTime.getUTCHours()).padStart(2, '0')}:${String(targetTime.getUTCMinutes()).padStart(2, '0')}Z`;
               }
+              const now = getCurrentUTCTime();
+              const nowLocal = utcToAirportLocal(now, airportCode, baseline);
+              const totalMins = (nowLocal.getUTCHours() * 60 + nowLocal.getUTCMinutes()) + v * 60;
+              const wrapped = ((totalMins % 1440) + 1440) % 1440;
+              const h = Math.floor(wrapped / 60);
+              const m = Math.round(wrapped % 60);
+              return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
             },
           },
         },
@@ -447,11 +439,13 @@ export function ArrivalTimeline({
             color: '#94a3b8',
           },
           grid: {
-            color: 'rgba(148, 163, 184, 0.1)',
+            color: 'rgba(148, 163, 184, 0.2)',
           },
           ticks: {
             color: '#94a3b8',
             font: { size: 10 },
+            stepSize: 5,
+            callback: (value) => `${value}m`,
           },
         },
       },
