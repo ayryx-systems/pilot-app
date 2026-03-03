@@ -43,7 +43,7 @@ import { pilotApi } from '@/services/api';
 import { HelpButton } from './HelpButton';
 import { CollapsibleSection } from './CollapsibleSection';
 import { CollapsibleCard } from './CollapsibleCard';
-import { TrendingUp, Plane as PlaneIcon, Sliders } from 'lucide-react';
+import { PlaneLanding, Timer, Sliders } from 'lucide-react';
 import { FeedbackButton } from './FeedbackButton';
 import { WeatherScenarioToggle } from './WeatherScenarioToggle';
 import { SettingsButton } from './SettingsButton';
@@ -1134,7 +1134,7 @@ export function PilotDashboard() {
                         <CollapsibleCard
                           key={`traffic-${selectedAirport}`}
                           title={`Arrival Traffic (${timeLabel})`}
-                          icon={TrendingUp}
+                          icon={PlaneLanding}
                           summary={trafficSummary}
                           defaultExpanded={false}
                         >
@@ -1222,7 +1222,7 @@ export function PilotDashboard() {
                       return (
                         <CollapsibleCard
                           title={`Arrival Durations from 50nm (${timeLabel})`}
-                          icon={PlaneIcon}
+                          icon={Timer}
                           summary={arrivalsSummary}
                           defaultExpanded={false}
                         >
