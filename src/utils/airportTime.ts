@@ -56,21 +56,6 @@ function getUSDSTEndUTC(year: number): Date {
 
 export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): 'summer' | 'winter' {
   const year = date.getUTCFullYear();
-
-  if (baseline?.dstDatesByYear) {
-    const dstDates = baseline.dstDatesByYear[year.toString()];
-
-    if (dstDates?.start && dstDates?.end) {
-      const dstStart = new Date(dstDates.start);
-      const dstEnd = new Date(dstDates.end);
-
-      if (date >= dstStart && date < dstEnd) {
-        return 'summer';
-      }
-      return 'winter';
-    }
-  }
-
   const dstStart = getUSDSTStartUTC(year);
   const dstEnd = getUSDSTEndUTC(year);
   return date >= dstStart && date < dstEnd ? 'summer' : 'winter';
