@@ -40,38 +40,40 @@ export function getAirportTimezone(airportCode: string): string {
   return AIRPORT_TIMEZONES[airportCode] || 'America/Chicago';
 }
 
-/**
- * Determine if a date is in summer (DST) or winter (standard time)
- * Uses DST dates from baseline data if available, otherwise estimates
- */
+function getUSDSTStartUTC(year: number): Date {
+  const march1 = new Date(Date.UTC(year, 2, 1));
+  const dayOfWeek = march1.getUTCDay();
+  const daysToAdd = dayOfWeek === 0 ? 7 : 14 - dayOfWeek;
+  return new Date(Date.UTC(year, 2, 1 + daysToAdd));
+}
+
+function getUSDSTEndUTC(year: number): Date {
+  const nov1 = new Date(Date.UTC(year, 10, 1));
+  const dayOfWeek = nov1.getUTCDay();
+  const daysToAdd = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
+  return new Date(Date.UTC(year, 10, 1 + daysToAdd));
+}
+
 export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): 'summer' | 'winter' {
+  const year = date.getUTCFullYear();
+
   if (baseline?.dstDatesByYear) {
-    const year = date.getFullYear().toString();
-    const dstDates = baseline.dstDatesByYear[year];
-    
-    if (dstDates) {
-      const [dstStartYear, dstStartMonth, dstStartDay] = dstDates.start.split('-').map(Number);
-      const [dstEndYear, dstEndMonth, dstEndDay] = dstDates.end.split('-').map(Number);
-      const dstStart = new Date(dstStartYear, dstStartMonth - 1, dstStartDay);
-      const dstEnd = new Date(dstEndYear, dstEndMonth - 1, dstEndDay);
-      
-      const dateOnly = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const dstStartOnly = new Date(dstStart.getFullYear(), dstStart.getMonth(), dstStart.getDate());
-      const dstEndOnly = new Date(dstEnd.getFullYear(), dstEnd.getMonth(), dstEnd.getDate());
-      
-      if (dateOnly >= dstStartOnly && dateOnly < dstEndOnly) {
+    const dstDates = baseline.dstDatesByYear[year.toString()];
+
+    if (dstDates?.start && dstDates?.end) {
+      const dstStart = new Date(dstDates.start);
+      const dstEnd = new Date(dstDates.end);
+
+      if (date >= dstStart && date < dstEnd) {
         return 'summer';
       }
+      return 'winter';
     }
   }
-  
-  // Fallback: estimate based on month (rough approximation)
-  // DST typically: March-November in US
-  const month = date.getMonth() + 1; // 1-12
-  if (month >= 3 && month < 11) {
-    return 'summer';
-  }
-  return 'winter';
+
+  const dstStart = getUSDSTStartUTC(year);
+  const dstEnd = getUSDSTEndUTC(year);
+  return date >= dstStart && date < dstEnd ? 'summer' : 'winter';
 }
 
 /**

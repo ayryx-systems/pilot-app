@@ -15,7 +15,7 @@ import {
 import annotationPlugin from 'chartjs-plugin-annotation';
 import { Line } from 'react-chartjs-2';
 import { BaselineData, ArrivalForecast } from '@/types';
-import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason, getCurrentUTCTime, getUTCDateString, formatUTCTimeShort } from '@/utils/airportTime';
+import { utcToAirportLocal, getAirportLocalDateString, getSeason as getAirportSeason, getCurrentUTCTime, getUTCDateString, formatUTCTimeShort, getAirportUTCOffset } from '@/utils/airportTime';
 import { HelpButton } from './HelpButton';
 import { useTimezonePreference } from '@/hooks/useTimezonePreference';
 
@@ -159,18 +159,20 @@ function alignTimeSlots(dayTimeSlots: string[], seasonalTimeSlots: string[]) {
 }
 
 function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData | null): string {
-  // date is a UTC Date object representing a moment in time
-  // Convert UTC date to airport local time
   const localDate = utcToAirportLocal(date, airportCode, baseline);
-  // Extract hours and minutes from the local time representation
-  // Since utcToAirportLocal returns a Date where UTC milliseconds represent local time,
-  // we use getUTCHours() and getUTCMinutes() to get the local time components
   const hours = localDate.getUTCHours();
   const minutes = localDate.getUTCMinutes();
   const slotMinutes = Math.floor(minutes / 15) * 15;
   const timeSlot = `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
-  
   return timeSlot;
+}
+
+function getSlotStartUTC(timeSlot: string, dateStr: string, airportCode: string, baseline?: BaselineData | null): number {
+  const [hours, minutes] = timeSlot.split(':').map(Number);
+  const [year, month, day] = dateStr.split('-').map(Number);
+  const localDate = new Date(Date.UTC(year, month - 1, day, hours, minutes));
+  const offsetHours = getAirportUTCOffset(airportCode, localDate, baseline);
+  return localDate.getTime() - offsetHours * 60 * 60 * 1000;
 }
 
 function getHoursFromNow(timeSlot: string, nowLocal: Date, airportCode: string, baseline?: BaselineData | null, slotDate?: string, todayDateStr?: string): number {
@@ -216,48 +218,6 @@ function formatLocalTime(timeSlot: string, dateStr: string, isUTC: boolean, airp
     return formatUTCTimeShort(utcDateFromLocal.toISOString());
   }
   return timeSlot;
-}
-
-function getAirportUTCOffset(airportCode: string, date: Date, baseline?: BaselineData | null): number {
-  const airportTimezones: Record<string, string> = {
-    KORD: 'America/Chicago',
-    KLGA: 'America/New_York',
-    KJFK: 'America/New_York',
-    KEWR: 'America/New_York',
-    KLAX: 'America/Los_Angeles',
-    KSFO: 'America/Los_Angeles',
-    KDEN: 'America/Denver',
-  };
-  
-  const offsets: Record<string, { winter: number; summer: number }> = {
-    'America/Los_Angeles': { winter: -8, summer: -7 },
-    'America/Denver': { winter: -7, summer: -6 },
-    'America/Chicago': { winter: -6, summer: -5 },
-    'America/New_York': { winter: -5, summer: -4 },
-  };
-  
-  const timezone = airportTimezones[airportCode] || 'America/Chicago';
-  const offset = offsets[timezone] || { winter: -6, summer: -5 };
-  
-  if (!baseline?.dstDatesByYear) {
-    return offset.winter;
-  }
-  
-  const year = date.getUTCFullYear();
-  const dstDates = baseline.dstDatesByYear[year];
-  
-  if (!dstDates) {
-    return offset.winter;
-  }
-  
-  const dstStart = new Date(dstDates.start);
-  const dstEnd = new Date(dstDates.end);
-  
-  if (date >= dstStart && date < dstEnd) {
-    return offset.summer;
-  }
-  
-  return offset.winter;
 }
 
 export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
@@ -478,9 +438,16 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     });
 
     // Find indices for NOW and ETA in relative time slots
-    // NOW is always for today's date
-    const nowTimeSlot = getTimeSlotKey(nowUTC, airportCode, baseline);
-    const nowRelativeIndex = relativeTimeSlots.findIndex(rt => rt.timeSlot === nowTimeSlot && rt.dateStr === todayDateStr);
+    // When isUTC: find slot by UTC time range (avoids timezone offset bugs in UTC display)
+    // When local: match by local timeSlot
+    const nowMs = nowUTC.getTime();
+    const nowRelativeIndex = isUTC
+      ? relativeTimeSlots.findIndex((rt) => {
+          const slotStart = getSlotStartUTC(rt.timeSlot, rt.dateStr, airportCode, baseline);
+          const slotEnd = slotStart + 15 * 60 * 1000;
+          return rt.dateStr === todayDateStr && nowMs >= slotStart && nowMs < slotEnd;
+        })
+      : relativeTimeSlots.findIndex((rt) => rt.timeSlot === getTimeSlotKey(nowUTC, airportCode, baseline) && rt.dateStr === todayDateStr);
     
     // ETA is for the selected date
     // Calculate the exact hours from now for the selected time
