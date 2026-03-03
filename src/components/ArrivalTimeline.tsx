@@ -73,11 +73,11 @@ function getQuadrantForArrival(arrival: Arrival): string {
   return 'unknown';
 }
 
-function getSeasonalBaseline(baseline: BaselineData | null | undefined) {
+function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string) {
   if (!baseline) return null;
   
   const now = new Date();
-  const season = getSeason(now, baseline);
+  const season = getSeason(now, airportCode);
   const seasonData = season === 'summer' ? baseline.summer : baseline.winter;
   
   if (!seasonData) return null;
@@ -107,7 +107,7 @@ export function ArrivalTimeline({
   
   const isAtNow = Math.abs(selectedTime.getTime() - Date.now()) < 60000;
   const hoursAhead = (selectedTime.getTime() - Date.now()) / (1000 * 60 * 60);
-  const currentSeason = getSeason(new Date(), baseline);
+  const currentSeason = getSeason(new Date(), airportCode);
 
   const chartData = useMemo(() => {
     const datasets: ChartData<'scatter'>['datasets'] = [];
@@ -151,7 +151,7 @@ export function ArrivalTimeline({
       });
     }
 
-    const seasonalBaseline = getSeasonalBaseline(baseline);
+    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
     if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
       const nowLocal = utcToAirportLocal(new Date(), airportCode, baseline);
       const nowLocalHours = nowLocal.getUTCHours();

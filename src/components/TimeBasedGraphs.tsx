@@ -292,7 +292,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
 
     // Use the airport local date for season calculation
     const localDateForSeason = utcToAirportLocal(selectedTime, airportCode, baseline);
-    const season = getAirportSeason(localDateForSeason, baseline);
+    const season = getAirportSeason(localDateForSeason, airportCode);
     const seasonDisplay = season.charAt(0).toUpperCase() + season.slice(1);
 
     const holidayKey = getHolidayKey(selectedDateStr);

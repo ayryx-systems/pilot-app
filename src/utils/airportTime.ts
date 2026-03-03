@@ -1,13 +1,10 @@
 /**
  * Airport Time Utilities
  * =====================
- * Functions to work with airport local time (not user's machine time)
+ * Functions to work with airport local time (not user's machine time).
+ * Uses Intl API for timezone/offset - DST handled automatically for all regions.
  */
 
-/**
- * Airport timezone mappings
- * Maps airport codes to IANA timezone identifiers
- */
 const AIRPORT_TIMEZONES: Record<string, string> = {
   KORD: 'America/Chicago',
   KBNA: 'America/Chicago',
@@ -22,56 +19,46 @@ const AIRPORT_TIMEZONES: Record<string, string> = {
   KSMO: 'America/Los_Angeles',
 };
 
-/**
- * UTC offset mappings by timezone (winter/summer)
- * Winter = standard time, Summer = daylight saving time
- */
-const UTC_OFFSETS: Record<string, { winter: number; summer: number }> = {
-  'America/Los_Angeles': { winter: -8, summer: -7 },
-  'America/Denver': { winter: -7, summer: -6 },
-  'America/Chicago': { winter: -6, summer: -5 },
-  'America/New_York': { winter: -5, summer: -4 },
-};
-
-/**
- * Get the timezone for an airport code
- */
 export function getAirportTimezone(airportCode: string): string {
-  return AIRPORT_TIMEZONES[airportCode] || 'America/Chicago';
+  const icao = (airportCode?.length === 3 && !airportCode?.startsWith('K'))
+    ? `K${airportCode}`.toUpperCase()
+    : (airportCode || '').toUpperCase();
+  return AIRPORT_TIMEZONES[icao] || 'America/Chicago';
 }
 
-function getUSDSTStartUTC(year: number): Date {
-  const march1 = new Date(Date.UTC(year, 2, 1));
-  const dayOfWeek = march1.getUTCDay();
-  const daysToAdd = dayOfWeek === 0 ? 7 : 14 - dayOfWeek;
-  return new Date(Date.UTC(year, 2, 1 + daysToAdd));
+function getUTCOffsetHoursFromIntl(date: Date, ianaTimezone: string): number {
+  try {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: ianaTimezone,
+      timeZoneName: 'longOffset',
+    });
+    const parts = formatter.formatToParts(date);
+    const tzPart = parts.find((p) => p.type === 'timeZoneName');
+    if (!tzPart?.value?.startsWith('GMT')) return 0;
+    const match = tzPart.value.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+    if (!match) return 0;
+    const sign = match[1] === '+' ? 1 : -1;
+    const hours = parseInt(match[2], 10);
+    const mins = match[3] ? parseInt(match[3], 10) : 0;
+    return sign * (hours + mins / 60);
+  } catch {
+    return 0;
+  }
 }
 
-function getUSDSTEndUTC(year: number): Date {
-  const nov1 = new Date(Date.UTC(year, 10, 1));
-  const dayOfWeek = nov1.getUTCDay();
-  const daysToAdd = dayOfWeek === 0 ? 0 : 7 - dayOfWeek;
-  return new Date(Date.UTC(year, 10, 1 + daysToAdd));
+export function getAirportUTCOffset(airportCode: string, date: Date, _baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): number {
+  const ianaTimezone = getAirportTimezone(airportCode);
+  return getUTCOffsetHoursFromIntl(date, ianaTimezone);
 }
 
-export function getSeason(date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): 'summer' | 'winter' {
+export function getSeason(date: Date, airportCode?: string): 'summer' | 'winter' {
+  const icao = airportCode || 'KORD';
+  const ianaTimezone = getAirportTimezone(icao);
   const year = date.getUTCFullYear();
-  const dstStart = getUSDSTStartUTC(year);
-  const dstEnd = getUSDSTEndUTC(year);
-  return date >= dstStart && date < dstEnd ? 'summer' : 'winter';
-}
-
-/**
- * Get UTC offset in hours for an airport at a specific date
- * date should be a UTC Date object
- */
-export function getAirportUTCOffset(airportCode: string, date: Date, baseline?: { dstDatesByYear?: Record<string, { start: string; end: string }> }): number {
-  const timezone = getAirportTimezone(airportCode);
-  const season = getSeason(date, baseline);
-  const offset = UTC_OFFSETS[timezone] || { winter: -6, summer: -5 };
-  const offsetHours = season === 'summer' ? offset.summer : offset.winter;
-  
-  return offsetHours;
+  const janDate = new Date(Date.UTC(year, 0, 15));
+  const winterOffset = getUTCOffsetHoursFromIntl(janDate, ianaTimezone);
+  const currentOffset = getUTCOffsetHoursFromIntl(date, ianaTimezone);
+  return currentOffset > winterOffset ? 'summer' : 'winter';
 }
 
 /**

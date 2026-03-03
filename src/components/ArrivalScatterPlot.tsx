@@ -58,11 +58,11 @@ const categoryNames: Record<string, string> = {
   widebody: 'Wide-body',
 };
 
-function getSeasonalBaseline(baseline: BaselineData | null | undefined): { season: string; byTimeSlot: Record<string, { medianTimeFrom50nm?: number }> } | null {
+function getSeasonalBaseline(baseline: BaselineData | null | undefined, airportCode: string): { season: string; byTimeSlot: Record<string, { medianTimeFrom50nm?: number }> } | null {
   if (!baseline) return null;
   
   const now = new Date();
-  const season = getSeason(now, baseline);
+  const season = getSeason(now, airportCode);
   const seasonData = season === 'summer' ? baseline.summer : baseline.winter;
   
   if (!seasonData) return null;
@@ -165,7 +165,7 @@ export function ArrivalScatterPlot({ arrivals, airportCode, baseline, onPointCli
       }
     });
 
-    const seasonalBaseline = getSeasonalBaseline(baseline);
+    const seasonalBaseline = getSeasonalBaseline(baseline, airportCode);
     if (seasonalBaseline && seasonalBaseline.byTimeSlot) {
       const baselineLineData = convertBaselineToHoursAgo(seasonalBaseline.byTimeSlot, airportCode, baseline);
       
