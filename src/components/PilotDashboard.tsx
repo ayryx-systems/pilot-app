@@ -33,7 +33,7 @@ import { ArrivalSituationResponse, MatchedDaysResponse, FlightCategory, Situatio
 import { MapControls } from './MapControls';
 import { TimeBasedGraphs } from './TimeBasedGraphs';
 import { usePilotData } from '@/hooks/usePilotData';
-import { getCurrentUTCTime, formatUTCTimeShort, getAirportUTCOffset, utcToAirportLocal } from '@/utils/airportTime';
+import { getCurrentUTCTime, formatUTCTimeShort, getAirportUTCOffset, utcToAirportLocal, getSeason } from '@/utils/airportTime';
 import { MapDisplayOptions } from '@/types';
 import { WifiOff, AlertTriangle, Menu, X, Map, BarChart3 } from 'lucide-react';
 import { SimpleDataAge } from './SimpleDataAge';
@@ -834,7 +834,7 @@ export function PilotDashboard() {
                                 const minutes = selectedTime.getUTCMinutes();
                                 return `at ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
                               }
-                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline);
+                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline ?? undefined);
                               return `at ${localTime.getUTCHours().toString().padStart(2, '0')}:${localTime.getUTCMinutes().toString().padStart(2, '0')}`;
                             })();
                       
@@ -847,32 +847,8 @@ export function PilotDashboard() {
                           return 'Loading traffic forecast...';
                         }
                         
-                        // Helper functions
-                        const getUTCOffsetHours = (airportCode: string, date: Date, baseline: any) => {
-                          const offsets: Record<string, { winter: number; summer: number }> = {
-                            'KORD': { winter: -6, summer: -5 },
-                            'ORD': { winter: -6, summer: -5 },
-                            'KLGA': { winter: -5, summer: -4 },
-                            'LGA': { winter: -5, summer: -4 },
-                            'KJFK': { winter: -5, summer: -4 },
-                            'JFK': { winter: -5, summer: -4 },
-                            'KLAX': { winter: -8, summer: -7 },
-                            'LAX': { winter: -8, summer: -7 },
-                            'KSFO': { winter: -8, summer: -7 },
-                            'SFO': { winter: -8, summer: -7 },
-                          };
-                          const offset = offsets[airportCode] || { winter: -6, summer: -5 };
-                          if (!baseline?.dstDatesByYear) return offset.winter;
-                          const year = date.getUTCFullYear();
-                          const dstDates = baseline.dstDatesByYear[year];
-                          if (!dstDates) return offset.winter;
-                          const dstStart = new Date(dstDates.start);
-                          const dstEnd = new Date(dstDates.end);
-                          return (date >= dstStart && date < dstEnd) ? offset.summer : offset.winter;
-                        };
-                        
                         const getAirportLocalDateString = (date: Date) => {
-                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
+                          const offset = getAirportUTCOffset(selectedAirport, date, baseline ?? undefined);
                           const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
                           const year = localDate.getUTCFullYear();
                           const month = String(localDate.getUTCMonth() + 1).padStart(2, '0');
@@ -886,16 +862,10 @@ export function PilotDashboard() {
                           return days[date.getUTCDay()];
                         };
                         
-                        const getSeason = (date: Date) => {
-                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
-                          const localDate = new Date(date.getTime() + offset * 60 * 60 * 1000);
-                          const month = localDate.getUTCMonth();
-                          return (month >= 3 && month <= 9) ? 'summer' : 'winter';
-                        };
+                        const getSeasonForBaseline = (date: Date) => getSeason(date, selectedAirport);
                         
-                        // Always get local time slot for matching forecast data (forecast uses local time slots)
                         const getTimeSlot = (date: Date) => {
-                          const offset = getUTCOffsetHours(selectedAirport, date, baseline);
+                          const offset = getAirportUTCOffset(selectedAirport, date, baseline ?? undefined);
                           const localTime = new Date(date.getTime() + offset * 60 * 60 * 1000);
                           const hours = localTime.getUTCHours();
                           const minutes = localTime.getUTCMinutes();
@@ -939,7 +909,7 @@ export function PilotDashboard() {
                         // Always use local date string for matching forecast data (forecast uses local dates)
                         // But display times in UTC when isUTC is true
                         const selectedDateStr = getAirportLocalDateString(referenceTime);
-                        const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
+                        const offset = getAirportUTCOffset(selectedAirport, referenceTime, baseline ?? undefined);
                         const referenceLocal = new Date(referenceTime.getTime() + offset * 60 * 60 * 1000);
                         const referenceLocalTime = new Date(
                           referenceLocal.getUTCFullYear(),
@@ -980,7 +950,7 @@ export function PilotDashboard() {
                         if (baseline) {
                           const dateStr = getAirportLocalDateString(referenceTime);
                           const dayOfWeek = getDayOfWeek(dateStr);
-                          const season = getSeason(referenceTime);
+                          const season = getSeasonForBaseline(referenceTime);
                           const seasonalData = baseline[season];
                           const dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
                           
@@ -1043,7 +1013,7 @@ export function PilotDashboard() {
                         if (timeslotArrivals === null && baseline) {
                           const dateStr = getAirportLocalDateString(referenceTime);
                           const dayOfWeek = getDayOfWeek(dateStr);
-                          const season = getSeason(referenceTime);
+                          const season = getSeasonForBaseline(referenceTime);
                           const seasonalData = baseline[season];
                           const dayData = seasonalData?.dayOfWeekTimeSlots?.[dayOfWeek];
                           
@@ -1093,7 +1063,7 @@ export function PilotDashboard() {
                         }
 
                         if (isNowMode && arrivalForecast?.actualCounts && arrivalForecast?.isCompleted) {
-                          const offset = getUTCOffsetHours(selectedAirport, referenceTime, baseline);
+                          const offset = getAirportUTCOffset(selectedAirport, referenceTime, baseline ?? undefined);
                           const nowMs = Date.now();
                           const oneHourAgoMs = nowMs - 60 * 60 * 1000;
                           let plannedInLastHour = 0;
@@ -1165,7 +1135,7 @@ export function PilotDashboard() {
                                 const minutes = selectedTime.getUTCMinutes();
                                 return `at ${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
                               }
-                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline);
+                              const localTime = utcToAirportLocal(selectedTime, selectedAirport, baseline ?? undefined);
                               return `at ${localTime.getUTCHours().toString().padStart(2, '0')}:${localTime.getUTCMinutes().toString().padStart(2, '0')}`;
                             })();
                       
