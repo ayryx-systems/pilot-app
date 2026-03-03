@@ -158,13 +158,23 @@ function alignTimeSlots(dayTimeSlots: string[], seasonalTimeSlots: string[]) {
   };
 }
 
-function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData | null): string {
+function getTimeSlotKey(date: Date, airportCode: string, baseline?: BaselineData | null, roundToNearest?: boolean): string {
   const localDate = utcToAirportLocal(date, airportCode, baseline);
   const hours = localDate.getUTCHours();
   const minutes = localDate.getUTCMinutes();
-  const slotMinutes = Math.floor(minutes / 15) * 15;
-  const timeSlot = `${hours.toString().padStart(2, '0')}:${slotMinutes.toString().padStart(2, '0')}`;
-  return timeSlot;
+  const slotMinutes = roundToNearest
+    ? Math.round(minutes / 15) * 15
+    : Math.floor(minutes / 15) * 15;
+  let finalMinutes = slotMinutes;
+  let finalHours = hours;
+  if (slotMinutes >= 60) {
+    finalMinutes = 0;
+    finalHours = (hours + 1) % 24;
+  } else if (slotMinutes < 0) {
+    finalMinutes = slotMinutes + 60;
+    finalHours = (hours + 24 - 1) % 24;
+  }
+  return `${String(finalHours).padStart(2, '0')}:${String(finalMinutes).padStart(2, '0')}`;
 }
 
 function getSlotStartUTC(timeSlot: string, dateStr: string, airportCode: string, baseline?: BaselineData | null): number {
@@ -287,7 +297,7 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     const windowStartHours = -2;
     const windowEndHours = isNow ? 2 : Math.max(hoursAhead + 2, 2);
     const dayOfWeek = getDayOfWeekName(selectedDateStr);
-    const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline);
+    const timeSlot = getTimeSlotKey(selectedTime, airportCode, baseline, true);
     const dayOfWeekDisplay = dayOfWeek.charAt(0).toUpperCase() + dayOfWeek.slice(1);
 
     // Use the airport local date for season calculation
@@ -453,17 +463,17 @@ export const TimeBasedGraphs = React.memo(function TimeBasedGraphs({
     // Calculate the exact hours from now for the selected time
     const selectedHoursFromNow = (selectedTime.getTime() - nowUTC.getTime()) / (1000 * 60 * 60);
     
-    // Find the slot that's closest to the selected time (within 15 minutes)
-    // This works regardless of UTC vs local mode because we're matching by actual time position
-    const etaRelativeIndex = relativeTimeSlots.findIndex(rt => {
-      // First try exact match by timeSlot and dateStr
-      if (rt.timeSlot === timeSlot && rt.dateStr === selectedDateStr) {
-        return true;
-      }
-      // Fallback: match by hoursFromNow (within 15 minutes = 0.25 hours)
-      // This handles cases where date strings differ but the time position is correct
-      return Math.abs(rt.hoursFromNow - selectedHoursFromNow) < 0.25;
-    });
+    const etaRelativeIndex = (() => {
+      const exact = relativeTimeSlots.findIndex(rt =>
+        rt.timeSlot === timeSlot && rt.dateStr === selectedDateStr
+      );
+      if (exact >= 0) return exact;
+      const withinRange = relativeTimeSlots
+        .map((rt, i) => ({ rt, i, diff: Math.abs(rt.hoursFromNow - selectedHoursFromNow) }))
+        .filter(({ diff }) => diff < 0.25)
+        .sort((a, b) => a.diff - b.diff);
+      return withinRange.length > 0 ? withinRange[0].i : -1;
+    })();
 
     // Align forecast data with relative time slots
     // Only include forecast slots for today (fixes bug where forecast appears on tomorrow)
